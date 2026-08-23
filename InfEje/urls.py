@@ -13,6 +13,12 @@ urlpatterns = [
     ),
 
     path(
+        "importar/",
+        views.importar,
+        name="importar"
+    ),
+
+    path(
         "exportar-pdf/",
         exportar_pdf,
         name="exportar_pdf"

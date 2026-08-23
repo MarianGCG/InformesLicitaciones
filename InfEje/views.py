@@ -15,6 +15,11 @@ from .models import (
     RegistroLicitacion
 )
 
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from .importadores import importar_excel
+
+
 
 def consultar(request):
 
@@ -219,4 +224,70 @@ def consultar(request):
         request,
         "InfEje/consultar.html",
         contexto
+    )
+
+def importar(request):
+
+    if request.method == "POST":
+
+        archivo = request.FILES.get("archivo")
+
+        if not archivo:
+
+            messages.error(
+                request,
+                "Debe seleccionar un archivo Excel."
+            )
+
+            return redirect("importar")
+
+        if not archivo.name.lower().endswith(
+            (".xlsx", ".xls")
+        ):
+
+            messages.error(
+                request,
+                "El archivo debe ser Excel (.xlsx o .xls)."
+            )
+
+            return redirect("importar")
+
+        try:
+
+            lote, cantidad, empresas_creadas = (
+                importar_excel(
+                    archivo,
+                    archivo.name
+                )
+            )
+
+            messages.success(
+                request,
+                (
+                    f"Archivo importado correctamente. "
+                    f"Lote: {lote.nombre_archivo}. "
+                    f"Registros: {cantidad}. "
+                    f"Empresas nuevas: {empresas_creadas}."
+                )
+            )
+
+            return redirect("importar")
+
+        except ValueError as error:
+
+            messages.error(
+                request,
+                str(error)
+            )
+
+        except Exception as error:
+
+            messages.error(
+                request,
+                f"Error durante la importación: {error}"
+            )
+
+    return render(
+        request,
+        "InfEje/importar.html"
     )

@@ -1,13 +1,18 @@
 import pandas as pd
-from decimal import Decimal
-from django.utils.dateparse import parse_date
 
-from .models import Lote, RegistroLicitacion
+from django.db import transaction
+
+from .models import (
+    Lote,
+    Empresa,
+    RegistroLicitacion,
+)
 
 
 # ============================================================
 # MAPEO DE COLUMNAS DEL EXCEL
 # ============================================================
+
 MAPEO_COLUMNAS = {
     "Unidad de Negocios": "unidad_negocios",
 
@@ -60,15 +65,12 @@ MAPEO_COLUMNAS = {
 # ============================================================
 
 def valor_o_none(valor):
-    """
-    Convierte valores vacíos de pandas en None
-    y limpia valores de texto.
-    """
 
     if pd.isna(valor):
         return None
 
     if isinstance(valor, str):
+
         valor = valor.strip()
 
         if not valor:
@@ -77,11 +79,11 @@ def valor_o_none(valor):
     return valor
 
 
+# ============================================================
+# LIMPIAR CUIT
+# ============================================================
+
 def limpiar_cuit(valor):
-    """
-    Convierte un CUIT proveniente de Excel
-    a texto sin .0 ni decimales.
-    """
 
     valor = valor_o_none(valor)
 
@@ -90,31 +92,63 @@ def limpiar_cuit(valor):
 
     try:
         return str(int(float(valor)))
+
     except (ValueError, TypeError):
+
         return str(valor).strip()
+
+
+# ============================================================
+# EMPRESA
+# ============================================================
+
+def obtener_empresa(cuit, nombre):
+
+    cuit = limpiar_cuit(cuit)
+
+    if not cuit:
+        return None, False
+
+    nombre = valor_o_none(nombre)
+
+    if not nombre:
+        nombre = "Empresa sin nombre"
+
+    empresa, creada = Empresa.objects.get_or_create(
+        cuit=cuit,
+        defaults={
+            "nombre": nombre
+        }
+    )
+
+    return empresa, creada
+
 
 # ============================================================
 # IMPORTAR EXCEL
 # ============================================================
 
+@transaction.atomic
+def importar_excel(archivo, nombre_archivo):
 
-def importar_excel(ruta_archivo, nombre_archivo):
-    """
-    Importa un Excel completo como un nuevo Lote.
+    # --------------------------------------------------------
+    # Evitar duplicar un lote
+    # --------------------------------------------------------
 
-    Se utiliza la cuarta pestaña del Excel
-    y la cuarta fila como encabezado.
+    if Lote.objects.filter(
+        nombre_archivo=nombre_archivo
+    ).exists():
 
-    Las columnas que no existan en el Excel
-    simplemente quedan en NULL.
-    """
+        raise ValueError(
+            f"El archivo '{nombre_archivo}' ya fue importado."
+        )
 
     # --------------------------------------------------------
     # Leer cuarta pestaña
     # --------------------------------------------------------
 
     df = pd.read_excel(
-        ruta_archivo,
+        archivo,
         sheet_name=3,
         header=3
     )
@@ -137,11 +171,13 @@ def importar_excel(ruta_archivo, nombre_archivo):
         rubro="Servicios de limpieza",
     )
 
-    # --------------------------------------------------------
-    # Procesar registros
-    # --------------------------------------------------------
-
     registros = []
+
+    empresas_creadas = 0
+
+    # --------------------------------------------------------
+    # Procesar filas
+    # --------------------------------------------------------
 
     for _, fila in df.iterrows():
 
@@ -149,19 +185,59 @@ def importar_excel(ruta_archivo, nombre_archivo):
 
         for columna_excel, campo_modelo in MAPEO_COLUMNAS.items():
 
-            if columna_excel in df.columns:
+            if columna_excel not in df.columns:
+                continue
 
-                valor = fila[columna_excel]
+            valor = fila[columna_excel]
 
-                if campo_modelo in (
-                    "cuit_oferente",
-                    "cuit_proveedor",
-                ):
-                    valor = limpiar_cuit(valor)
-                else:
-                    valor = valor_o_none(valor)
+            if campo_modelo in (
+                "cuit_oferente",
+                "cuit_proveedor",
+            ):
 
-                datos[campo_modelo] = valor
+                valor = limpiar_cuit(valor)
+
+            else:
+
+                valor = valor_o_none(valor)
+
+            datos[campo_modelo] = valor
+
+        # ----------------------------------------------------
+        # EMPRESA OFERENTE
+        # ----------------------------------------------------
+
+        empresa_oferente, creada = obtener_empresa(
+            datos.get("cuit_oferente"),
+            datos.get("oferente"),
+        )
+
+        if empresa_oferente:
+
+            datos["empresa_oferente"] = empresa_oferente
+
+            if creada:
+                empresas_creadas += 1
+
+        # ----------------------------------------------------
+        # EMPRESA PROVEEDOR
+        # ----------------------------------------------------
+
+        empresa_proveedor, creada = obtener_empresa(
+            datos.get("cuit_proveedor"),
+            datos.get("proveedor"),
+        )
+
+        if empresa_proveedor:
+
+            datos["empresa_proveedor"] = empresa_proveedor
+
+            if creada:
+                empresas_creadas += 1
+
+        # ----------------------------------------------------
+        # LOTE
+        # ----------------------------------------------------
 
         datos["lote"] = lote
 
@@ -178,20 +254,22 @@ def importar_excel(ruta_archivo, nombre_archivo):
         batch_size=1000
     )
 
-    return lote, len(registros)
+    return (
+        lote,
+        len(registros),
+        empresas_creadas,
+    )
 
 
-    
-
-
-
-
-
-    # ============================================================
-# DIAGNÓSTICO DE COLUMNAS
 # ============================================================
-def diagnosticar_columnas(ruta_archivo, nombre_hoja):
-    
+# DIAGNÓSTICO
+# ============================================================
+
+def diagnosticar_columnas(
+    ruta_archivo,
+    nombre_hoja
+):
+
     df = pd.read_excel(
         ruta_archivo,
         sheet_name=nombre_hoja
@@ -203,14 +281,21 @@ def diagnosticar_columnas(ruta_archivo, nombre_hoja):
     ]
 
     columnas_excel = set(df.columns)
-    columnas_esperadas = set(MAPEO_COLUMNAS.keys())
+
+    columnas_esperadas = set(
+        MAPEO_COLUMNAS.keys()
+    )
 
     encontradas = sorted(
-        columnas_excel.intersection(columnas_esperadas)
+        columnas_excel.intersection(
+            columnas_esperadas
+        )
     )
 
     faltantes = sorted(
-        columnas_esperadas.difference(columnas_excel)
+        columnas_esperadas.difference(
+            columnas_excel
+        )
     )
 
     print("\n========================================")
@@ -219,15 +304,20 @@ def diagnosticar_columnas(ruta_archivo, nombre_hoja):
     print("========================================")
 
     print("\nCOLUMNAS ENCONTRADAS:")
+
     for columna in encontradas:
         print("  OK  ", columna)
 
     print("\nCOLUMNAS NO PRESENTES:")
+
     for columna in faltantes:
         print("  --- ", columna)
 
-    print("\nCOLUMNAS DEL EXCEL QUE NO ESTAMOS MAPEANDO:")
-    for columna in sorted(columnas_excel - columnas_esperadas):
+    print("\nCOLUMNAS NO MAPEADAS:")
+
+    for columna in sorted(
+        columnas_excel - columnas_esperadas
+    ):
         print("  ??? ", columna)
 
     print("\n========================================\n")
