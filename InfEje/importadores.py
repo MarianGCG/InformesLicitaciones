@@ -97,6 +97,33 @@ def limpiar_cuit(valor):
 
         return str(valor).strip()
 
+# ============================================================
+# LIMPIAR FECHA
+# ============================================================
+def limpiar_fecha(valor):
+    """
+    Convierte fechas provenientes de Excel a date.
+    Si está vacío o no se puede convertir, devuelve None.
+    """
+
+    valor = valor_o_none(valor)
+
+    if valor is None:
+        return None
+
+    try:
+        fecha = pd.to_datetime(
+            valor,
+            errors="coerce"
+        )
+
+        if pd.isna(fecha):
+            return None
+
+        return fecha.date()
+
+    except (ValueError, TypeError):
+        return None
 
 # ============================================================
 # EMPRESA
@@ -190,6 +217,8 @@ def importar_excel(archivo, nombre_archivo):
 
             valor = fila[columna_excel]
 
+
+
             if campo_modelo in (
                 "cuit_oferente",
                 "cuit_proveedor",
@@ -197,9 +226,31 @@ def importar_excel(archivo, nombre_archivo):
 
                 valor = limpiar_cuit(valor)
 
+            elif campo_modelo in (
+                "fecha_apertura",
+                "fecha_inicio_contrato",
+                "fecha_fin_contrato",
+            ):
+
+                valor = limpiar_fecha(valor)
+
+            elif campo_modelo == "duracion_contrato":
+
+                valor = valor_o_none(valor)
+
+                if valor is not None:
+                    try:
+                        valor = int(float(valor))
+                    except (ValueError, TypeError):
+                        valor = None
+
             else:
 
                 valor = valor_o_none(valor)
+
+
+
+
 
             datos[campo_modelo] = valor
 

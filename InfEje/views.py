@@ -18,8 +18,15 @@ from .models import (
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from .importadores import importar_excel
+from django.http import HttpResponse, JsonResponse
 
+from django.db.models import Q
 
+from .exportar_pdf import (
+    construir_pdf,
+    obtener_registros_filtrados,
+    limpiar_nombre_archivo,
+)
 
 def consultar(request):
 
@@ -291,3 +298,83 @@ def importar(request):
         request,
         "InfEje/importar.html"
     )
+
+def empresas_para_pdf(request):
+
+    registros, _ = obtener_registros_filtrados(request)
+
+    empresas = {}
+
+    for registro in registros:
+
+        empresa = None
+
+        if registro.empresa_oferente:
+            empresa = registro.empresa_oferente
+
+        elif registro.empresa_proveedor:
+            empresa = registro.empresa_proveedor
+
+        if not empresa:
+            continue
+
+        empresas[empresa.id] = {
+            "id": empresa.id,
+            "nombre": empresa.nombre,
+            "cuit": empresa.cuit,
+        }
+
+    resultado = sorted(
+        empresas.values(),
+        key=lambda x: x["nombre"].lower(),
+    )
+
+    return JsonResponse({
+        "empresas": resultado
+    })
+
+
+def exportar_pdf_empresa(request, empresa_id):
+
+    try:
+
+        empresa = Empresa.objects.get(
+            id=empresa_id
+        )
+
+    except Empresa.DoesNotExist:
+
+        return HttpResponse(
+            "Empresa no encontrada.",
+            status=404,
+        )
+
+    registros, _ = obtener_registros_filtrados(request)
+
+    registros = registros.filter(
+        Q(cuit_oferente=empresa.cuit) |
+        Q(cuit_proveedor=empresa.cuit)
+    )
+
+    buffer = construir_pdf(
+        registros,
+        empresa=empresa,
+    )
+
+    nombre_archivo = (
+        limpiar_nombre_archivo(
+            empresa.nombre
+        )
+        + ".pdf"
+    )
+
+    respuesta = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/pdf",
+    )
+
+    respuesta["Content-Disposition"] = (
+        f'inline; filename="{nombre_archivo}"'
+    )
+
+    return respuesta

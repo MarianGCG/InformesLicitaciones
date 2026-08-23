@@ -199,22 +199,45 @@
             width: 320px;
             max-width: 320px;
         }
+
+
+        th:nth-child(2),
+        td:nth-child(2) {
+            width: 130px;
+            max-width: 130px;
+        }
+       
         /* COMPRADOR */
         th:nth-child(3),
         td:nth-child(3) {
             width: 300px;
             max-width: 300px;
         }
-        /* ESTADO */
-        th:nth-child(7),
-        td:nth-child(7) {
-            width: 180px;
-            max-width: 180px;
+        /* renglon */
+        th:nth-child(4),
+        td:nth-child(4) {
+            width: 130px;
+            max-width: 130px;
+        }
+
+
+        /* renglon */
+        th:nth-child(5),
+        td:nth-child(5) {
+            width: 50px;
+            max-width: 50px;
+        }
+
+        /* renglon */
+        th:nth-child(11),
+        td:nth-child(11) {
+            width: 50px;
+            max-width: 50px;
         }
 
         /* COLUMNA DESCRIPCIÓN */
-        th:nth-child(10),
-        td:nth-child(10) {
+        th:nth-child(12),
+        td:nth-child(12) {
             width: 450px;
             max-width: 450px;
         }
@@ -229,6 +252,27 @@
             text-overflow: ellipsis;
             cursor: help;
         }
+
+        /* COLUMNA DESCRIPCIÓN */
+        th:nth-child(10),
+        td:nth-child(10) {
+            width: 150px;
+            max-width: 150px;
+        }
+
+
+        th:nth-child(6),
+        td:nth-child(6),
+        th:nth-child(7),
+        td:nth-child(7),
+        th:nth-child(8),
+        td:nth-child(8) {
+            width: 90px;
+            max-width: 90px;
+            white-space: nowrap;
+        }
+
+
 
         .campo-lotes {
             width: 300px;
@@ -435,6 +479,63 @@
 
 <body>
 
+<div
+    id="modalProcesando"
+    style="
+        display:none;
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,.35);
+        z-index:20000;
+        align-items:center;
+        justify-content:center;
+    "
+>
+    <div
+        style="
+            background:white;
+            padding:28px 35px;
+            border-radius:12px;
+            box-shadow:0 5px 20px rgba(0,0,0,.25);
+            text-align:center;
+            min-width:320px;
+        "
+    >
+
+        <div
+            style="
+                font-size:38px;
+                margin-bottom:12px;
+            "
+        >
+            ⏳
+        </div>
+
+        <div
+            style="
+                font-size:18px;
+                font-weight:700;
+                margin-bottom:8px;
+            "
+        >
+            Generando PDFs...
+        </div>
+
+        <div
+            id="textoProcesando"
+            style="
+                font-size:14px;
+                color:#6c757d;
+            "
+        >
+            Preparando...
+        </div>
+
+    </div>
+</div>
+
+
+
 <div class="contenedor">
 
     <div class="encabezado">
@@ -614,24 +715,38 @@
                 <button
                     type="submit"
                     class="boton"
+                    style="background: #198754;"
                 >
                     BUSCAR
                 </button>
+
+                <a
+                    href="{% url 'importar' %}"
+                    class="boton-pdf"
+                    style="background: #fd7e14;"
+                >
+                    Importar EXCEL
+                </a>
 
                 <a
                     href="#"
                     id="btnExportarPDF"
                     class="boton-pdf"
                 >
-                    EXPORTAR PDF
+                    Exportar PDF
                 </a>
 
-                <a
-                    href="{% url 'importar' %}"
+
+
+
+                <button
+                    type="button"
+                    id="btnPDFEmpresas"
                     class="boton-pdf"
                 >
-                    IMPORTAR EXCEL
-                </a>
+                    PDF por EMPRESA
+                </button>
+
             </div>
 
         </form>
@@ -662,12 +777,15 @@
                 <thead>
 
                     <tr>
-                        
+                       
                         <th>Empresa</th>
                         <th>OC</th>
                         <th>Comprador</th>
                         <th>Proceso</th>
                         <th>Rengl</th>
+                        <th>Apertura</th>
+                        <th>Inicio</th>
+                        <th>Fin</th>
                         <th>Estado</th>
                         <th>Oferta</th>
                         <th>Mon</th>
@@ -725,7 +843,31 @@
                                 {{ registro.numero_renglon|default:"-" }}
                             </td>
 
-                      
+                            <td>
+                                {% if registro.fecha_apertura %}
+                                    {{ registro.fecha_apertura|date:"d/m/Y" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if registro.fecha_inicio_contrato %}
+                                    {{ registro.fecha_inicio_contrato|date:"d/m/Y" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if registro.fecha_fin_contrato %}
+                                    {{ registro.fecha_fin_contrato|date:"d/m/Y" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+
                             <!-- ESTADO -->
                             <td
                                 class="estado"
@@ -1161,7 +1303,233 @@
     );
 
 </script>
+<script>
 
+document.getElementById("btnPDFEmpresas").addEventListener(
+    "click",
+    async function () {
+        const modalProcesando =
+            document.getElementById("modalProcesando");
+
+        const textoProcesando =
+            document.getElementById("textoProcesando");
+        try {
+
+            // =================================================
+            // 1. ELEGIR CARPETA
+            // =================================================
+
+            if (!window.showDirectoryPicker) {
+
+                alert(
+                    "Esta función requiere Google Chrome o Microsoft Edge."
+                );
+
+                return;
+            }
+
+            const carpeta =
+                await window.showDirectoryPicker({
+                    mode: "readwrite"
+                });
+
+
+            // =================================================
+            // 2. TOMAR LOS FILTROS ACTUALES
+            // =================================================
+
+            const formulario =
+                document.querySelector(".filtros form");
+
+            const datos =
+                new FormData(formulario);
+
+            const parametros =
+                new URLSearchParams();
+
+
+            for (
+                const [nombre, valor]
+                of datos.entries()
+            ) {
+
+                if (valor !== "") {
+
+                    parametros.append(
+                        nombre,
+                        valor
+                    );
+                }
+            }
+
+
+            // =================================================
+            // 3. OBTENER LAS EMPRESAS DE LA CONSULTA
+            // =================================================
+
+            const respuestaEmpresas =
+                await fetch(
+                    "{% url 'empresas_para_pdf' %}"
+                    + "?"
+                    + parametros.toString()
+                );
+
+
+            if (!respuestaEmpresas.ok) {
+
+                throw new Error(
+                    "No se pudieron obtener las empresas."
+                );
+            }
+
+
+            const informacion =
+                await respuestaEmpresas.json();
+
+            const empresas =
+                informacion.empresas;
+
+
+            if (!empresas.length) {
+
+                alert(
+                    "No se encontraron empresas para generar los PDFs."
+                );
+
+                return;
+            }
+
+
+            // =================================================
+            // 4. GENERAR UN PDF POR EMPRESA
+            // =================================================
+
+
+
+            let cantidadGenerada = 0;
+
+            modalProcesando.style.display = "flex";
+
+            textoProcesando.textContent =
+                `0 de ${empresas.length} empresas`;
+
+            for (const empresa of empresas) {
+
+                const url =
+                    "{% url 'exportar_pdf_empresa' 0 %}"
+                        .replace(
+                            "/0/",
+                            `/${empresa.id}/`
+                        )
+                    + "?"
+                    + parametros.toString();
+
+
+                const respuestaPDF =
+                    await fetch(url);
+
+
+                if (!respuestaPDF.ok) {
+
+                    console.error(
+                        "Error generando PDF:",
+                        empresa.nombre
+                    );
+
+                    continue;
+                }
+
+
+                const blob =
+                    await respuestaPDF.blob();
+
+
+                // =================================================
+                // 5. LIMPIAR NOMBRE DEL ARCHIVO
+                // =================================================
+
+                let nombreArchivo =
+                    empresa.nombre
+                        .replace(/\./g, "")
+                        .replace(
+                            /[\\/:*?"<>|]/g,
+                            ""
+                        )
+                        .trim();
+
+
+                if (!nombreArchivo) {
+
+                    nombreArchivo =
+                        "Empresa";
+                }
+
+
+                nombreArchivo += ".pdf";
+
+
+                // =================================================
+                // 6. CREAR EL ARCHIVO EN LA CARPETA ELEGIDA
+                // =================================================
+
+                const archivo =
+                    await carpeta.getFileHandle(
+                        nombreArchivo,
+                        {
+                            create: true
+                        }
+                    );
+
+
+                const writable =
+                    await archivo.createWritable();
+
+
+                await writable.write(blob);
+
+                await writable.close();
+
+                cantidadGenerada++;
+
+                textoProcesando.textContent =
+                    `${cantidadGenerada} de ${empresas.length} empresas`;
+
+              
+            }
+
+
+            // =================================================
+            // 7. RESULTADO
+            // =================================================
+            modalProcesando.style.display = "none";
+            alert(
+                `Se generaron ${cantidadGenerada} PDF(s) correctamente.`
+            );
+
+
+        } catch (error) {
+            modalProcesando.style.display = "none";
+            console.error(error);
+
+
+            if (
+                error.name === "AbortError"
+            ) {
+
+                // El usuario canceló la selección de carpeta.
+                return;
+            }
+
+
+            alert(
+                "Ocurrió un error al generar los PDFs."
+            );
+        }
+
+    }
+);
+
+</script>
 </body>
 
 </html>
