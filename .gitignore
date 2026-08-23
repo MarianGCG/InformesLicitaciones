@@ -1,0 +1,29 @@
+# Entorno virtual
+venv/
+
+# Base de datos local
+db.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# Django
+staticfiles/
+
+# Archivos temporales
+*.tmp
+*.bak
+*.log
+
+# VS Code
+.vscode/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+cargar_empresas.py
+probar_excel.py

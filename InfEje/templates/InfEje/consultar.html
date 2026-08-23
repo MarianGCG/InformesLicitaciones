@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Consulta de Licitaciones</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #212529;
+        }
+
+        .contenedor {
+            width: 95%;
+            max-width: none;
+            margin: 20px auto;
+        }
+
+        .encabezado {
+            background: white;
+            border-radius: 12px;
+            padding: 22px 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+
+        .encabezado h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .encabezado p {
+            margin: 8px 0 0;
+            color: #6c757d;
+        }
+
+        .filtros {
+            background: white;
+            border-radius: 12px;
+            padding: 22px 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+
+        .fila-filtros {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .campo {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .campo label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        select,
+        input {
+            height: 38px;
+            min-width: 220px;
+            padding: 7px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .boton {
+            height: 38px;
+            padding: 0 22px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            background: #0d6efd;
+            color: white;
+        }
+
+        .boton:hover {
+            background: #0b5ed7;
+        }
+
+        .resultados {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+
+        .titulo-resultados {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .titulo-resultados h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .tabla-contenedor {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            color: #000;
+        }
+
+        th {
+            background: #f1f3f5;
+            color: #000;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 10px 9px;
+            text-align: left;
+            white-space: nowrap;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        td {
+            color: #000;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 9px;
+            border-bottom: 1px solid #e2e2e2;
+            white-space: nowrap;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+            cursor: pointer;
+        }
+
+        .sin-resultados {
+            padding: 40px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+
+        .importe {
+            font-weight: 800;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .descripcion {
+            font-weight: 500;
+            max-width: 500px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 180px;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+
+
+
+
+
+
+        td.estado {
+            width: 100px;
+            max-width: 100px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: help;
+        }
+
+        /* EMPRESA */
+        th:nth-child(1),
+        td:nth-child(1) {
+            width: 320px;
+            max-width: 320px;
+        }
+        /* COMPRADOR */
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 300px;
+            max-width: 300px;
+        }
+        /* ESTADO */
+        th:nth-child(7),
+        td:nth-child(7) {
+            width: 180px;
+            max-width: 180px;
+        }
+
+        /* COLUMNA DESCRIPCIÓN */
+        th:nth-child(10),
+        td:nth-child(10) {
+            width: 450px;
+            max-width: 450px;
+        }
+
+        /* CAMPOS CON TEXTO LARGO */
+        td.empresa,
+        td.comprador,
+        td.estado,
+        td.descripcion {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: help;
+        }
+
+        .campo-lotes {
+            width: 300px;
+            min-width: 300px;
+        }
+
+        .selector-lotes {
+            width: 300px;
+            max-height: 125px;
+            overflow-y: auto;
+
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: #fff;
+            padding: 4px 0;
+        }
+
+        .check-lote {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center;
+
+            width: 100%;
+            min-width: 0;
+
+            padding: 6px 9px;
+
+            font-size: 13px;
+            font-weight: 600;
+
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .check-lote:hover {
+            background: #f1f3f5;
+        }
+
+        .check-lote input[type="checkbox"] {
+            width: 16px !important;
+            min-width: 16px !important;
+            height: 16px !important;
+
+            margin: 0 8px 0 0;
+            padding: 0;
+        }
+
+        .check-lote span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .check-lote.todos {
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 3px;
+        }
+
+
+
+
+
+
+        /* =========================================================
+        EMPRESA - COMBO CON BÚSQUEDA
+        ========================================================= */
+
+        .empresa-autocomplete {
+            position: relative;
+            width: 420px;
+            min-width: 420px;
+        }
+
+        .empresa-control {
+            position: relative;
+            width: 100%;
+        }
+
+        .empresa-control input {
+            width: 100%;
+            height: 38px;
+
+            padding: 7px 34px 7px 10px;
+
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+
+            background: #fff;
+
+            font-size: 13px;
+            font-weight: 600;
+            color: #000;
+
+            outline: none;
+        }
+
+        .empresa-control input:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+        }
+
+        .empresa-flecha {
+            position: absolute;
+            right: 1px;
+            top: 1px;
+
+            width: 34px;
+            height: 36px;
+
+            border: none;
+            background: transparent;
+
+            cursor: pointer;
+
+            font-size: 11px;
+            color: #495057;
+        }
+
+        /* =========================================================
+        LISTA FLOTANTE
+        ========================================================= */
+
+        .empresa-resultados {
+            position: absolute;
+
+            top: 100%;
+            left: 0;
+
+            width: 100%;
+
+            max-height: 260px;
+            overflow-y: auto;
+
+            background: #fff;
+
+            border: 1px solid #ced4da;
+            border-top: none;
+
+            border-radius: 0 0 6px 6px;
+
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+
+            z-index: 9999;
+
+            display: none;
+        }
+
+        .empresa-opcion {
+            display: block;
+
+            width: 100%;
+
+            padding: 8px 10px;
+
+            font-size: 13px;
+            font-weight: 600;
+
+            color: #000;
+
+            cursor: pointer;
+
+            white-space: nowrap;
+
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .empresa-opcion:hover {
+            background: #f1f3f5;
+        }
+
+
+
+        .boton-pdf {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            height: 38px;
+            padding: 0 22px;
+
+            background: #0d6efd;
+            color: #fff;
+
+            border: none;
+            border-radius: 6px;
+
+            font-weight: bold;
+            font-size: 14px;
+
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .boton-pdf:hover {
+            background: #0b5ed7;
+            color: #fff;
+            text-decoration: none;
+        }
+
+
+    </style>
+</head>
+
+<body>
+
+<div class="contenedor">
+
+    <div class="encabezado">
+        <h1>Consulta de Licitaciones</h1>
+        <p>Consulta de procesos, oferentes y proveedores</p>
+    </div>
+
+    <div class="filtros">
+
+        <form method="get">
+
+            <div class="fila-filtros">
+
+                <!-- LOTE -->
+                <!-- LOTE -->
+                <div class="campo campo-lotes">
+
+                    <label>Lotes</label>
+
+                    <div class="selector-lotes">
+
+                        <label class="check-lote todos">
+                            <input
+                                type="checkbox"
+                                id="todosLotes"
+                            >
+                            <span><strong>Todos</strong></span>
+                        </label>
+
+                        {% for lote in lotes %}
+
+                            <label class="check-lote">
+
+                                <input
+                                    type="checkbox"
+                                    name="lote"
+                                    value="{{ lote.id }}"
+                                    class="lote-checkbox"
+
+                                    {% if lote.id|stringformat:"s" in lotes_seleccionados %}
+                                        checked
+                                    {% endif %}
+                                >
+
+                                <span>{{ lote.nombre_archivo }}</span>
+
+                            </label>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+
+                <!-- EMPRESA -->
+
+
+                <div class="campo empresa-autocomplete">
+
+                    <label>Empresa</label>
+
+                    <div class="empresa-control">
+
+                        <input
+                            type="text"
+                            id="empresaBusqueda"
+                            placeholder="Buscar empresa..."
+                            autocomplete="off"
+                        >
+
+                        <button
+                            type="button"
+                            class="empresa-flecha"
+                            id="empresaFlecha"
+                            tabindex="-1"
+                        >
+                            ▼
+                        </button>
+
+                    </div>
+
+                    <input
+                        type="hidden"
+                        name="empresa"
+                        id="empresaId"
+                        value="{{ empresa_seleccionada|default:'' }}"
+                    >
+
+                    <div
+                        id="empresaResultados"
+                        class="empresa-resultados"
+                    ></div>
+
+                </div>
+
+
+
+
+                <!-- ESTADO -->
+                <div class="campo">
+                    <label>Estado</label>
+
+                    <select name="estado">
+
+                        <option value="">
+                            Todos los estados
+                        </option>
+
+                        {% for estado in estados %}
+
+                            <option
+                                value="{{ estado }}"
+                                {% if estado == estado_seleccionado %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ estado }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+                </div>
+
+
+                <!-- ORDEN DE COMPRA -->
+                <div class="campo">
+                    <label>Orden de Compra</label>
+
+                    <select name="oc">
+
+                        <option
+                            value=""
+                            {% if not oc_seleccionado %}
+                                selected
+                            {% endif %}
+                        >
+                            Todas
+                        </option>
+
+                        <option
+                            value="si"
+                            {% if oc_seleccionado == "si" %}
+                                selected
+                            {% endif %}
+                        >
+                            Con OC
+                        </option>
+
+                        <option
+                            value="no"
+                            {% if oc_seleccionado == "no" %}
+                                selected
+                            {% endif %}
+                        >
+                            Sin OC
+                        </option>
+
+                    </select>
+                </div>
+
+
+                <!-- PROCESO -->
+                <div class="campo">
+                    <label>Número de proceso</label>
+
+                    <input
+                        type="text"
+                        name="proceso"
+                        placeholder="Buscar proceso..."
+                        value="{{ proceso_seleccionado|default:'' }}"
+                    >
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="boton"
+                >
+                    BUSCAR
+                </button>
+
+                <a
+                    href="#"
+                    id="btnExportarPDF"
+                    class="boton-pdf"
+                >
+                    EXPORTAR PDF
+                </a>
+
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+
+
+
+    <div class="resultados">
+
+        <div class="titulo-resultados">
+
+            <h2>Resultados</h2>
+
+            <div>
+                {{ registros|length }} registros
+            </div>
+
+        </div>
+
+
+        <div class="tabla-contenedor">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        
+                        <th>Empresa</th>
+                        <th>OC</th>
+                        <th>Comprador</th>
+                        <th>Proceso</th>
+                        <th>Rengl</th>
+                        <th>Estado</th>
+                        <th>Oferta</th>
+                        <th>Mon</th>
+                        <th>Descripción</th>
+                    </tr>
+
+                </thead>
+                <tbody>
+
+                    {% for registro in registros %}
+
+                        <tr>
+
+                            <!-- EMPRESA -->
+
+                            <td
+                                class="empresa"
+                                title="{% if registro.empresa_oferente %}{{ registro.empresa_oferente.nombre }}{% elif registro.empresa_proveedor %}{{ registro.empresa_proveedor.nombre }}{% else %}-{% endif %}"
+                            >
+                                {% if registro.empresa_oferente %}
+                                    {{ registro.empresa_oferente.nombre }}
+                                {% elif registro.empresa_proveedor %}
+                                    {{ registro.empresa_proveedor.nombre }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if registro.numero_oc %}
+                                    {{ registro.numero_oc }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td
+                                class="comprador"
+                                title="{{ registro.comprador|default:'-' }}"
+                            >
+                                {{ registro.comprador|default:"-" }}
+                            </td>
+
+                            <td>
+                                {{ registro.numero_proceso|default:"-" }}
+                            </td>
+
+
+
+
+
+
+                            <!-- RENGLÓN -->
+                            <td>
+                                {{ registro.numero_renglon|default:"-" }}
+                            </td>
+
+                      
+                            <!-- ESTADO -->
+                            <td
+                                class="estado"
+                                title="{{ registro.estado|default:'-' }}"
+                            >
+                                {{ registro.estado|default:"-" }}
+                            </td>
+
+
+
+                            <!-- OFERTA -->
+
+                            <td
+                                class="importe"
+                                data-importe="{{ registro.precio_total_oferta|default:'' }}"
+                            >
+                                {{ registro.precio_total_oferta|default:"-" }}
+                            </td>
+
+
+
+                            <!-- MONEDA -->
+                            <td>
+                                {{ registro.moneda_oferta|default:"-" }}
+                            </td>
+
+                            <!-- DESCRIPCIÓN -->
+
+                            <td
+                                class="descripcion"
+                                title="{{ registro.descripcion_renglon|default:'-' }}"
+                            >
+                                {{ registro.descripcion_renglon|default:"-" }}
+                            </td>
+
+
+
+                        </tr>
+
+                    {% empty %}
+
+                        <tr>
+                            <td colspan="10">
+
+                                <div class="sin-resultados">
+
+                                    {% if request.GET %}
+                                        No se encontraron registros
+                                        con los filtros seleccionados.
+                                    {% else %}
+                                        Utilice los filtros para consultar
+                                        las licitaciones.
+                                    {% endif %}
+
+                                </div>
+                            </td>
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    // =========================================================
+    // EMPRESAS
+    // =========================================================
+
+    const empresas = [
+
+        {% for empresa in empresas %}
+
+            {
+                id: "{{ empresa.id }}",
+                nombre: "{{ empresa.nombre|escapejs }}",
+                cuit: "{{ empresa.cuit }}"
+            },
+
+        {% endfor %}
+
+    ];
+
+
+    const inputEmpresa =
+        document.getElementById("empresaBusqueda");
+
+    const empresaId =
+        document.getElementById("empresaId");
+
+    const empresaResultados =
+        document.getElementById("empresaResultados");
+
+    const empresaFlecha =
+        document.getElementById("empresaFlecha");
+
+
+    // =========================================================
+    // MOSTRAR EMPRESAS
+    // =========================================================
+
+    function mostrarEmpresas() {
+
+        const texto =
+            inputEmpresa.value
+                .trim()
+                .toLowerCase();
+
+
+        empresaResultados.innerHTML = "";
+
+
+        // -----------------------------------------------------
+        // Si está vacío, mostramos todas
+        // -----------------------------------------------------
+
+        if (!texto) {
+
+            empresas.forEach(
+                agregarEmpresa
+            );
+
+            empresaResultados.style.display = "block";
+
+            return;
+        }
+
+
+        // -----------------------------------------------------
+        // Filtrar por nombre o CUIT
+        // -----------------------------------------------------
+
+        const encontradas =
+            empresas.filter(
+                empresa => {
+
+                    const nombre =
+                        empresa.nombre.toLowerCase();
+
+                    const cuit =
+                        empresa.cuit.toLowerCase();
+
+                    return (
+                        nombre.includes(texto) ||
+                        cuit.includes(texto)
+                    );
+                }
+            );
+
+
+        encontradas.forEach(
+            agregarEmpresa
+        );
+
+
+        empresaResultados.style.display =
+            encontradas.length
+                ? "block"
+                : "none";
+    }
+
+
+    // =========================================================
+    // CREAR UNA OPCIÓN
+    // =========================================================
+
+    function agregarEmpresa(empresa) {
+
+        const opcion =
+            document.createElement("div");
+
+
+        opcion.className =
+            "empresa-opcion";
+
+
+        opcion.textContent =
+            `${empresa.nombre} — CUIT ${empresa.cuit}`;
+
+
+        opcion.addEventListener(
+            "click",
+            function () {
+
+                inputEmpresa.value =
+                    `${empresa.nombre} — CUIT ${empresa.cuit}`;
+
+                empresaId.value =
+                    empresa.id;
+
+                empresaResultados.innerHTML = "";
+
+                empresaResultados.style.display =
+                    "none";
+            }
+        );
+
+
+        empresaResultados.appendChild(
+            opcion
+        );
+    }
+
+
+    // =========================================================
+    // ESCRIBIR
+    // =========================================================
+
+    inputEmpresa.addEventListener(
+        "input",
+        function () {
+
+            // Si cambia el texto,
+            // limpiamos la empresa seleccionada.
+
+            empresaId.value = "";
+
+            mostrarEmpresas();
+
+        }
+    );
+
+
+    // =========================================================
+    // FLECHA
+    // =========================================================
+
+    empresaFlecha.addEventListener(
+        "click",
+        function () {
+
+            inputEmpresa.focus();
+
+            mostrarEmpresas();
+
+        }
+    );
+
+
+    // =========================================================
+    // CLICK FUERA
+    // =========================================================
+
+    document.addEventListener(
+        "click",
+        function (event) {
+
+            if (
+                !event.target.closest(
+                    ".empresa-autocomplete"
+                )
+            ) {
+
+                empresaResultados.style.display =
+                    "none";
+            }
+        }
+    );
+
+
+    // =========================================================
+    // EMPRESA YA SELECCIONADA
+    // =========================================================
+
+    const empresaSeleccionada =
+        "{{ empresa_seleccionada|default:'' }}";
+
+
+    if (empresaSeleccionada) {
+
+        const empresa =
+            empresas.find(
+                e =>
+                    e.id === empresaSeleccionada
+            );
+
+
+        if (empresa) {
+
+            inputEmpresa.value =
+                `${empresa.nombre} — CUIT ${empresa.cuit}`;
+
+        }
+
+    }
+
+
+    // =========================================================
+    // IMPORTES
+    // =========================================================
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+            const importes =
+                document.querySelectorAll(
+                    ".importe"
+                );
+
+
+            importes.forEach(
+                function (celda) {
+
+                    const valor =
+                        celda.dataset.importe;
+
+
+                    if (!valor) {
+                        return;
+                    }
+
+
+                    const numero =
+                        Number(valor);
+
+
+                    if (
+                        Number.isNaN(numero)
+                    ) {
+                        return;
+                    }
+
+
+                    celda.textContent =
+                        new Intl.NumberFormat(
+                            "es-AR",
+                            {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            }
+                        ).format(numero);
+
+                }
+            );
+
+        }
+    );
+
+</script>
+
+<script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const importes = document.querySelectorAll(".importe");
+
+        importes.forEach(function (celda) {
+
+            const valor = celda.dataset.importe;
+
+            if (!valor) {
+                return;
+            }
+
+            const numero = Number(
+                String(valor).replace(",", ".")
+            );
+
+            if (Number.isNaN(numero)) {
+                return;
+            }
+
+            celda.textContent = new Intl.NumberFormat(
+                "es-AR",
+                {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }
+            ).format(numero);
+
+        });
+
+    });
+
+</script>
+<script>
+
+    const btnExportarPDF =
+        document.getElementById("btnExportarPDF");
+
+
+    btnExportarPDF.addEventListener(
+        "click",
+        function (event) {
+
+            event.preventDefault();
+
+            const formulario =
+                document.querySelector(
+                    '.filtros form'
+                );
+
+            const datos =
+                new FormData(formulario);
+
+            const parametros =
+                new URLSearchParams();
+
+            for (const [nombre, valor] of datos.entries()) {
+
+                if (valor !== "") {
+
+                    parametros.append(
+                        nombre,
+                        valor
+                    );
+
+                }
+
+            }
+
+            const url =
+                "{% url 'exportar_pdf' %}"
+                + "?"
+                + parametros.toString();
+
+            window.open(
+                url,
+                "_blank"
+            );
+        }
+    );
+
+</script>
+
+</body>
+
+</html>
