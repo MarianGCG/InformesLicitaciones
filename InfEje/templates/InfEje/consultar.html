@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Consulta de Licitaciones</title>
+    <title>Licitaciones - Cauciones</title>
 
     <style>
 
@@ -721,6 +721,13 @@
                 </button>
 
                 <a
+                    href="{% url 'empresas' %}"
+                    class="boton-pdf"
+                >
+                    EMPRESAS
+                </a>
+
+                <a
                     href="{% url 'importar' %}"
                     class="boton-pdf"
                     style="background: #fd7e14;"
@@ -746,6 +753,17 @@
                 >
                     PDF por EMPRESA
                 </button>
+
+
+                <a
+                    href="#"
+                    id="btnCSVdoppler"
+                    class="boton-pdf"
+                    style="background:#6f42c1;"
+                >
+                    CSV DOPPLER
+                </a>
+
 
             </div>
 
@@ -1254,6 +1272,39 @@
     });
 
 </script>
+
+<script>
+
+    function obtenerParametrosFiltros() {
+
+        const formulario =
+            document.querySelector(".filtros form");
+
+        const datos =
+            new FormData(formulario);
+
+        const parametros =
+            new URLSearchParams();
+
+        for (
+            const [nombre, valor]
+            of datos.entries()
+        ) {
+
+            if (valor !== "") {
+
+                parametros.append(
+                    nombre,
+                    valor
+                );
+            }
+        }
+
+        return parametros;
+    }
+
+</script>
+
 <script>
 
     const btnExportarPDF =
@@ -1266,152 +1317,220 @@
 
             event.preventDefault();
 
-            const formulario =
-                document.querySelector(
-                    '.filtros form'
-                );
-
-            const datos =
-                new FormData(formulario);
+            // ================================================
+            // TOMAR LOS FILTROS ACTUALES
+            // ================================================
 
             const parametros =
-                new URLSearchParams();
+                obtenerParametrosFiltros();
 
-            for (const [nombre, valor] of datos.entries()) {
 
-                if (valor !== "") {
+            // ================================================
+            // MOSTRAR RELOJITO
+            // ================================================
 
-                    parametros.append(
-                        nombre,
-                        valor
-                    );
+            const modalProcesando =
+                document.getElementById(
+                    "modalProcesando"
+                );
 
-                }
+            const textoProcesando =
+                document.getElementById(
+                    "textoProcesando"
+                );
+
+
+            if (modalProcesando) {
+
+                modalProcesando.style.display =
+                    "flex";
 
             }
+
+            if (textoProcesando) {
+
+                textoProcesando.textContent =
+                    "Generando PDF...";
+
+            }
+
+
+            // ================================================
+            // GENERAR PDF
+            // ================================================
 
             const url =
                 "{% url 'exportar_pdf' %}"
                 + "?"
                 + parametros.toString();
 
+
             window.open(
                 url,
                 "_blank"
             );
+
+
+            // ================================================
+            // OCULTAR RELOJITO
+            // ================================================
+
+            setTimeout(
+                function () {
+
+                    if (modalProcesando) {
+
+                        modalProcesando.style.display =
+                            "none";
+
+                    }
+
+                },
+                1200
+            );
+
         }
     );
 
 </script>
+
+
 <script>
 
 document.getElementById("btnPDFEmpresas").addEventListener(
     "click",
-    async function () {
-        const modalProcesando =
-            document.getElementById("modalProcesando");
+    async function (event) {
 
-        const textoProcesando =
-            document.getElementById("textoProcesando");
+        event.preventDefault();
+
+        // =====================================================
+        // TOMAR LOS FILTROS ACTUALES
+        // =====================================================
+
+        const parametros =
+            obtenerParametrosFiltros();
+
+
+        // =====================================================
+        // ELEGIR CARPETA
+        // =====================================================
+
+        if (!window.showDirectoryPicker) {
+
+            alert(
+                "Esta función requiere Google Chrome o Microsoft Edge."
+            );
+
+            return;
+        }
+
+
+        let carpeta;
+
         try {
 
-            // =================================================
-            // 1. ELEGIR CARPETA
-            // =================================================
-
-            if (!window.showDirectoryPicker) {
-
-                alert(
-                    "Esta función requiere Google Chrome o Microsoft Edge."
-                );
-
-                return;
-            }
-
-            const carpeta =
+            carpeta =
                 await window.showDirectoryPicker({
                     mode: "readwrite"
                 });
 
+        } catch (error) {
 
-            // =================================================
-            // 2. TOMAR LOS FILTROS ACTUALES
-            // =================================================
-
-            const formulario =
-                document.querySelector(".filtros form");
-
-            const datos =
-                new FormData(formulario);
-
-            const parametros =
-                new URLSearchParams();
+            // El usuario canceló la selección
+            return;
+        }
 
 
-            for (
-                const [nombre, valor]
-                of datos.entries()
-            ) {
+        // =====================================================
+        // OBTENER EMPRESAS SEGÚN LOS FILTROS
+        // =====================================================
 
-                if (valor !== "") {
+        let respuestaEmpresas;
 
-                    parametros.append(
-                        nombre,
-                        valor
-                    );
-                }
-            }
+        try {
 
-
-            // =================================================
-            // 3. OBTENER LAS EMPRESAS DE LA CONSULTA
-            // =================================================
-
-            const respuestaEmpresas =
+            respuestaEmpresas =
                 await fetch(
                     "{% url 'empresas_para_pdf' %}"
                     + "?"
                     + parametros.toString()
                 );
 
+        } catch (error) {
 
-            if (!respuestaEmpresas.ok) {
+            alert(
+                "No se pudieron obtener las empresas."
+            );
 
-                throw new Error(
-                    "No se pudieron obtener las empresas."
-                );
-            }
-
-
-            const informacion =
-                await respuestaEmpresas.json();
-
-            const empresas =
-                informacion.empresas;
+            return;
+        }
 
 
-            if (!empresas.length) {
+        if (!respuestaEmpresas.ok) {
 
-                alert(
-                    "No se encontraron empresas para generar los PDFs."
-                );
+            alert(
+                "No se pudieron obtener las empresas."
+            );
 
-                return;
-            }
-
-
-            // =================================================
-            // 4. GENERAR UN PDF POR EMPRESA
-            // =================================================
+            return;
+        }
 
 
+        const informacion =
+            await respuestaEmpresas.json();
 
-            let cantidadGenerada = 0;
+        const empresas =
+            informacion.empresas;
 
-            modalProcesando.style.display = "flex";
+
+        if (!empresas.length) {
+
+            alert(
+                "No se encontraron empresas para generar los PDFs."
+            );
+
+            return;
+        }
+
+
+        // =====================================================
+        // MOSTRAR RELOJITO
+        // =====================================================
+
+        const modalProcesando =
+            document.getElementById(
+                "modalProcesando"
+            );
+
+        const textoProcesando =
+            document.getElementById(
+                "textoProcesando"
+            );
+
+
+        if (modalProcesando) {
+
+            modalProcesando.style.display =
+                "flex";
+
+        }
+
+        if (textoProcesando) {
 
             textoProcesando.textContent =
                 `0 de ${empresas.length} empresas`;
+
+        }
+
+
+        // =====================================================
+        // GENERAR UN PDF POR EMPRESA
+        // =====================================================
+
+        let cantidadGenerada = 0;
+
+
+        try {
 
             for (const empresa of empresas) {
 
@@ -1444,9 +1563,9 @@ document.getElementById("btnPDFEmpresas").addEventListener(
                     await respuestaPDF.blob();
 
 
-                // =================================================
-                // 5. LIMPIAR NOMBRE DEL ARCHIVO
-                // =================================================
+                // -------------------------------------------------
+                // NOMBRE DEL ARCHIVO
+                // -------------------------------------------------
 
                 let nombreArchivo =
                     empresa.nombre
@@ -1462,15 +1581,16 @@ document.getElementById("btnPDFEmpresas").addEventListener(
 
                     nombreArchivo =
                         "Empresa";
+
                 }
 
 
                 nombreArchivo += ".pdf";
 
 
-                // =================================================
-                // 6. CREAR EL ARCHIVO EN LA CARPETA ELEGIDA
-                // =================================================
+                // -------------------------------------------------
+                // GUARDAR ARCHIVO
+                // -------------------------------------------------
 
                 const archivo =
                     await carpeta.getFileHandle(
@@ -1489,35 +1609,88 @@ document.getElementById("btnPDFEmpresas").addEventListener(
 
                 await writable.close();
 
+
+                // -------------------------------------------------
+                // ACTUALIZAR CONTADOR
+                // -------------------------------------------------
+
                 cantidadGenerada++;
 
-                textoProcesando.textContent =
-                    `${cantidadGenerada} de ${empresas.length} empresas`;
+                if (textoProcesando) {
 
-              
+                    textoProcesando.textContent =
+                        `${cantidadGenerada} de ${empresas.length} empresas`;
+
+                }
+
+                await new Promise(
+                    resolve =>
+                        requestAnimationFrame(resolve)
+                );
             }
 
 
-            // =================================================
-            // 7. RESULTADO
-            // =================================================
-            modalProcesando.style.display = "none";
-            alert(
-                `Se generaron ${cantidadGenerada} PDF(s) correctamente.`
+            // =====================================================
+            // FIN
+            // =====================================================
+
+            if (textoProcesando) {
+
+                textoProcesando.innerHTML = `
+                    <div style="
+                        font-size:32px;
+                        margin-bottom:10px;
+                    ">
+                        ✅
+                    </div>
+
+                    <div style="
+                        font-size:18px;
+                        font-weight:700;
+                        color:#198754;
+                        margin-bottom:8px;
+                    ">
+                        PDFs generados correctamente
+                    </div>
+
+                    <div style="
+                        font-size:14px;
+                        color:#6c757d;
+                    ">
+                        ${cantidadGenerada}
+                        de
+                        ${empresas.length}
+                        empresas
+                    </div>
+                `;
+            }
+
+
+            setTimeout(
+                function () {
+
+                    if (modalProcesando) {
+
+                        modalProcesando.style.display =
+                            "none";
+
+                    }
+
+                },
+                1500
             );
 
 
         } catch (error) {
-            modalProcesando.style.display = "none";
+
             console.error(error);
 
 
-            if (
-                error.name === "AbortError"
-            ) {
+            if (modalProcesando) {
 
-                // El usuario canceló la selección de carpeta.
-                return;
+                modalProcesando.style.display =
+                    "none";
+
             }
 
 
@@ -1530,6 +1703,266 @@ document.getElementById("btnPDFEmpresas").addEventListener(
 );
 
 </script>
+
+
+<script>
+
+document.getElementById("btnCSVdoppler").addEventListener(
+    "click",
+    async function (event) {
+
+        event.preventDefault();
+
+        // =====================================================
+        // TOMAR LOS FILTROS ACTUALES
+        // =====================================================
+
+        const parametros =
+            obtenerParametrosFiltros();
+
+
+        // =====================================================
+        // MOSTRAR RELOJITO
+        // =====================================================
+
+        const modalProcesando =
+            document.getElementById(
+                "modalProcesando"
+            );
+
+        const textoProcesando =
+            document.getElementById(
+                "textoProcesando"
+            );
+
+
+        if (modalProcesando) {
+
+            modalProcesando.style.display =
+                "flex";
+
+        }
+
+        if (textoProcesando) {
+
+            textoProcesando.textContent =
+                "Generando CSV para Doppler...";
+
+        }
+
+
+        // =====================================================
+        // GENERAR CSV
+        // =====================================================
+
+        try {
+
+            const url =
+                "{% url 'exportar_csv_doppler' %}"
+                + "?"
+                + parametros.toString();
+
+
+            const respuesta =
+                await fetch(url);
+
+
+            if (!respuesta.ok) {
+
+                throw new Error(
+                    "No se pudo generar el CSV."
+                );
+            }
+
+
+            const blob =
+                await respuesta.blob();
+
+
+            // =================================================
+            // DESCARGAR ARCHIVO
+            // =================================================
+
+            const enlace =
+                document.createElement("a");
+
+            const urlBlob =
+                window.URL.createObjectURL(blob);
+
+            enlace.href =
+                urlBlob;
+
+            enlace.download =
+                "doppler_licitaciones.csv";
+
+            document.body.appendChild(
+                enlace
+            );
+
+            enlace.click();
+
+            enlace.remove();
+
+            window.URL.revokeObjectURL(
+                urlBlob
+            );
+
+
+            // =================================================
+            // OK
+            // =================================================
+
+            if (textoProcesando) {
+
+                textoProcesando.innerHTML = `
+                    <div style="
+                        font-size:32px;
+                        margin-bottom:10px;
+                    ">
+                        ✅
+                    </div>
+
+                    <div style="
+                        font-size:18px;
+                        font-weight:700;
+                        color:#198754;
+                        margin-bottom:8px;
+                    ">
+                        CSV generado correctamente
+                    </div>
+                `;
+            }
+
+
+            setTimeout(
+                function () {
+
+                    if (modalProcesando) {
+
+                        modalProcesando.style.display =
+                            "none";
+
+                    }
+
+                },
+                1500
+            );
+
+
+        } catch (error) {
+
+            console.error(error);
+
+
+            if (modalProcesando) {
+
+                modalProcesando.style.display =
+                    "none";
+
+            }
+
+
+            alert(
+                "Ocurrió un error al generar el CSV."
+            );
+        }
+
+    }
+);
+
+</script>
+
+
+<script>
+
+    // =========================================================
+    // LOTES
+    // =========================================================
+
+    const todosLotes =
+        document.getElementById("todosLotes");
+
+    const lotesCheckbox =
+        document.querySelectorAll(
+            ".lote-checkbox"
+        );
+
+
+    // ---------------------------------------------------------
+    // MARCAR / DESMARCAR TODOS
+    // ---------------------------------------------------------
+
+    todosLotes.addEventListener(
+        "change",
+        function () {
+
+            lotesCheckbox.forEach(
+                function (checkbox) {
+
+                    checkbox.checked =
+                        todosLotes.checked;
+
+                }
+            );
+
+        }
+    );
+
+
+    // ---------------------------------------------------------
+    // CONTROLAR LOS LOTES INDIVIDUALES
+    // ---------------------------------------------------------
+
+    lotesCheckbox.forEach(
+        function (checkbox) {
+
+            checkbox.addEventListener(
+                "change",
+                function () {
+
+                    const cantidadMarcados =
+                        document.querySelectorAll(
+                            ".lote-checkbox:checked"
+                        ).length;
+
+
+                    if (
+                        cantidadMarcados ===
+                        lotesCheckbox.length
+                    ) {
+
+                        todosLotes.checked = true;
+
+                    } else {
+
+                        todosLotes.checked = false;
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+    // ---------------------------------------------------------
+    // ESTADO INICIAL
+    // ---------------------------------------------------------
+
+    if (
+        lotesCheckbox.length > 0 &&
+        document.querySelectorAll(
+            ".lote-checkbox:checked"
+        ).length === lotesCheckbox.length
+    ) {
+
+        todosLotes.checked = true;
+
+    }
+
+</script>
+
 </body>
 
 </html>

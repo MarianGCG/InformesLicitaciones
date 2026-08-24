@@ -36,4 +36,30 @@ urlpatterns = [
         name="exportar_pdf_empresa",
     ),
 
+
+    path(
+        "empresas/",
+        views.empresas,
+        name="empresas",
+    ),
+
+    path(
+        "importar-emails/",
+        views.importar_emails,
+        name="importar_emails",
+    ),
+
+    path(
+        "empresas/<int:empresa_id>/guardar-emails/",
+        views.guardar_emails,
+        name="guardar_emails",
+    ),
+
+
+    path(
+        "exportar-csv-doppler/",
+        views.exportar_csv_doppler,
+        name="exportar_csv_doppler",
+    ),
+
 ]

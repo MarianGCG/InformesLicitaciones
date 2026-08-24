@@ -374,3 +374,93 @@ def diagnosticar_columnas(
     print("\n========================================\n")
 
     return df.columns.tolist()
+
+
+def importar_emails_excel(archivo):
+    """
+    Actualiza email, email_2 y email_3 de Empresa
+    utilizando exclusivamente el CUIT.
+
+    El Excel debe tener:
+        CUIT
+        Nombre
+        mail1
+        mail2
+        mail3
+    """
+
+    df = pd.read_excel(
+        archivo
+    )
+
+    df.columns = [
+        str(col).strip()
+        for col in df.columns
+    ]
+
+    columnas_obligatorias = {
+        "CUIT",
+        "mail1",
+        "mail2",
+        "mail3",
+    }
+
+    faltantes = (
+        columnas_obligatorias
+        - set(df.columns)
+    )
+
+    if faltantes:
+        raise ValueError(
+            "Faltan columnas obligatorias: "
+            + ", ".join(sorted(faltantes))
+        )
+
+    actualizadas = 0
+    no_encontradas = []
+
+    for _, fila in df.iterrows():
+
+        cuit = limpiar_cuit(
+            fila["CUIT"]
+        )
+
+        if not cuit:
+            continue
+
+        try:
+            empresa = Empresa.objects.get(
+                cuit=cuit
+            )
+
+        except Empresa.DoesNotExist:
+
+            no_encontradas.append(cuit)
+            continue
+
+        empresa.email = valor_o_none(
+            fila["mail1"]
+        )
+
+        empresa.email_2 = valor_o_none(
+            fila["mail2"]
+        )
+
+        empresa.email_3 = valor_o_none(
+            fila["mail3"]
+        )
+
+        empresa.save(
+            update_fields=[
+                "email",
+                "email_2",
+                "email_3",
+            ]
+        )
+
+        actualizadas += 1
+
+    return (
+        actualizadas,
+        no_encontradas,
+    )

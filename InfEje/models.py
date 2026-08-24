@@ -13,11 +13,24 @@ class Lote(models.Model):
 class Empresa(models.Model):
     nombre = models.CharField(max_length=200)
     cuit = models.CharField(max_length=20, unique=True)
-    email = models.EmailField(blank=True, null=True)
+
+    email = models.EmailField(
+        blank=True,
+        null=True
+    )
+
+    email_2 = models.EmailField(
+        blank=True,
+        null=True
+    )
+
+    email_3 = models.EmailField(
+        blank=True,
+        null=True
+    )
 
     def __str__(self):
         return self.nombre
-
 
 class RegistroLicitacion(models.Model):
     lote = models.ForeignKey(

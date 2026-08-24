@@ -7,25 +7,29 @@ from django.db.models import (
     IntegerField,
     CharField,
 )
-from django.db.models.functions import Coalesce, Cast
+from django.db.models.functions import Coalesce, Cast, Lower
 
 from .models import (
     Lote,
     Empresa,
     RegistroLicitacion
 )
-
+import csv
+from datetime import datetime
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from .importadores import importar_excel
 from django.http import HttpResponse, JsonResponse
 
-from django.db.models import Q
-
+from django.db.models import Q, Count
 from .exportar_pdf import (
     construir_pdf,
     obtener_registros_filtrados,
     limpiar_nombre_archivo,
+)
+from .importadores import (
+    importar_excel,
+    importar_emails_excel,
 )
 
 def consultar(request):
@@ -45,7 +49,10 @@ def consultar(request):
     empresas = (
         Empresa.objects
         .all()
-        .order_by("nombre")
+        .annotate(
+            nombre_orden=Lower("nombre")
+        )
+        .order_by("nombre_orden")
     )
 
     estados = (
@@ -378,3 +385,389 @@ def exportar_pdf_empresa(request, empresa_id):
     )
 
     return respuesta
+
+def empresas(request):
+
+
+    empresas = (
+        Empresa.objects
+        .all()
+        .annotate(
+            nombre_orden=Lower("nombre")
+        )
+        .order_by("nombre_orden")
+    )
+    total_empresas = empresas.count()
+
+    total_email1 = (
+        empresas
+        .exclude(email__isnull=True)
+        .exclude(email="")
+        .count()
+    )
+
+    total_email2 = (
+        empresas
+        .exclude(email_2__isnull=True)
+        .exclude(email_2="")
+        .count()
+    )
+
+    total_email3 = (
+        empresas
+        .exclude(email_3__isnull=True)
+        .exclude(email_3="")
+        .count()
+    )
+
+    return render(
+        request,
+        "InfEje/empresas.html",
+        {
+            "empresas": empresas,
+            "total_empresas": total_empresas,
+            "total_email1": total_email1,
+            "total_email2": total_email2,
+            "total_email3": total_email3,
+        }
+    )
+
+
+
+def importar_emails(request):
+
+    if request.method == "POST":
+
+        archivo = request.FILES.get(
+            "archivo"
+        )
+
+        if not archivo:
+
+            messages.error(
+                request,
+                "Debe seleccionar un archivo Excel."
+            )
+
+            return redirect(
+                "importar_emails"
+            )
+
+        try:
+
+            (
+                actualizadas,
+                no_encontradas,
+            ) = importar_emails_excel(
+                archivo
+            )
+
+            mensaje = (
+                f"Empresas actualizadas: "
+                f"{actualizadas}."
+            )
+
+            if no_encontradas:
+
+                mensaje += (
+                    f" CUIT no encontrados: "
+                    f"{len(no_encontradas)}."
+                )
+
+            messages.success(
+                request,
+                mensaje
+            )
+
+            return redirect(
+                "empresas"
+            )
+
+        except Exception as error:
+
+            messages.error(
+                request,
+                f"Error al importar mails: {error}"
+            )
+
+    return render(
+        request,
+        "InfEje/importar_emails.html"
+    )
+
+def guardar_emails(request, empresa_id):
+
+    if request.method != "POST":
+        return redirect("empresas")
+
+    try:
+        empresa = Empresa.objects.get(
+            id=empresa_id
+        )
+    except Empresa.DoesNotExist:
+        return redirect("empresas")
+
+    empresa.email = (
+        request.POST.get("email") or None
+    )
+
+    empresa.email_2 = (
+        request.POST.get("email_2") or None
+    )
+
+    empresa.email_3 = (
+        request.POST.get("email_3") or None
+    )
+
+    empresa.save(
+        update_fields=[
+            "email",
+            "email_2",
+            "email_3",
+        ]
+    )
+
+    messages.success(
+        request,
+        f"Emails de {empresa.nombre} actualizados correctamente."
+    )
+
+    return redirect("empresas")
+
+
+def armar_estrategia(compradores):
+    """
+    Arma el texto de estrategia según la cantidad
+    de compradores únicos.
+    """
+
+    compradores = [
+        comprador.strip()
+        for comprador in compradores
+        if comprador and comprador.strip()
+    ]
+
+    # Eliminar duplicados conservando el orden
+    compradores_unicos = list(
+        dict.fromkeys(compradores)
+    )
+
+    cantidad = len(compradores_unicos)
+
+    if cantidad == 0:
+        return ""
+
+    if cantidad == 1:
+        return compradores_unicos[0]
+
+    if cantidad == 2:
+        return (
+            f"{compradores_unicos[0]} "
+            f"y en {compradores_unicos[1]}"
+        )
+
+    if cantidad == 3:
+        return (
+            f"{compradores_unicos[0]}, "
+            f"{compradores_unicos[1]} "
+            f"y en {compradores_unicos[2]}"
+        )
+
+    return (
+        f"{compradores_unicos[0]}, "
+        f"{compradores_unicos[1]} "
+        f"y en {compradores_unicos[2]} "
+        f"entre otros"
+    )
+
+def exportar_csv_doppler(request):
+
+    # ========================================================
+    # TOMAR LOS REGISTROS SEGÚN LOS FILTROS DE LA PANTALLA
+    # ========================================================
+
+    registros, _ = obtener_registros_filtrados(request)
+
+    # ========================================================
+    # AGRUPAR POR CUIT
+    # ========================================================
+
+    empresas = {}
+
+    for registro in registros:
+
+        empresa = None
+
+        if registro.empresa_oferente:
+            empresa = registro.empresa_oferente
+
+        elif registro.empresa_proveedor:
+            empresa = registro.empresa_proveedor
+
+        if not empresa:
+            continue
+
+        cuit = empresa.cuit
+
+        if cuit not in empresas:
+
+            empresas[cuit] = {
+                "empresa": empresa,
+                "compradores": [],
+            }
+
+        if registro.comprador:
+
+            comprador = registro.comprador.strip()
+
+            if (
+                comprador
+                and comprador
+                not in empresas[cuit]["compradores"]
+            ):
+
+                empresas[cuit]["compradores"].append(
+                    comprador
+                )
+
+    # ========================================================
+    # CREAR CSV
+    # ========================================================
+
+    respuesta = HttpResponse(
+        content_type="text/csv; charset=utf-8"
+    )
+
+    respuesta["Content-Disposition"] = (
+        'attachment; filename="doppler_licitaciones.csv"'
+    )
+
+    # BOM para UTF-8
+    respuesta.write("\ufeff")
+
+    escritor = csv.writer(
+        respuesta,
+        delimiter=";",
+        lineterminator="\n",
+    )
+
+    # ========================================================
+    # ENCABEZADO
+    # ========================================================
+
+    escritor.writerow([
+        "EMAIL",
+        "NOMBRE",
+        "APELLIDO",
+        "APORTE",
+        "LOCALIDAD",
+        "CLIENTE",
+        "estrategia",
+        "FECHA_CREACION",
+    ])
+
+    fecha_creacion = datetime.now().strftime(
+        "%d/%m/%Y"
+    )
+
+    # ========================================================
+    # EMPRESAS
+    # ========================================================
+
+    for datos in empresas.values():
+
+        empresa = datos["empresa"]
+
+        nombre_empresa = (
+            empresa.nombre or ""
+        ).strip()
+
+        estrategia = armar_estrategia(
+            datos["compradores"]
+        )
+
+        cliente = nombre_empresa
+
+        # ----------------------------------------------------
+        # PERSONA / EMPRESA
+        # ----------------------------------------------------
+        cuit = str(empresa.cuit or "").strip()
+
+        es_persona = cuit.startswith(
+            ("20", "23", "24", "27")
+        )
+
+        if es_persona:
+
+            partes = nombre_empresa.split()
+
+            if len(partes) >= 2:
+
+                apellido = partes[-1]
+
+                nombre = " ".join(
+                    partes[:-1]
+                )
+
+            else:
+
+                nombre = nombre_empresa
+                apellido = ""
+
+            aporte = ""
+
+        else:
+
+            nombre = nombre_empresa
+            apellido = ""
+            aporte = ""
+
+        # ----------------------------------------------------
+        # EMAILS
+        # ----------------------------------------------------
+
+        emails = [
+            empresa.email,
+            empresa.email_2,
+            empresa.email_3,
+        ]
+
+        emails_validos = []
+
+        for email in emails:
+
+            if not email:
+                continue
+
+            email = str(email).strip()
+
+            if not email:
+                continue
+
+            if email.lower() in [
+                e.lower()
+                for e in emails_validos
+            ]:
+                continue
+
+            emails_validos.append(email)
+
+        # ----------------------------------------------------
+        # UNA FILA POR EMAIL
+        # ----------------------------------------------------
+
+        for email in emails_validos:
+
+            escritor.writerow([
+                email,
+                nombre,
+                apellido,
+                aporte,
+                "",
+                cliente,
+                estrategia,
+                fecha_creacion,
+            ])
+
+    return respuesta
+

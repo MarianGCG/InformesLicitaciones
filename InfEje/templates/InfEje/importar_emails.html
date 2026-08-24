@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Importar Emails</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        .contenedor {
+            width: 90%;
+            max-width: 900px;
+            margin: 40px auto;
+        }
+
+        .tarjeta {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        }
+
+        .boton {
+            height: 38px;
+            padding: 0 22px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .naranja {
+            background: #fd7e14;
+        }
+
+        .azul {
+            background: #0d6efd;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            margin: 20px 0;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .botones {
+            display: flex;
+            gap: 10px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="contenedor">
+
+    <div class="tarjeta">
+
+        <h1>
+            Importar Emails
+        </h1>
+
+        <p>
+            El Excel debe tener las columnas:
+        </p>
+
+        <strong>
+            CUIT | Nombre | mail1 | mail2 | mail3
+        </strong>
+
+        <form
+            method="post"
+            enctype="multipart/form-data"
+        >
+
+            {% csrf_token %}
+
+            <input
+                type="file"
+                name="archivo"
+                accept=".xlsx,.xls"
+                required
+            >
+
+            <div class="botones">
+
+                <button
+                    type="submit"
+                    class="boton naranja"
+                >
+                    IMPORTAR EMAILS
+                </button>
+
+                <a
+                    href="{% url 'empresas' %}"
+                    class="boton azul"
+                >
+                    VOLVER
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>
