@@ -169,8 +169,8 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        th:nth-child(3),
-        td:nth-child(3) {
+        th:nth-child(4),
+        td:nth-child(4) {
             width: 180px;
             max-width: 180px;
             overflow: hidden;
@@ -201,43 +201,43 @@
         }
 
 
-        th:nth-child(2),
-        td:nth-child(2) {
+        th:nth-child(3),
+        td:nth-child(3) {
             width: 130px;
             max-width: 130px;
         }
        
         /* COMPRADOR */
-        th:nth-child(3),
-        td:nth-child(3) {
+        th:nth-child(4),
+        td:nth-child(4) {
             width: 300px;
             max-width: 300px;
         }
         /* renglon */
-        th:nth-child(4),
-        td:nth-child(4) {
+        th:nth-child(5),
+        td:nth-child(5) {
             width: 130px;
             max-width: 130px;
         }
 
 
         /* renglon */
-        th:nth-child(5),
-        td:nth-child(5) {
+        th:nth-child(6),
+        td:nth-child(6) {
             width: 50px;
             max-width: 50px;
         }
 
         /* renglon */
-        th:nth-child(11),
-        td:nth-child(11) {
+        th:nth-child(12),
+        td:nth-child(12) {
             width: 50px;
             max-width: 50px;
         }
 
         /* COLUMNA DESCRIPCIÓN */
-        th:nth-child(12),
-        td:nth-child(12) {
+        th:nth-child(13),
+        td:nth-child(13) {
             width: 450px;
             max-width: 450px;
         }
@@ -254,19 +254,19 @@
         }
 
         /* COLUMNA DESCRIPCIÓN */
-        th:nth-child(10),
-        td:nth-child(10) {
+        th:nth-child(11),
+        td:nth-child(11) {
             width: 150px;
             max-width: 150px;
         }
 
 
-        th:nth-child(6),
-        td:nth-child(6),
         th:nth-child(7),
         td:nth-child(7),
         th:nth-child(8),
-        td:nth-child(8) {
+        td:nth-child(8),
+        th:nth-child(9),
+        td:nth-child(9) {
             width: 90px;
             max-width: 90px;
             white-space: nowrap;
@@ -473,7 +473,32 @@
             text-decoration: none;
         }
 
+        .boton-toggle-email {
+            margin-left: 6px;
 
+            width: 22px;
+            height: 22px;
+
+            padding: 0;
+
+            border: 1px solid #adb5bd;
+            border-radius: 4px;
+
+            background: #fff;
+
+            color: #212529;
+
+            font-size: 15px;
+            font-weight: 800;
+
+            line-height: 20px;
+
+            cursor: pointer;
+        }
+
+        .boton-toggle-email:hover {
+            background: #f1f3f5;
+        }
     </style>
 </head>
 
@@ -795,8 +820,28 @@
                 <thead>
 
                     <tr>
-                       
-                        <th>Empresa</th>
+
+                        <th>
+                            Empresa
+
+                            <button
+                                type="button"
+                                id="toggleEmail1"
+                                class="boton-toggle-email"
+                                title="Mostrar Email 1"
+                            >
+                                +
+                            </button>
+                        </th>
+
+                        <th
+                            id="thEmail1"
+                            class="columna-email"
+                            style="display:none;"
+                        >
+                            Email 1
+                        </th>
+
                         <th>OC</th>
                         <th>Comprador</th>
                         <th>Proceso</th>
@@ -808,9 +853,13 @@
                         <th>Oferta</th>
                         <th>Mon</th>
                         <th>Descripción</th>
+
                     </tr>
 
                 </thead>
+
+
+
                 <tbody>
 
                     {% for registro in registros %}
@@ -831,6 +880,25 @@
                                     -
                                 {% endif %}
                             </td>
+
+
+                            <td
+                                class="columna-email"
+                                style="display:none;"
+                            >
+                                {% if registro.empresa_oferente %}
+                                    {{ registro.empresa_oferente.email|default:"-" }}
+
+                                {% elif registro.empresa_proveedor %}
+                                    {{ registro.empresa_proveedor.email|default:"-" }}
+
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+
+
 
                             <td>
                                 {% if registro.numero_oc %}
@@ -1962,7 +2030,52 @@ document.getElementById("btnCSVdoppler").addEventListener(
     }
 
 </script>
+<script>
 
+    const toggleEmail1 =
+        document.getElementById("toggleEmail1");
+
+    const columnasEmail =
+        document.querySelectorAll(".columna-email");
+
+
+    let emailVisible = false;
+
+
+    toggleEmail1.addEventListener(
+        "click",
+        function () {
+
+            emailVisible = !emailVisible;
+
+
+            columnasEmail.forEach(
+                function (columna) {
+
+                    columna.style.display =
+                        emailVisible
+                            ? ""
+                            : "none";
+
+                }
+            );
+
+
+            toggleEmail1.textContent =
+                emailVisible
+                    ? "−"
+                    : "+";
+
+
+            toggleEmail1.title =
+                emailVisible
+                    ? "Ocultar Email 1"
+                    : "Mostrar Email 1";
+
+        }
+    );
+
+</script>
 </body>
 
 </html>
