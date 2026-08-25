@@ -45,18 +45,31 @@
         }
 
         .filtros {
-            background: white;
+            background: #fff;
             border-radius: 12px;
-            padding: 22px 28px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            padding: 12px 16px;
         }
 
         .fila-filtros {
             display: flex;
-            gap: 15px;
-            align-items: end;
-            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 10px;
+            width: 100%;
+        }
+ 
+
+        .botones-filtros {
+            grid-column: 3;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .campo-lotes {
+            grid-column: 1;
+            grid-row: 1 / span 2;
         }
 
         .campo {
@@ -153,7 +166,7 @@
 
         .sin-resultados {
             padding: 40px;
-            text-align: center;
+            text-align: center;N ANEXO I - ESPECIFICACIONES TÉCNICAS DEL P.B. y C.P.; Acondicionamiento: SEGÚN ANEXO I - ESPECIFICACIONES TÉCNICAS DEL P.B. y C.P.; Observaciones: SEGÚN P.B. y C.P.
             color: #6c757d;
         }
 
@@ -164,13 +177,17 @@
             white-space: nowrap;
         }
         .descripcion {
-            font-weight: 500;
-            max-width: 500px;
+            font-family: "Aptos Narrow", Arial, sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            line-height: 1.35;
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        th:nth-child(4),
-        td:nth-child(4) {
+
+        th:nth-child(5),
+        td:nth-child(5) {
             width: 180px;
             max-width: 180px;
             overflow: hidden;
@@ -201,45 +218,45 @@
         }
 
 
-        th:nth-child(3),
-        td:nth-child(3) {
+        th:nth-child(4),
+        td:nth-child(4) {
             width: 130px;
             max-width: 130px;
         }
        
         /* COMPRADOR */
-        th:nth-child(4),
-        td:nth-child(4) {
+        th:nth-child(5),
+        td:nth-child(5) {
             width: 300px;
             max-width: 300px;
         }
         /* renglon */
-        th:nth-child(5),
-        td:nth-child(5) {
+        th:nth-child(6),
+        td:nth-child(6) {
             width: 130px;
             max-width: 130px;
         }
 
 
         /* renglon */
-        th:nth-child(6),
-        td:nth-child(6) {
+        th:nth-child(7),
+        td:nth-child(7) {
             width: 50px;
             max-width: 50px;
         }
 
         /* renglon */
-        th:nth-child(12),
-        td:nth-child(12) {
+        th:nth-child(14),
+        td:nth-child(14) {
             width: 50px;
             max-width: 50px;
         }
 
-        /* COLUMNA DESCRIPCIÓN */
-        th:nth-child(13),
-        td:nth-child(13) {
-            width: 450px;
-            max-width: 450px;
+        /* COLUMNA DESCRIPCIoN */
+        th:nth-child(15),
+        td:nth-child(15) {
+            width: 2000px;
+            max-width: 2000px;
         }
 
         /* CAMPOS CON TEXTO LARGO */
@@ -249,22 +266,21 @@
         td.descripcion {
             white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis;
             cursor: help;
         }
 
-        /* COLUMNA DESCRIPCIÓN */
-        th:nth-child(11),
-        td:nth-child(11) {
-            width: 150px;
-            max-width: 150px;
+        /* COLUMNA monto */
+        th:nth-child(13),
+        td:nth-child(13) {
+            width: 250px;
+            max-width: 250px;
         }
 
 
-        th:nth-child(7),
-        td:nth-child(7),
-        th:nth-child(8),
-        td:nth-child(8),
+        th:nth-child(10),
+        td:nth-child(10),
+        th:nth-child(11),
+        td:nth-child(11),
         th:nth-child(9),
         td:nth-child(9) {
             width: 90px;
@@ -499,6 +515,280 @@
         .boton-toggle-email:hover {
             background: #f1f3f5;
         }
+
+
+        .ficha-empresa {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+
+        .ficha-titulo {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .ficha-datos {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1.2fr 2fr 2fr 2fr;
+            gap: 14px;
+        }
+
+        .ficha-datos div {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .ficha-datos strong {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .ficha-datos span {
+            font-size: 15px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .ficha-comentarios {
+            margin-top: 18px;
+        }
+
+        .ficha-comentarios strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .ficha-comentarios textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 9px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            resize: vertical;
+            font-family: Arial, sans-serif;
+            font-size: 15px;
+        }
+
+        .ficha-datos input {
+            width: 100%;
+            height: 34px;
+            box-sizing: border-box;
+            padding: 6px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 15px;
+        }
+
+        .ficha-datos input:focus {
+            outline: none;
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 2px rgba(13,110,253,.15);
+        }
+
+
+        .ficha-cabecera {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .ficha-titulo {
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+
+        th:last-child,
+        td.descripcion {
+            width: 30%;
+            max-width: 30%;
+        }
+        .columna-competidores {
+            width: 500px;
+            min-width: 500px;
+            max-width: 500px;
+
+            font-family: "Aptos Narrow", Arial, sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            line-height: 1.35;
+
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            word-break: normal;
+        }
+
+        th.columna-competidores {
+            width: 420px;
+            min-width: 420px;
+            max-width: 420px;
+        }
+       
+
+        th.columna-competidores {
+            width: 500px;
+            min-width: 500px;
+            max-width: 500px;
+        }
+        .tabla-contenedor table {
+            min-width: 1800px;
+        }
+
+        .tabla-contenedor {
+            overflow-x: auto;
+        }
+
+
+        .fila-filtros .boton,
+        .fila-filtros .boton-pdf,
+        .fila-filtros button {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .filtros {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+
+        .filtros-layout {
+            display: grid;
+            grid-template-columns: 230px 1fr;
+            column-gap: 16px;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        .campo-lotes {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .zona-filtros {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+
+        .botones-filtros {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .botones-filtros .boton,
+        .botones-filtros .boton-pdf {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .empresa-autocomplete,
+
+        .empresa-control {
+            width: 100%;
+        }
+
+        .empresa-control input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+
+        /* =========================================================
+        AJUSTE FILA DE FILTROS
+        ========================================================= */
+
+        .filtros-layout {
+            grid-template-columns: 300px 1fr !important;
+        }
+
+        .zona-filtros {
+            width: 100%;
+        }
+
+
+        .empresa-autocomplete {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+
+        .empresa-control {
+            width: 100% !important;
+        }
+
+        .empresa-control input {
+            width: 100% !important;
+            box-sizing: border-box;
+        }
+
+
+        .fila-superior,
+        .fila-inferior {
+            display: grid;
+            grid-template-columns:
+                360px
+                280px
+                auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .fila-inferior {
+            margin-top: 6px;
+        }
+
+        .botones-filtros {
+            grid-column: 3;
+
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+
+            gap: 8px;
+
+            white-space: nowrap;
+        }
+
+        .botones-filtros .boton,
+        .botones-filtros .boton-pdf {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .botones-filtros-inferior {
+            grid-column: 3;
+            justify-content: flex-start;
+            margin-top: 0;
+        }
+        .botones-filtros-superior {
+            grid-column: 3;
+            justify-content: flex-start;
+            margin-top: 0;
+        }
+
+        .botones-filtros .boton,
+        .botones-filtros .boton-pdf {
+            width: 220px;
+            min-width: 220px;
+            max-width: 220px;
+            box-sizing: border-box;
+            padding: 0;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -564,7 +854,7 @@
 <div class="contenedor">
 
     <div class="encabezado">
-        <h1>Consulta de Licitaciones</h1>
+        <h1>Licitaciones - Cauciones</h1>
         <p>Consulta de procesos, oferentes y proveedores</p>
     </div>
 
@@ -572,10 +862,12 @@
 
         <form method="get">
 
-            <div class="fila-filtros">
+            <div class="filtros-layout">
 
-                <!-- LOTE -->
-                <!-- LOTE -->
+                <!-- =====================================================
+                    LOTES
+                ====================================================== -->
+
                 <div class="campo campo-lotes">
 
                     <label>Lotes</label>
@@ -583,11 +875,16 @@
                     <div class="selector-lotes">
 
                         <label class="check-lote todos">
+
                             <input
                                 type="checkbox"
                                 id="todosLotes"
                             >
-                            <span><strong>Todos</strong></span>
+
+                            <span>
+                                <strong>Todos</strong>
+                            </span>
+
                         </label>
 
                         {% for lote in lotes %}
@@ -605,7 +902,9 @@
                                     {% endif %}
                                 >
 
-                                <span>{{ lote.nombre_archivo }}</span>
+                                <span>
+                                    {{ lote.nombre_archivo }}
+                                </span>
 
                             </label>
 
@@ -616,191 +915,343 @@
                 </div>
 
 
-                <!-- EMPRESA -->
+                <!-- =====================================================
+                    ZONA DERECHA
+                ====================================================== -->
+
+                <div class="zona-filtros">
 
 
-                <div class="campo empresa-autocomplete">
+                    <!-- =================================================
+                        FILA SUPERIOR
+                    ================================================== -->
 
-                    <label>Empresa</label>
+                    <div class="fila-superior">
 
-                    <div class="empresa-control">
 
-                        <input
-                            type="text"
-                            id="empresaBusqueda"
-                            placeholder="Buscar empresa..."
-                            autocomplete="off"
-                        >
+                        <!-- EMPRESA -->
 
-                        <button
-                            type="button"
-                            class="empresa-flecha"
-                            id="empresaFlecha"
-                            tabindex="-1"
-                        >
-                            ▼
-                        </button>
+                        <div class="campo empresa-autocomplete">
+
+                            <label>Empresa</label>
+
+                            <div class="empresa-control">
+
+                                <input
+                                    type="text"
+                                    id="empresaBusqueda"
+                                    placeholder="Buscar empresa..."
+                                    autocomplete="off"
+                                >
+
+                                <button
+                                    type="button"
+                                    class="empresa-flecha"
+                                    id="empresaFlecha"
+                                    tabindex="-1"
+                                >
+                                    ▼
+                                </button>
+
+                            </div>
+
+                            <input
+                                type="hidden"
+                                name="empresa"
+                                id="empresaId"
+                                value="{{ empresa_seleccionada.id|default:'' }}"
+                            >
+
+                            <div
+                                id="empresaResultados"
+                                class="empresa-resultados"
+                            ></div>
+
+                        </div>
+
+
+                        <!-- ESTADO -->
+
+                        <div class="campo">
+
+                            <label>Estado</label>
+
+                            <select name="estado">
+
+                                <option value="">
+                                    Todos los estados
+                                </option>
+
+                                {% for estado in estados %}
+
+                                    <option
+                                        value="{{ estado }}"
+                                        {% if estado == estado_seleccionado %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {{ estado }}
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- BOTONES -->
+
+                        <div class="botones-filtros botones-filtros-superior">
+
+                            <button
+                                type="submit"
+                                class="boton"
+                                style="background:#198754;"
+                            >
+                                BUSCAR
+                            </button>
+
+                            <a
+                                href="{% url 'empresas' %}"
+                                class="boton-pdf"
+                                style="background:#374151;"
+                            >
+                                EMPRESAS
+                            </a>
+
+                            <a
+                                href="{% url 'importar' %}"
+                                class="boton-pdf"
+                                style="background:#fd7e14;"
+                            >
+                                Importar EXCEL
+                            </a>
+
+                        </div>
 
                     </div>
 
-                    <input
-                        type="hidden"
-                        name="empresa"
-                        id="empresaId"
-                        value="{{ empresa_seleccionada|default:'' }}"
-                    >
 
-                    <div
-                        id="empresaResultados"
-                        class="empresa-resultados"
-                    ></div>
+                    <!-- =================================================
+                        FILA INFERIOR
+                    ================================================== -->
 
-                </div>
+                    <div class="fila-inferior">
 
 
+                        <!-- ORDEN DE COMPRA -->
+
+                        <div class="campo">
+
+                            <label>Orden de Compra</label>
+
+                            <select name="oc">
+
+                                <option
+                                    value=""
+                                    {% if not oc_seleccionado %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    Todas
+                                </option>
+
+                                <option
+                                    value="si"
+                                    {% if oc_seleccionado == "si" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    Con OC
+                                </option>
+
+                                <option
+                                    value="no"
+                                    {% if oc_seleccionado == "no" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    Sin OC
+                                </option>
+
+                            </select>
+
+                        </div>
 
 
-                <!-- ESTADO -->
-                <div class="campo">
-                    <label>Estado</label>
+                        <!-- NÚMERO DE PROCESO -->
 
-                    <select name="estado">
+                        <div class="campo">
 
-                        <option value="">
-                            Todos los estados
-                        </option>
+                            <label>Número de proceso</label>
 
-                        {% for estado in estados %}
-
-                            <option
-                                value="{{ estado }}"
-                                {% if estado == estado_seleccionado %}
-                                    selected
-                                {% endif %}
+                            <input
+                                type="text"
+                                name="proceso"
+                                placeholder="Buscar proceso..."
+                                value="{{ proceso_seleccionado|default:'' }}"
                             >
-                                {{ estado }}
-                            </option>
 
-                        {% endfor %}
+                        </div>
 
-                    </select>
+
+                        <div class="botones-filtros botones-filtros-inferior">
+
+                            <a
+                                href="#"
+                                id="btnExportarPDF"
+                                class="boton-pdf"
+                            >
+                                Exportar PDF
+                            </a>
+
+                            <button
+                                type="button"
+                                id="btnPDFEmpresas"
+                                class="boton-pdf"
+                            >
+                                Exportar PDF por EMPRESA
+                            </button>
+
+                            <a
+                                href="#"
+                                id="btnCSVdoppler"
+                                class="boton-pdf"
+                                style="background:#6f42c1;"
+                            >
+                                CSV DOPPLER
+                            </a>
+
+                        </div>
+
+
+
+
+                    </div>
+
                 </div>
-
-
-                <!-- ORDEN DE COMPRA -->
-                <div class="campo">
-                    <label>Orden de Compra</label>
-
-                    <select name="oc">
-
-                        <option
-                            value=""
-                            {% if not oc_seleccionado %}
-                                selected
-                            {% endif %}
-                        >
-                            Todas
-                        </option>
-
-                        <option
-                            value="si"
-                            {% if oc_seleccionado == "si" %}
-                                selected
-                            {% endif %}
-                        >
-                            Con OC
-                        </option>
-
-                        <option
-                            value="no"
-                            {% if oc_seleccionado == "no" %}
-                                selected
-                            {% endif %}
-                        >
-                            Sin OC
-                        </option>
-
-                    </select>
-                </div>
-
-
-                <!-- PROCESO -->
-                <div class="campo">
-                    <label>Número de proceso</label>
-
-                    <input
-                        type="text"
-                        name="proceso"
-                        placeholder="Buscar proceso..."
-                        value="{{ proceso_seleccionado|default:'' }}"
-                    >
-                </div>
-
-
-                <button
-                    type="submit"
-                    class="boton"
-                    style="background: #198754;"
-                >
-                    BUSCAR
-                </button>
-
-                <a
-                    href="{% url 'empresas' %}"
-                    class="boton-pdf"
-                >
-                    EMPRESAS
-                </a>
-
-                <a
-                    href="{% url 'importar' %}"
-                    class="boton-pdf"
-                    style="background: #fd7e14;"
-                >
-                    Importar EXCEL
-                </a>
-
-                <a
-                    href="#"
-                    id="btnExportarPDF"
-                    class="boton-pdf"
-                >
-                    Exportar PDF
-                </a>
-
-
-
-
-                <button
-                    type="button"
-                    id="btnPDFEmpresas"
-                    class="boton-pdf"
-                >
-                    PDF por EMPRESA
-                </button>
-
-
-                <a
-                    href="#"
-                    id="btnCSVdoppler"
-                    class="boton-pdf"
-                    style="background:#6f42c1;"
-                >
-                    CSV DOPPLER
-                </a>
-
 
             </div>
 
         </form>
 
     </div>
+        
 
+    {% if empresa_seleccionada %}
 
+        <form
+            method="post"
+            action="{% url 'guardar_ficha_empresa' empresa_seleccionada.id %}"
+        >
+
+            {% csrf_token %}
+
+            <div class="ficha-empresa">
+
+                <div class="ficha-cabecera">
+
+                    <div class="ficha-titulo">
+                        INFORMACIÓN DEL PROVEEDOR
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="boton boton-buscar"
+                    >
+                        GUARDAR
+                    </button>
+
+                </div>
+
+                <div class="ficha-datos">
+
+                    <div>
+                        <strong>Empresa</strong>
+
+                        <span>
+                            {{ empresa_seleccionada.nombre }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <strong>CUIT</strong>
+
+                        <span>
+                            {{ empresa_seleccionada.cuit }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <strong>Teléfono</strong>
+
+                        <input
+                            type="text"
+                            name="telefono"
+                            value="{{ empresa_seleccionada.telefono|default:'' }}"
+                            placeholder="Teléfono"
+                        >
+                    </div>
+
+                    <div>
+                        <strong>Email 1</strong>
+
+                        <input
+                            type="email"
+                            name="email"
+                            value="{{ empresa_seleccionada.email|default:'' }}"
+                            placeholder="Email 1"
+                        >
+                    </div>
+
+                    <div>
+                        <strong>Email 2</strong>
+
+                        <input
+                            type="email"
+                            name="email_2"
+                            value="{{ empresa_seleccionada.email_2|default:'' }}"
+                            placeholder="Email 2"
+                        >
+                    </div>
+
+                    <div>
+                        <strong>Email 3</strong>
+
+                        <input
+                            type="email"
+                            name="email_3"
+                            value="{{ empresa_seleccionada.email_3|default:'' }}"
+                            placeholder="Email 3"
+                        >
+                    </div>
+
+                </div>
+
+                <div class="ficha-comentarios">
+
+                    <strong>Comentarios</strong>
+
+                    <textarea
+                        name="comentarios"
+                        rows="4"
+                        placeholder="Comentarios sobre el proveedor..."
+                    >{{ empresa_seleccionada.comentarios|default:"" }}</textarea>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    {% endif %}
 
 
 
     <div class="resultados">
+
+
 
         <div class="titulo-resultados">
 
@@ -828,10 +1279,17 @@
                                 type="button"
                                 id="toggleEmail1"
                                 class="boton-toggle-email"
-                                title="Mostrar Email 1"
+                                title="Mostrar teléfono y Email 1"
                             >
                                 +
                             </button>
+                        </th>
+
+                        <th
+                            class="columna-telefono"
+                            style="display:none;"
+                        >
+                            Teléfono
                         </th>
 
                         <th
@@ -844,9 +1302,33 @@
 
                         <th>OC</th>
                         <th>Comprador</th>
+
+
                         <th>Proceso</th>
-                        <th>Rengl</th>
+
+                        <th>
+                            R
+
+                            <button
+                                type="button"
+                                id="toggleCompetidores"
+                                class="boton-toggle-email"
+                                title="Mostrar / ocultar competidores"
+                            >
+                                +
+                            </button>
+                        </th>
+
+                        <th
+                            class="columna-competidores"
+                            style="display:none;"
+                        >
+                            Empresas que también licitaron
+                        </th>
+
                         <th>Apertura</th>
+
+
                         <th>Inicio</th>
                         <th>Fin</th>
                         <th>Estado</th>
@@ -881,7 +1363,20 @@
                                 {% endif %}
                             </td>
 
+                            <td
+                                class="columna-telefono"
+                                style="display:none;"
+                            >
+                                {% if registro.empresa_oferente %}
+                                    {{ registro.empresa_oferente.telefono|default:"-" }}
 
+                                {% elif registro.empresa_proveedor %}
+                                    {{ registro.empresa_proveedor.telefono|default:"-" }}
+
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                             <td
                                 class="columna-email"
                                 style="display:none;"
@@ -919,15 +1414,23 @@
                                 {{ registro.numero_proceso|default:"-" }}
                             </td>
 
-
-
-
-
-
                             <!-- RENGLÓN -->
+
                             <td>
                                 {{ registro.numero_renglon|default:"-" }}
                             </td>
+
+
+                            <!-- COMPETIDORES -->
+
+                            <td
+                                class="columna-competidores"
+                                style="display:none;"
+                                title="{{ registro.competidores|default:'-' }}"
+                            >
+                                {{ registro.competidores|default:"-" }}
+                            </td>
+
 
                             <td>
                                 {% if registro.fecha_apertura %}
@@ -936,6 +1439,8 @@
                                     -
                                 {% endif %}
                             </td>
+
+
 
                             <td>
                                 {% if registro.fecha_inicio_contrato %}
@@ -1060,7 +1565,24 @@
     const empresaFlecha =
         document.getElementById("empresaFlecha");
 
+    // =========================================================
+    // SI EL USUARIO BORRA EL NOMBRE DE LA EMPRESA
+    // TAMBIÉN BORRAMOS EL ID OCULTO
+    // =========================================================
 
+    inputEmpresa.addEventListener(
+        "input",
+        function () {
+
+            if (inputEmpresa.value.trim() === "") {
+
+                empresaId.value = "";
+
+                empresaResultados.innerHTML = "";
+            }
+
+        }
+    );
     // =========================================================
     // MOSTRAR EMPRESAS
     // =========================================================
@@ -2035,9 +2557,10 @@ document.getElementById("btnCSVdoppler").addEventListener(
     const toggleEmail1 =
         document.getElementById("toggleEmail1");
 
-    const columnasEmail =
-        document.querySelectorAll(".columna-email");
-
+    const columnasContacto =
+        document.querySelectorAll(
+            ".columna-telefono, .columna-email"
+        );
 
     let emailVisible = false;
 
@@ -2049,7 +2572,7 @@ document.getElementById("btnCSVdoppler").addEventListener(
             emailVisible = !emailVisible;
 
 
-            columnasEmail.forEach(
+            columnasContacto.forEach(
                 function (columna) {
 
                     columna.style.display =
@@ -2076,6 +2599,60 @@ document.getElementById("btnCSVdoppler").addEventListener(
     );
 
 </script>
+
+<script>
+
+    const toggleCompetidores =
+        document.getElementById(
+            "toggleCompetidores"
+        );
+
+    const columnasCompetidores =
+        document.querySelectorAll(
+            ".columna-competidores"
+        );
+
+
+    let competidoresVisible = false;
+
+
+    toggleCompetidores.addEventListener(
+        "click",
+        function () {
+
+            competidoresVisible =
+                !competidoresVisible;
+
+
+            columnasCompetidores.forEach(
+                function (columna) {
+
+                    columna.style.display =
+                        competidoresVisible
+                            ? ""
+                            : "none";
+
+                }
+            );
+
+
+            toggleCompetidores.textContent =
+                competidoresVisible
+                    ? "−"
+                    : "+";
+
+
+            toggleCompetidores.title =
+                competidoresVisible
+                    ? "Ocultar competidores"
+                    : "Mostrar competidores";
+
+        }
+    );
+
+</script>
+
+
 </body>
 
 </html>

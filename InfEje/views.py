@@ -18,6 +18,7 @@ import csv
 from datetime import datetime
 from django.contrib import messages
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from .importadores import importar_excel
 from django.http import HttpResponse, JsonResponse
 
@@ -103,19 +104,26 @@ def consultar(request):
         try:
 
             empresa_seleccionada = Empresa.objects.get(
-                id=empresa_id
+                id=int(empresa_id)
             )
 
             cuit = empresa_seleccionada.cuit
 
             registros = registros.filter(
-                Q(cuit_oferente=cuit) |
+                Q(cuit_oferente=cuit)
+                |
                 Q(cuit_proveedor=cuit)
             )
 
-        except Empresa.DoesNotExist:
+        except (
+            ValueError,
+            TypeError,
+            Empresa.DoesNotExist,
+        ):
 
             empresa_seleccionada = None
+
+
 
     # ========================================================
     # FILTRO POR ESTADO
@@ -166,6 +174,94 @@ def consultar(request):
             numero_proceso__icontains=proceso
         )
 
+
+    # ========================================================
+    # COMPETIDORES POR PROCESO + RENGLÓN
+    #
+    # Funciona siempre, haya o no empresa seleccionada.
+    # Busca en TODOS los lotes.
+    # ========================================================
+
+    competidores_por_clave = {}
+
+    # --------------------------------------------------------
+    # Obtener las combinaciones PROCESO + RENGLÓN
+    # que aparecen en la consulta actual
+    # --------------------------------------------------------
+
+    claves_consulta = set(
+        registros
+        .exclude(numero_proceso__isnull=True)
+        .exclude(numero_proceso="")
+        .exclude(numero_renglon__isnull=True)
+        .values_list(
+            "numero_proceso",
+            "numero_renglon",
+        )
+    )
+
+    # --------------------------------------------------------
+    # Buscar posibles competidores en TODOS los lotes
+    # --------------------------------------------------------
+
+    if claves_consulta:
+
+        registros_competidores = (
+            RegistroLicitacion.objects
+            .filter(
+                numero_proceso__in=[
+                    clave[0]
+                    for clave in claves_consulta
+                ],
+                numero_renglon__in=[
+                    clave[1]
+                    for clave in claves_consulta
+                ],
+            )
+            .select_related(
+                "empresa_oferente",
+                "empresa_proveedor",
+            )
+        )
+
+        # ----------------------------------------------------
+        # Guardar empresas por combinación exacta
+        # PROCESO + RENGLÓN
+        # ----------------------------------------------------
+
+        for otro in registros_competidores:
+
+            clave = (
+                otro.numero_proceso,
+                otro.numero_renglon,
+            )
+
+            # Evitar mezclar proceso/renglón
+            if clave not in claves_consulta:
+                continue
+
+            empresa = None
+
+            if otro.empresa_oferente:
+
+                empresa = otro.empresa_oferente
+
+            elif otro.empresa_proveedor:
+
+                empresa = otro.empresa_proveedor
+
+            if not empresa:
+                continue
+
+            if clave not in competidores_por_clave:
+
+                competidores_por_clave[clave] = {}
+
+            competidores_por_clave[
+                clave
+            ][empresa.cuit] = empresa.nombre
+
+            
     # ========================================================
     # ORDEN DE LOS RESULTADOS
     # ========================================================
@@ -208,8 +304,113 @@ def consultar(request):
             "renglon_orden",
         )
     )
+    # ========================================================
+    # ASIGNAR COMPETIDORES A CADA REGISTRO
+    # ========================================================
 
+    for registro in registros:
 
+        clave = (
+            registro.numero_proceso,
+            registro.numero_renglon,
+        )
+
+        empresas_competidoras = (
+            competidores_por_clave.get(
+                clave,
+                {}
+            )
+        )
+
+        # ----------------------------------------------------
+        # Identificar la empresa de esta fila
+        # ----------------------------------------------------
+
+        cuit_actual = None
+
+        if registro.empresa_oferente:
+
+            cuit_actual = (
+                registro.empresa_oferente.cuit
+            )
+
+        elif registro.empresa_proveedor:
+
+            cuit_actual = (
+                registro.empresa_proveedor.cuit
+            )
+
+        # ----------------------------------------------------
+        # Excluir a la propia empresa
+        # ----------------------------------------------------
+
+        nombres = [
+            nombre
+            for cuit, nombre
+            in empresas_competidoras.items()
+            if cuit != cuit_actual
+        ]
+
+        registro.competidores = " ; ".join(
+            sorted(
+                nombres,
+                key=str.lower
+            )
+        )
+            
+    # ========================================================
+    # ASIGNAR COMPETIDORES A CADA REGISTRO
+    # ========================================================
+
+    for registro in registros:
+
+        clave = (
+            registro.numero_proceso,
+            registro.numero_renglon,
+        )
+
+        empresas_competidoras = (
+            competidores_por_clave.get(
+                clave,
+                {}
+            )
+        )
+
+        # ====================================================
+        # EMPRESA DE LA FILA ACTUAL
+        # ====================================================
+
+        cuit_actual = None
+
+        if registro.empresa_oferente:
+
+            cuit_actual = (
+                registro.empresa_oferente.cuit
+            )
+
+        elif registro.empresa_proveedor:
+
+            cuit_actual = (
+                registro.empresa_proveedor.cuit
+            )
+
+        # ====================================================
+        # EXCLUIR LA EMPRESA DE LA FILA
+        # ====================================================
+
+        nombres = [
+            nombre
+            for cuit, nombre
+            in empresas_competidoras.items()
+            if cuit != cuit_actual
+        ]
+
+        registro.competidores = " ; ".join(
+            sorted(
+                nombres,
+                key=str.lower
+            )
+        )
     # ========================================================
     # CONTEXTO
     # ========================================================
@@ -225,7 +426,9 @@ def consultar(request):
         "registros": registros,
 
         "lotes_seleccionados": lotes_seleccionados,
-        "empresa_seleccionada": empresa_id,
+
+        "empresa_seleccionada": empresa_seleccionada,
+
 
         "estado_seleccionado": estado,
 
@@ -504,8 +707,21 @@ def guardar_emails(request, empresa_id):
         empresa = Empresa.objects.get(
             id=empresa_id
         )
+
     except Empresa.DoesNotExist:
         return redirect("empresas")
+
+    # ========================================================
+    # TELEFONO
+    # ========================================================
+
+    empresa.telefono = (
+        request.POST.get("telefono") or None
+    )
+
+    # ========================================================
+    # EMAILS
+    # ========================================================
 
     empresa.email = (
         request.POST.get("email") or None
@@ -519,8 +735,13 @@ def guardar_emails(request, empresa_id):
         request.POST.get("email_3") or None
     )
 
+    # ========================================================
+    # GUARDAR
+    # ========================================================
+
     empresa.save(
         update_fields=[
+            "telefono",
             "email",
             "email_2",
             "email_3",
@@ -529,10 +750,11 @@ def guardar_emails(request, empresa_id):
 
     messages.success(
         request,
-        f"Emails de {empresa.nombre} actualizados correctamente."
+        f"Datos de {empresa.nombre} actualizados correctamente."
     )
 
     return redirect("empresas")
+    
 
 
 def armar_estrategia(compradores):
@@ -771,3 +993,54 @@ def exportar_csv_doppler(request):
 
     return respuesta
 
+def guardar_ficha_empresa(request, empresa_id):
+
+    if request.method != "POST":
+        return redirect("consultar")
+
+    try:
+        empresa = Empresa.objects.get(
+            id=empresa_id
+        )
+
+    except Empresa.DoesNotExist:
+        return redirect("consultar")
+
+    empresa.telefono = (
+        request.POST.get("telefono") or None
+    )
+
+    empresa.email = (
+        request.POST.get("email") or None
+    )
+
+    empresa.email_2 = (
+        request.POST.get("email_2") or None
+    )
+
+    empresa.email_3 = (
+        request.POST.get("email_3") or None
+    )
+
+    empresa.comentarios = (
+        request.POST.get("comentarios") or None
+    )
+
+    empresa.save(
+        update_fields=[
+            "telefono",
+            "email",
+            "email_2",
+            "email_3",
+            "comentarios",
+        ]
+    )
+
+    messages.success(
+        request,
+        f"Información de {empresa.nombre} actualizada correctamente."
+    )
+
+    return redirect(
+        f"{reverse('consultar')}?{request.GET.urlencode()}"
+    )

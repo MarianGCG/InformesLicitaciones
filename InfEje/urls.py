@@ -61,5 +61,9 @@ urlpatterns = [
         views.exportar_csv_doppler,
         name="exportar_csv_doppler",
     ),
-
+    path(
+        "guardar-ficha-empresa/<int:empresa_id>/",
+        views.guardar_ficha_empresa,
+        name="guardar_ficha_empresa",
+    ),
 ]

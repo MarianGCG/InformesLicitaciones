@@ -97,6 +97,29 @@ def limpiar_cuit(valor):
 
         return str(valor).strip()
 
+
+def limpiar_telefono(valor):
+    """
+    Convierte teléfonos provenientes de Excel
+    evitando que queden con .0 cuando Excel
+    los entrega como número.
+    """
+
+    valor = valor_o_none(valor)
+
+    if valor is None:
+        return None
+
+    if isinstance(valor, float):
+        if valor.is_integer():
+            return str(int(valor))
+
+    if isinstance(valor, int):
+        return str(valor)
+
+    return str(valor).strip()
+
+
 # ============================================================
 # LIMPIAR FECHA
 # ============================================================
@@ -378,7 +401,7 @@ def diagnosticar_columnas(
 
 def importar_emails_excel(archivo):
     """
-    Actualiza email, email_2 y email_3 de Empresa
+    Actualiza telefono, email, email_2 y email_3 de Empresa
     utilizando exclusivamente el CUIT.
 
     El Excel debe tener:
@@ -387,6 +410,7 @@ def importar_emails_excel(archivo):
         mail1
         mail2
         mail3
+        Telefono
     """
 
     df = pd.read_excel(
@@ -403,6 +427,7 @@ def importar_emails_excel(archivo):
         "mail1",
         "mail2",
         "mail3",
+        "Telefono",
     }
 
     faltantes = (
@@ -429,6 +454,7 @@ def importar_emails_excel(archivo):
             continue
 
         try:
+
             empresa = Empresa.objects.get(
                 cuit=cuit
             )
@@ -437,6 +463,10 @@ def importar_emails_excel(archivo):
 
             no_encontradas.append(cuit)
             continue
+
+        empresa.telefono = limpiar_telefono(
+            fila["Telefono"]
+        )
 
         empresa.email = valor_o_none(
             fila["mail1"]
@@ -452,6 +482,7 @@ def importar_emails_excel(archivo):
 
         empresa.save(
             update_fields=[
+                "telefono",
                 "email",
                 "email_2",
                 "email_3",

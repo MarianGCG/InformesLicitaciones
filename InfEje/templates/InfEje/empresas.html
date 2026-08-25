@@ -94,6 +94,15 @@
             font-weight: 700;
         }
 
+
+
+        .mensaje-guardado {
+            color: #198754;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
     </style>
 
 </head>
@@ -131,21 +140,6 @@
     </div>
 
 
-    {% if messages %}
-
-        <div class="panel">
-
-            {% for message in messages %}
-
-                <strong>
-                    {{ message }}
-                </strong>
-
-            {% endfor %}
-
-        </div>
-
-    {% endif %}
 
 
     <div class="panel">
@@ -181,7 +175,6 @@
                 placeholder="Buscar por nombre o CUIT..."
                 autocomplete="off"
                 style="
-
                     width: 280px;
                     height: 25px;
                     padding: 8px 12px;
@@ -191,10 +184,19 @@
                 "
             >
 
+            {% if messages %}
 
+                {% for message in messages %}
+
+                    <span class="mensaje-guardado">
+                        {{ message }}
+                    </span>
+
+                {% endfor %}
+
+            {% endif %}
 
         </div>
-
 
         <table>
 
@@ -203,7 +205,7 @@
                 <tr>
                     <th>CUIT</th>
                     <th>Empresa</th>
-
+                    <th>Teléfono</th>
                     <th>
                         Email 1
                         ({{ total_email1 }})
@@ -246,6 +248,15 @@
 
                             <td>
                                 {{ empresa.nombre }}
+                            </td>
+
+                            <td>
+                                <input
+                                    type="text"
+                                    name="telefono"
+                                    value="{{ empresa.telefono|default:'' }}"
+                                    placeholder="Teléfono"
+                                >
                             </td>
 
                             <td>
@@ -296,7 +307,7 @@
                 {% empty %}
 
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             No hay empresas.
                         </td>
                     </tr>
@@ -361,6 +372,42 @@
             );
 
         }
+    );
+
+
+
+
+</script>
+
+<script>
+
+    setTimeout(
+        function () {
+
+            const mensaje =
+                document.querySelector(
+                    ".mensaje-guardado"
+                );
+
+            if (mensaje) {
+
+                mensaje.style.transition =
+                    "opacity 0.5s";
+
+                mensaje.style.opacity = "0";
+
+                setTimeout(
+                    function () {
+
+                        mensaje.remove();
+
+                    },
+                    500
+                );
+            }
+
+        },
+        3000
     );
 
 </script>

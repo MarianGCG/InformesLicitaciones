@@ -28,7 +28,16 @@ class Empresa(models.Model):
         blank=True,
         null=True
     )
+    telefono = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
 
+    comentarios = models.TextField(
+        blank=True,
+        null=True
+    )
     def __str__(self):
         return self.nombre
 
