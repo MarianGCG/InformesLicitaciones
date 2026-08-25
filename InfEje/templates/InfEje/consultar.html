@@ -111,9 +111,15 @@
 
         .resultados {
             background: white;
-            border-radius: 12px;
+            border-radius: 0 0 12px 12px;
+
             padding: 22px;
+            margin-top: 12px;        
             box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            border-top: 4px solid #6c757d;
+   
+            
+            margin-top: 0;
         }
 
         .titulo-resultados {
@@ -177,15 +183,18 @@
             white-space: nowrap;
         }
         .descripcion {
-            font-family: "Aptos Narrow", Arial, sans-serif;
-            font-size: 11px;
-            font-weight: 400;
-            line-height: 1.35;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
 
+            font-family: "Aptos Narrow", "Arial Narrow", Arial, sans-serif;
+            font-size:  12px;
+            font-weight: 400;
+            line-height: 1.25;
+            white-space: normal;
+            overflow: visible;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+        }
         th:nth-child(5),
         td:nth-child(5) {
             width: 180px;
@@ -262,8 +271,7 @@
         /* CAMPOS CON TEXTO LARGO */
         td.empresa,
         td.comprador,
-        td.estado,
-        td.descripcion {
+        td.estado {
             white-space: nowrap;
             overflow: hidden;
             cursor: help;
@@ -502,7 +510,7 @@
 
             background: #fff;
 
-            color: #212529;
+            color: #090909;
 
             font-size: 15px;
             font-weight: 800;
@@ -519,12 +527,16 @@
 
         .ficha-empresa {
             background: white;
-            border-radius: 12px;
+            border-radius: 0 0 12px 12px;
             padding: 20px 24px;
+            margin-top: 12px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.06);
-        }
+            border-bottom: 1px solid #adb5bd;
+            border-top: 4px solid #6c757d;
 
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            margin-bottom: 0;
+        }
         .ficha-titulo {
             font-size: 16px;
             font-weight: 800;
@@ -545,13 +557,13 @@
 
         .ficha-datos strong {
             font-size: 12px;
-            color: #6c757d;
+            color: #1a1d20;
         }
 
         .ficha-datos span {
             font-size: 15px;
             font-weight: 600;
-            color: #000;
+            color: #343a40;
         }
 
         .ficha-comentarios {
@@ -562,7 +574,7 @@
             display: block;
             margin-bottom: 6px;
             font-size: 12px;
-            color: #6c757d;
+            color: #1a1d20;
         }
 
         .ficha-comentarios textarea {
@@ -604,20 +616,20 @@
             font-size: 16px;
             font-weight: 800;
         }
-
-
         th:last-child,
         td.descripcion {
-            width: 30%;
-            max-width: 30%;
+            width: 1100px;
+            min-width: 1100px;
+            max-width: 1100px;
         }
+
         .columna-competidores {
             width: 500px;
             min-width: 500px;
             max-width: 500px;
 
             font-family: "Aptos Narrow", Arial, sans-serif;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 400;
             line-height: 1.35;
 
@@ -672,6 +684,7 @@
         .campo-lotes {
             grid-column: 1;
             grid-row: 1;
+            color: #080808;
         }
 
         .zona-filtros {
@@ -789,6 +802,27 @@
             padding: 0;
             text-align: center;
         }
+
+        .dato-principal {
+            background: #f8f9fa;
+            border: 1px solid #dbe2e8;
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+
+        .dato-principal {
+            background: #abbed0;
+            border: 1px solid #b6cfe5;
+            border-radius: 8px;
+            padding: 10px 12px;
+            min-height: 48px;
+        }
+
+        .dato-principal span {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
     </style>
 </head>
 
@@ -942,8 +976,8 @@
                                     id="empresaBusqueda"
                                     placeholder="Buscar empresa..."
                                     autocomplete="off"
+                                    value="{% if empresa_seleccionada %}{{ empresa_seleccionada.nombre }} — CUIT {{ empresa_seleccionada.cuit }}{% else %}Todas{% endif %}"
                                 >
-
                                 <button
                                     type="button"
                                     class="empresa-flecha"
@@ -1167,21 +1201,22 @@
 
                 <div class="ficha-datos">
 
-                    <div>
-                        <strong>Empresa</strong>
+                <div class="dato-principal">
+                    <strong>Empresa</strong>
 
-                        <span>
-                            {{ empresa_seleccionada.nombre }}
-                        </span>
-                    </div>
+                    <span>
+                        {{ empresa_seleccionada.nombre }}
+                    </span>
+                </div>
 
-                    <div>
-                        <strong>CUIT</strong>
 
-                        <span>
-                            {{ empresa_seleccionada.cuit }}
-                        </span>
-                    </div>
+                <div class="dato-principal">
+                    <strong>CUIT</strong>
+
+                    <span>
+                        {{ empresa_seleccionada.cuit }}
+                    </span>
+                </div>
 
                     <div>
                         <strong>Teléfono</strong>
@@ -1566,28 +1601,9 @@
         document.getElementById("empresaFlecha");
 
     // =========================================================
-    // SI EL USUARIO BORRA EL NOMBRE DE LA EMPRESA
-    // TAMBIÉN BORRAMOS EL ID OCULTO
-    // =========================================================
-
-    inputEmpresa.addEventListener(
-        "input",
-        function () {
-
-            if (inputEmpresa.value.trim() === "") {
-
-                empresaId.value = "";
-
-                empresaResultados.innerHTML = "";
-            }
-
-        }
-    );
-    // =========================================================
     // MOSTRAR EMPRESAS
     // =========================================================
-
-    function mostrarEmpresas() {
+    function mostrarEmpresas(mostrarTodas = false) {
 
         const texto =
             inputEmpresa.value
@@ -1598,25 +1614,62 @@
         empresaResultados.innerHTML = "";
 
 
-        // -----------------------------------------------------
-        // Si está vacío, mostramos todas
-        // -----------------------------------------------------
+        // =====================================================
+        // OPCIÓN TODAS
+        // =====================================================
 
-        if (!texto) {
+        const opcionTodas =
+            document.createElement("div");
+
+        opcionTodas.className =
+            "empresa-opcion";
+
+        opcionTodas.textContent =
+            "Todas";
+
+        opcionTodas.addEventListener(
+            "click",
+            function () {
+
+                inputEmpresa.value = "Todas";
+
+                empresaId.value = "";
+
+                empresaResultados.innerHTML = "";
+
+                empresaResultados.style.display =
+                    "none";
+            }
+        );
+
+        empresaResultados.appendChild(
+            opcionTodas
+        );
+
+
+        // =====================================================
+        // MOSTRAR TODAS
+        // =====================================================
+
+        if (
+            mostrarTodas ||
+            !texto
+        ) {
 
             empresas.forEach(
                 agregarEmpresa
             );
 
-            empresaResultados.style.display = "block";
+            empresaResultados.style.display =
+                "block";
 
             return;
         }
 
 
-        // -----------------------------------------------------
-        // Filtrar por nombre o CUIT
-        // -----------------------------------------------------
+        // =====================================================
+        // FILTRAR POR NOMBRE O CUIT
+        // =====================================================
 
         const encontradas =
             empresas.filter(
@@ -1646,8 +1699,6 @@
                 ? "block"
                 : "none";
     }
-
-
     // =========================================================
     // CREAR UNA OPCIÓN
     // =========================================================
@@ -1690,24 +1741,58 @@
     }
 
 
+
     // =========================================================
-    // ESCRIBIR
+    // ESCRIBIR / CAMBIAR EL TEXTO
     // =========================================================
 
     inputEmpresa.addEventListener(
         "input",
         function () {
 
-            // Si cambia el texto,
-            // limpiamos la empresa seleccionada.
+            if (
+                inputEmpresa.value.trim() === "Todas"
+            ) {
+                empresaId.value = "";
+                return;
+            }
+            const texto =
+                inputEmpresa.value.trim();
 
-            empresaId.value = "";
+            // -------------------------------------------------
+            // Si el usuario borró todo
+            // -------------------------------------------------
+
+            if (texto === "") {
+
+                empresaId.value = "";
+
+                empresaResultados.innerHTML = "";
+
+                empresaResultados.style.display =
+                    "none";
+
+                return;
+            }
+
+            // -------------------------------------------------
+            // Si el texto ya no coincide exactamente con
+            // la empresa seleccionada, limpiamos el ID.
+            // -------------------------------------------------
+
+            if (
+                empresaId.value &&
+                !inputEmpresa.value.includes("— CUIT")
+            ) {
+
+                empresaId.value = "";
+
+            }
 
             mostrarEmpresas();
 
         }
     );
-
 
     // =========================================================
     // FLECHA
@@ -1717,13 +1802,10 @@
         "click",
         function () {
 
-            inputEmpresa.focus();
-
-            mostrarEmpresas();
+            mostrarEmpresas(true);
 
         }
     );
-
 
     // =========================================================
     // CLICK FUERA
