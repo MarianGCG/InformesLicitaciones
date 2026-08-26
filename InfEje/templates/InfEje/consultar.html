@@ -109,6 +109,107 @@
             background: #0b5ed7;
         }
 
+        /* =====================================================
+           VISTAS: RESULTADOS / TOTALES POR EMPRESA
+        ====================================================== */
+
+        .aviso-vistas {
+            margin-top: 14px;
+            padding: 10px 14px;
+            border: 1px solid #f0d98c;
+            border-radius: 8px;
+            background: #fff9e6;
+            color: #6b5600;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .vistas-tabs {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .vista-tab {
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            background: #f1f3f5;
+            color: #495057;
+            padding: 10px 18px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .vista-tab.activa {
+            background: white;
+            color: #198754;
+            border-top: 3px solid #198754;
+            padding-top: 8px;
+        }
+
+        .vista-panel {
+            display: none;
+        }
+
+        .vista-panel.activa {
+            display: block;
+        }
+
+        .totales-panel {
+            background: white;
+            border-radius: 0 0 12px 12px;
+            padding: 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            border-top: 4px solid #198754;
+        }
+
+        .totales-nota {
+            margin: -5px 0 16px;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .totales-tabla {
+            width: 920px;
+            max-width: 100%;
+            min-width: 0 !important;
+            table-layout: fixed;
+        }
+
+        .totales-tabla th:first-child,
+        .totales-tabla td:first-child {
+            width: 440px;
+        }
+
+        .totales-tabla th:nth-child(2),
+        .totales-tabla td:nth-child(2) {
+            width: 150px;
+        }
+
+        .totales-tabla th:nth-child(3),
+        .totales-tabla td:nth-child(3) {
+            width: 170px;
+        }
+
+        .totales-tabla th:nth-child(4),
+        .totales-tabla td:nth-child(4) {
+            width: 160px;
+        }
+
+        .totales-tabla .numero {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .totales-tabla .total-final td {
+            font-weight: 800;
+            background: #f1f3f5;
+            border-top: 2px solid #adb5bd;
+        }
+
         .resultados {
             background: white;
             border-radius: 0 0 12px 12px;
@@ -1176,6 +1277,12 @@
                                     Todas
                                 </option>
 
+                                {% if oc_seleccionado and oc_seleccionado != "si" and oc_seleccionado != "no" %}
+                                    <option value="{{ oc_seleccionado }}" selected>
+                                        {{ oc_seleccionado }}
+                                    </option>
+                                {% endif %}
+
                                 <option
                                     value="si"
                                     {% if oc_seleccionado == "si" %}
@@ -1369,6 +1476,17 @@
 
 
 
+    <div class="vistas-tabs">
+        <button type="button" class="vista-tab activa" data-vista="resultados">
+            RESULTADOS
+        </button>
+        <button type="button" class="vista-tab" data-vista="totales">
+            TOTALES POR EMPRESA
+        </button>
+    </div>
+
+    <div id="vista-resultados" class="vista-panel activa">
+
     <div class="resultados">
 
 
@@ -1515,7 +1633,7 @@
 
 
 
-                            <td>
+                            <td class="orden-compra">
                                 {% if registro.numero_oc %}
                                     {{ registro.numero_oc }}
                                 {% else %}
@@ -1530,7 +1648,10 @@
                                 {{ registro.comprador|default:"-" }}
                             </td>
 
-                            <td>
+                            <td
+                                class="proceso"
+                                title="Doble clic para buscar este proceso"
+                            >
                                 {{ registro.numero_proceso|default:"-" }}
                             </td>
 
@@ -1641,12 +1762,99 @@
 
                 </tbody>
 
+                {% if registros %}
+                    <tfoot>
+                        <tr class="total-final">
+                            <td><strong>TOTAL OFERTAS</strong></td>
+                            <td class="columna-telefono" style="display:none;"></td>
+                            <td class="columna-email" style="display:none;"></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="columna-competidores" style="display:none;"></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="importe"><strong>{{ total_ofertas_resultados|floatformat:2 }}</strong></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                {% endif %}
 
             </table>
 
         </div>
 
+    </div>  <!-- Cierra .resultados -->
+
+</div>  <!-- Cierra #vista-resultados -->
+
+    <div id="vista-totales" class="vista-panel">
+
+        <div class="totales-panel">
+
+            <div class="titulo-resultados">
+                <h2>Totales de ofertas por empresa</h2>
+                <div>{{ totales_empresas|length }} empresas</div>
+            </div>
+
+            <div class="totales-nota">
+                Para cada Empresa + Proceso + Renglón se considera el registro del archivo con fecha más reciente.
+                El filtro Con OC / Sin OC no modifica esta tabla. Se excluyen del cálculo los Procesos + Renglones que ya poseen OC en la base.
+            </div>
+
+            <div class="tabla-contenedor">
+                <table class="totales-tabla">
+                    <thead>
+                        <tr>
+                            <th>Empresa</th>
+                            <th class="numero">Procesos distintos</th>
+                            <th class="numero">Procesos / Renglones</th>
+                            <th class="numero">Total Ofertas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for total in totales_empresas %}
+                            <tr>
+                                <td class="empresa" title="Doble clic para filtrar esta empresa">{{ total.empresa }}</td>
+                                <td class="numero">{{ total.procesos_distintos }}</td>
+                                <td class="numero">{{ total.procesos_renglones }}</td>
+                                <td class="numero">{{ total.total_ofertas|floatformat:2 }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4">
+                                    <div class="sin-resultados">
+                                        No hay datos para calcular los totales con los filtros seleccionados.
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+
+                        {% if totales_empresas %}
+                            <tr class="total-final">
+                                <td>TOTAL</td>
+                                <td class="numero">{{ total_procesos_distintos }}</td>
+                                <td class="numero">{{ total_procesos_renglones }}</td>
+                                <td class="numero">{{ total_ofertas|floatformat:2 }}</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
     </div>
+
+</div>
+
+
+
+
 
 </div>
 
@@ -1925,6 +2133,106 @@
                 empresaResultados.style.display =
                     "none";
             }
+        }
+    );
+
+
+    // =========================================================
+    // DOBLE CLICK EN ORDEN DE COMPRA -> FILTRAR AUTOMÁTICAMENTE
+    // =========================================================
+
+    document.querySelectorAll("td.orden-compra").forEach(
+        function (celda) {
+
+            celda.title =
+                "Doble clic para buscar esta Orden de Compra";
+
+            celda.addEventListener("dblclick", function () {
+
+                const numeroOC = celda.textContent.trim();
+
+                if (!numeroOC || numeroOC === "-") {
+                    return;
+                }
+
+                const filtroOC =
+                    document.querySelector('select[name="oc"]');
+
+                if (!filtroOC) {
+                    return;
+                }
+
+                let opcion = Array.from(filtroOC.options).find(
+                    function (option) {
+                        return option.value === numeroOC;
+                    }
+                );
+
+                if (!opcion) {
+                    opcion = new Option(numeroOC, numeroOC);
+                    filtroOC.appendChild(opcion);
+                }
+
+                filtroOC.value = numeroOC;
+
+                const formulario =
+                    document.querySelector(".filtros form");
+
+                if (formulario) {
+                    formulario.submit();
+                }
+            });
+        }
+    );
+
+
+    // =========================================================
+    // DOBLE CLICK EN PROCESO -> FILTRAR AUTOMÁTICAMENTE
+    // =========================================================
+
+    document.querySelectorAll("td.proceso").forEach(
+        function (celda) {
+
+            celda.title =
+                "Doble clic para buscar este proceso";
+
+            celda.addEventListener("dblclick", function (evento) {
+
+                // Evitar que el navegador seleccione solamente
+                // una parte del texto con el doble clic.
+                evento.preventDefault();
+
+                const seleccion = window.getSelection();
+                if (seleccion) {
+                    seleccion.removeAllRanges();
+                }
+
+                // Tomar TODO el contenido de la celda.
+                const numeroProceso =
+                    celda.textContent.trim();
+
+                if (!numeroProceso || numeroProceso === "-") {
+                    return;
+                }
+
+                const filtroProceso =
+                    document.querySelector('input[name="proceso"]');
+
+                if (!filtroProceso) {
+                    return;
+                }
+
+                // Copiar el proceso completo al filtro.
+                filtroProceso.value = numeroProceso;
+
+                // Buscar automáticamente.
+                const formulario =
+                    document.querySelector(".filtros form");
+
+                if (formulario) {
+                    formulario.submit();
+                }
+            });
         }
     );
 
@@ -2979,6 +3287,40 @@ document.getElementById("btnCSVdoppler").addEventListener(
 
 </script>
 
+
+<script>
+
+    // =========================================================
+    // PESTAÑAS: RESULTADOS / TOTALES POR EMPRESA
+    // =========================================================
+
+    const botonesVistas = document.querySelectorAll(".vista-tab");
+    const panelResultados = document.getElementById("vista-resultados");
+    const panelTotales = document.getElementById("vista-totales");
+
+    botonesVistas.forEach(function (boton) {
+        boton.addEventListener("click", function () {
+            const vista = boton.dataset.vista;
+
+            botonesVistas.forEach(function (otro) {
+                otro.classList.remove("activa");
+            });
+
+            boton.classList.add("activa");
+
+            panelResultados.classList.toggle(
+                "activa",
+                vista === "resultados"
+            );
+
+            panelTotales.classList.toggle(
+                "activa",
+                vista === "totales"
+            );
+        });
+    });
+
+</script>
 
 </body>
 

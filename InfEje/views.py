@@ -15,6 +15,8 @@ from .models import (
     RegistroLicitacion
 )
 import csv
+import re
+from decimal import Decimal
 from datetime import datetime
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
@@ -163,6 +165,14 @@ def consultar(request):
             Q(numero_oc="")
         )
 
+    elif oc:
+
+        # Cuando el filtro trae una OC concreta (por ejemplo,
+        # seleccionada mediante doble clic), buscar esa OC exacta.
+        registros = registros.filter(
+            numero_oc=oc
+        )
+
     # ========================================================
     # FILTRO POR NÚMERO DE PROCESO
     # ========================================================
@@ -174,6 +184,11 @@ def consultar(request):
         registros = registros.filter(
             numero_proceso__icontains=proceso
         )
+
+    # IMPORTANTE: la segunda pestaña usa todos los filtros de entrada
+    # salvo el filtro Con OC / Sin OC. Ese filtro es exclusivo de la
+    # tabla Resultados, como consulta rápida.
+    registros_para_totales = registros
 
 
     # ========================================================
@@ -263,6 +278,207 @@ def consultar(request):
             ][empresa.cuit] = empresa.nombre
 
             
+    # ========================================================
+    # TOTALES POR EMPRESA
+    #
+    # Esta estructura alimenta la segunda pestaña de la pantalla.
+    # Usa los mismos filtros de entrada que la tabla Resultados.
+    #
+    # REGLAS: 
+    # 1) Para Empresa + Proceso + Renglón duplicados en distintos
+    #    lotes, conservar el lote cuyo nombre tenga la fecha más
+    #    reciente <= hoy.
+    # 2) Si Proceso + Renglón tiene OC en cualquier registro de la
+    #    base, excluir toda esa combinación del cálculo, sin
+    #    importar qué proveedor tenga el OC.
+    # 3) Luego agrupar por empresa y calcular procesos distintos,
+    #    procesos/renglones y suma de ofertas.
+    # ========================================================
+
+    hoy = datetime.now().date()
+
+    def fecha_del_nombre_lote(nombre):
+        match = re.search(r"(\d{4}-\d{2}-\d{2})", nombre or "")
+        if not match:
+            return None
+        try:
+            return datetime.strptime(
+                match.group(1),
+                "%Y-%m-%d"
+            ).date()
+        except ValueError:
+            return None
+
+    # Todas las claves Proceso + Renglón que tienen OC en la base.
+    # Esto es deliberadamente independiente de los filtros de Empresa,
+    # Lote y OC: la regla dice que un OC de cualquier proveedor excluye
+    # esa combinación completa del resumen.
+    claves_con_oc = set(
+        RegistroLicitacion.objects
+        .exclude(numero_proceso__isnull=True)
+        .exclude(numero_proceso="")
+        .exclude(numero_renglon__isnull=True)
+        .exclude(numero_renglon="")
+        .exclude(
+            Q(numero_oc__isnull=True) |
+            Q(numero_oc="")
+        )
+        .values_list(
+            "numero_proceso",
+            "numero_renglon",
+        )
+    )
+
+    # Evaluamos solamente los registros que resultan de los filtros
+    # compartidos (Lote, Empresa, Estado y Proceso).
+    # El filtro Con OC / Sin OC NO participa de esta pestaña.
+    # La tabla Resultados no se modifica.
+    registros_para_totales = list(
+        registros_para_totales
+        .select_related(
+            "lote",
+            "empresa_oferente",
+            "empresa_proveedor",
+        )
+    )
+
+    # Para cada Empresa + Proceso + Renglón elegimos un único registro.
+    # La prioridad es la fecha del archivo más reciente <= hoy.
+    # Si hay empate, usamos fecha de carga e id como desempate.
+    seleccionados_por_clave = {}
+
+    for registro in registros_para_totales:
+
+        if not registro.numero_proceso or not registro.numero_renglon:
+            continue
+
+        clave_proceso = (
+            registro.numero_proceso,
+            registro.numero_renglon,
+        )
+
+        if clave_proceso in claves_con_oc:
+            continue
+
+        empresa_registro = None
+
+        if registro.empresa_oferente:
+            empresa_registro = registro.empresa_oferente
+        elif registro.empresa_proveedor:
+            empresa_registro = registro.empresa_proveedor
+
+        if not empresa_registro:
+            continue
+
+        fecha_archivo = fecha_del_nombre_lote(
+            registro.lote.nombre_archivo
+        )
+
+        # Si el archivo no tiene fecha YYYY-MM-DD o es futuro,
+        # no puede ganar como lote vigente.
+        fecha_valida = (
+            fecha_archivo
+            if fecha_archivo and fecha_archivo <= hoy
+            else None
+        )
+
+        clave = (
+            empresa_registro.cuit,
+            registro.numero_proceso,
+            registro.numero_renglon,
+        )
+
+        candidato = (
+            fecha_valida,
+            registro.lote.fecha_carga,
+            registro.id,
+            registro,
+        )
+
+        anterior = seleccionados_por_clave.get(clave)
+
+        def peso(item):
+            fecha, fecha_carga, registro_id, _ = item
+            return (
+                fecha is not None,
+                fecha or datetime.min.date(),
+                fecha_carga,
+                registro_id,
+            )
+
+        if anterior is None or peso(candidato) > peso(anterior):
+            seleccionados_por_clave[clave] = candidato
+
+    # Agrupar los registros únicos por empresa.
+    acumulado_empresas = {}
+
+    for _, _, _, registro in seleccionados_por_clave.values():
+
+        if registro.empresa_oferente:
+            empresa_registro = registro.empresa_oferente
+        elif registro.empresa_proveedor:
+            empresa_registro = registro.empresa_proveedor
+        else:
+            continue
+
+        cuit = empresa_registro.cuit
+
+        if cuit not in acumulado_empresas:
+            acumulado_empresas[cuit] = {
+                "empresa": empresa_registro.nombre,
+                "procesos": set(),
+                "procesos_renglones": 0,
+                "total_ofertas": Decimal("0"),
+            }
+
+        datos = acumulado_empresas[cuit]
+
+        datos["procesos"].add(
+            registro.numero_proceso
+        )
+
+        datos["procesos_renglones"] += 1
+
+        if registro.precio_total_oferta is not None:
+            datos["total_ofertas"] += (
+                registro.precio_total_oferta
+            )
+
+    totales_empresas = []
+
+    for datos in acumulado_empresas.values():
+        totales_empresas.append({
+            "empresa": datos["empresa"],
+            "procesos_distintos": len(datos["procesos"]),
+            "procesos_renglones": datos["procesos_renglones"],
+            "total_ofertas": datos["total_ofertas"],
+        })
+
+    # Ordenar por Total Ofertas: mayor a menor.
+    # En caso de empate, ordenar por empresa.
+    totales_empresas.sort(
+        key=lambda x: (-x["total_ofertas"], x["empresa"].lower())
+    )
+
+    total_procesos_distintos = len({
+        (cuit, proceso)
+        for cuit, datos in acumulado_empresas.items()
+        for proceso in datos["procesos"]
+    })
+
+    total_procesos_renglones = sum(
+        datos["procesos_renglones"]
+        for datos in acumulado_empresas.values()
+    )
+
+    total_ofertas = sum(
+        (
+            datos["total_ofertas"]
+            for datos in acumulado_empresas.values()
+        ),
+        Decimal("0")
+    )
+
     # ========================================================
     # ORDEN DE LOS RESULTADOS
     # ========================================================
@@ -413,6 +629,20 @@ def consultar(request):
             )
         )
     # ========================================================
+    # TOTAL DE OFERTAS DE LA TABLA RESULTADOS
+    # ========================================================
+    # Suma solamente los registros que actualmente se muestran
+    # en la primera pestaana, respetando todos sus filtros.
+    total_ofertas_resultados = sum(
+        (
+            registro.precio_total_oferta
+            for registro in registros
+            if registro.precio_total_oferta is not None
+        ),
+        Decimal("0")
+    )
+
+    # ========================================================
     # CONTEXTO
     # ========================================================
 
@@ -436,6 +666,13 @@ def consultar(request):
         "oc_seleccionado": oc,
 
         "proceso_seleccionado": proceso,
+
+        # Segunda pestaña: Totales por Empresa
+        "totales_empresas": totales_empresas,
+        "total_procesos_distintos": total_procesos_distintos,
+        "total_procesos_renglones": total_procesos_renglones,
+        "total_ofertas": total_ofertas,
+        "total_ofertas_resultados": total_ofertas_resultados,
     }
 
     return render(
