@@ -16,6 +16,7 @@ from .models import (
 )
 import csv
 import re
+from openpyxl import Workbook
 from decimal import Decimal
 from datetime import datetime
 from django.contrib import messages
@@ -962,6 +963,100 @@ def empresas(request):
 
 
 
+def exportar_empresas(request):
+    """
+    Exporta TODAS las empresas existentes en la tabla Empresa
+    al Excel maestro PROVEEDORES_serv_limpieza.xlsx.
+
+    El archivo se genera directamente desde la base de datos,
+    por lo que no depende de los registros de licitaciones.
+    """
+
+    empresas = (
+        Empresa.objects
+        .all()
+        .annotate(
+            nombre_orden=Lower("nombre")
+        )
+        .order_by("nombre_orden")
+    )
+
+    workbook = Workbook()
+    hoja = workbook.active
+    hoja.title = "Empresas"
+
+    # ========================================================
+    # ENCABEZADOS
+    # ========================================================
+
+    hoja.append([
+        "CUIT",
+        "Nombre",
+        "mail1",
+        "mail2",
+        "mail3",
+        "Telefono",
+        "Provincia",
+        "Comentarios",
+    ])
+
+    # ========================================================
+    # EMPRESAS
+    # ========================================================
+
+    for empresa in empresas:
+        hoja.append([
+            empresa.cuit or "",
+            empresa.nombre or "",
+            empresa.email or "",
+            empresa.email_2 or "",
+            empresa.email_3 or "",
+            empresa.telefono or "",
+            empresa.provincia or "",
+            empresa.comentarios or "",
+        ])
+
+    # ========================================================
+    # FORMATO BÁSICO
+    # ========================================================
+
+    hoja.freeze_panes = "A2"
+    hoja.auto_filter.ref = hoja.dimensions
+
+    anchos = {
+        "A": 18,  # CUIT
+        "B": 45,  # Nombre
+        "C": 35,  # mail1
+        "D": 35,  # mail2
+        "E": 35,  # mail3
+        "F": 22,  # Telefono
+        "G": 22,  # Provincia
+        "H": 50,  # Comentarios
+    }
+
+    for columna, ancho in anchos.items():
+        hoja.column_dimensions[columna].width = ancho
+
+    # ========================================================
+    # RESPUESTA
+    # ========================================================
+
+    respuesta = HttpResponse(
+        content_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        )
+    )
+
+    respuesta["Content-Disposition"] = (
+        'attachment; filename="PROVEEDORES_serv_limpieza.xlsx"'
+    )
+
+    workbook.save(respuesta)
+
+    return respuesta
+
+
 def importar_emails(request):
 
     if request.method == "POST":
@@ -1045,6 +1140,14 @@ def guardar_emails(request, empresa_id):
     )
 
     # ========================================================
+    # PROVINCIA
+    # ========================================================
+
+    empresa.provincia = (
+        request.POST.get("provincia") or None
+    )
+
+    # ========================================================
     # EMAILS
     # ========================================================
 
@@ -1059,6 +1162,13 @@ def guardar_emails(request, empresa_id):
     empresa.email_3 = (
         request.POST.get("email_3") or None
     )
+    # ========================================================
+    # COMENTARIOS
+    # ========================================================
+
+    empresa.comentarios = (
+        request.POST.get("comentarios") or None
+    )
 
     # ========================================================
     # GUARDAR
@@ -1066,10 +1176,14 @@ def guardar_emails(request, empresa_id):
 
     empresa.save(
         update_fields=[
+
             "telefono",
+            "provincia",
             "email",
             "email_2",
             "email_3",
+            "comentarios",
+
         ]
     )
 
@@ -1350,7 +1464,9 @@ def guardar_ficha_empresa(request, empresa_id):
     empresa.comentarios = (
         request.POST.get("comentarios") or None
     )
-
+    empresa.novedades = (
+        request.POST.get("novedades") or None
+    )
     empresa.save(
         update_fields=[
             "telefono",
@@ -1358,6 +1474,7 @@ def guardar_ficha_empresa(request, empresa_id):
             "email_2",
             "email_3",
             "comentarios",
+            "novedades",
         ]
     )
 

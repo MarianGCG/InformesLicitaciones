@@ -64,6 +64,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
 
         th {
@@ -78,6 +79,7 @@
             border-bottom: 1px solid #ddd;
         }
 
+        input[type="text"],
         input[type="email"] {
             width: 100%;
             height: 36px;
@@ -85,10 +87,68 @@
             padding: 6px 8px;
             border: 1px solid #ced4da;
             border-radius: 5px;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 500;
         }
 
+        textarea {
+            width: 100%;
+            min-height: 70px;
+            box-sizing: border-box;
+            padding: 6px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 15px;
+            resize: vertical;
+        }
+
+
+
+        /* =====================================================
+           ANCHOS DE COLUMNAS
+        ===================================================== */
+
+        th:nth-child(1),
+        td:nth-child(1) {
+            width: 105px;
+        }
+
+        th:nth-child(2),
+        td:nth-child(2) {
+            width: 240px;
+        }
+
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 90px;
+        }
+
+        th:nth-child(4),
+        td:nth-child(4) {
+            width: 170px;
+        }
+
+        th:nth-child(5),
+        td:nth-child(5),
+        th:nth-child(6),
+        td:nth-child(6),
+        th:nth-child(7),
+        td:nth-child(7) {
+            width: 175px;
+        }
+
+        th:nth-child(8),
+        td:nth-child(8) {
+            width: 250px;
+        }
+
+        th:nth-child(9),
+        td:nth-child(9) {
+            width: 95px;
+        }
+
+        
         .cuit {
             white-space: nowrap;
             font-weight: 700;
@@ -126,6 +186,13 @@
                 class="boton naranja"
             >
                 IMPORTAR EMAILS DESDE EXCEL
+            </a>
+
+            <a
+                href="{% url 'exportar_empresas' %}"
+                class="boton azul"
+            >
+                EXPORTAR EMPRESAS
             </a>
 
             <a
@@ -201,11 +268,12 @@
         <table>
 
             <thead>
-
                 <tr>
                     <th>CUIT</th>
                     <th>Empresa</th>
+                    <th>Provincia</th>
                     <th>Teléfono</th>
+
                     <th>
                         Email 1
                         ({{ total_email1 }})
@@ -221,8 +289,11 @@
                         ({{ total_email3 }})
                     </th>
 
+                    <th>Comentarios</th>
+
                     <th></th>
                 </tr>
+
 
             </thead>
 
@@ -249,7 +320,14 @@
                             <td>
                                 {{ empresa.nombre }}
                             </td>
-
+                            <td>
+                                <input
+                                    type="text"
+                                    name="provincia"
+                                    value="{{ empresa.provincia|default:'' }}"
+                                    placeholder="Provincia"
+                                >
+                            </td>
                             <td>
                                 <input
                                     type="text"
@@ -285,7 +363,12 @@
                                     placeholder="Email 3"
                                 >
                             </td>
-
+                            <td>
+                                <textarea
+                                    name="comentarios"
+                                    placeholder="Comentarios..."
+                                >{{ empresa.comentarios|default:'' }}</textarea>
+                            </td>
                             <td>
                                 <button
                                     type="submit"

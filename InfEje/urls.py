@@ -71,5 +71,9 @@ urlpatterns = [
         views.eliminar_lote,
         name="eliminar_lote",
     ),
-
+    path(
+        "exportar-empresas/",
+        views.exportar_empresas,
+        name="exportar_empresas",
+    ),
 ]

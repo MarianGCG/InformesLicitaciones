@@ -14,6 +14,12 @@ class Empresa(models.Model):
     nombre = models.CharField(max_length=200)
     cuit = models.CharField(max_length=20, unique=True)
 
+    provincia = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
     email = models.EmailField(
         blank=True,
         null=True
@@ -38,6 +44,11 @@ class Empresa(models.Model):
         blank=True,
         null=True
     )
+    novedades = models.TextField(
+        blank=True,
+        null=True
+    )
+
     def __str__(self):
         return self.nombre
 

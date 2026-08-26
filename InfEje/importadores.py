@@ -398,11 +398,9 @@ def diagnosticar_columnas(
 
     return df.columns.tolist()
 
-
 def importar_emails_excel(archivo):
     """
-    Actualiza telefono, email, email_2 y email_3 de Empresa
-    utilizando exclusivamente el CUIT.
+    Actualiza la información de Empresa utilizando exclusivamente el CUIT.
 
     El Excel debe tener:
         CUIT
@@ -411,6 +409,13 @@ def importar_emails_excel(archivo):
         mail2
         mail3
         Telefono
+        Provincia
+        Comentarios
+
+    Lo que viene del Excel reemplaza lo que existe actualmente
+    en la base de datos.
+
+    Novedades NO se modifica.
     """
 
     df = pd.read_excel(
@@ -424,10 +429,13 @@ def importar_emails_excel(archivo):
 
     columnas_obligatorias = {
         "CUIT",
+        "Nombre",
         "mail1",
         "mail2",
         "mail3",
         "Telefono",
+        "Provincia",
+        "Comentarios",
     }
 
     faltantes = (
@@ -446,12 +454,20 @@ def importar_emails_excel(archivo):
 
     for _, fila in df.iterrows():
 
+        # =====================================================
+        # CUIT
+        # =====================================================
+
         cuit = limpiar_cuit(
             fila["CUIT"]
         )
 
         if not cuit:
             continue
+
+        # =====================================================
+        # BUSCAR EMPRESA POR CUIT
+        # =====================================================
 
         try:
 
@@ -461,31 +477,95 @@ def importar_emails_excel(archivo):
 
         except Empresa.DoesNotExist:
 
-            no_encontradas.append(cuit)
+            no_encontradas.append(
+                cuit
+            )
+
             continue
 
-        empresa.telefono = limpiar_telefono(
-            fila["Telefono"]
+        # =====================================================
+        # NOMBRE
+        # =====================================================
+
+        empresa.nombre = (
+            valor_o_none(
+                fila["Nombre"]
+            )
         )
 
-        empresa.email = valor_o_none(
-            fila["mail1"]
+        # =====================================================
+        # TELEFONO
+        # =====================================================
+
+        empresa.telefono = (
+            limpiar_telefono(
+                fila["Telefono"]
+            )
         )
 
-        empresa.email_2 = valor_o_none(
-            fila["mail2"]
+        # =====================================================
+        # EMAIL 1
+        # =====================================================
+
+        empresa.email = (
+            valor_o_none(
+                fila["mail1"]
+            )
         )
 
-        empresa.email_3 = valor_o_none(
-            fila["mail3"]
+        # =====================================================
+        # EMAIL 2
+        # =====================================================
+
+        empresa.email_2 = (
+            valor_o_none(
+                fila["mail2"]
+            )
         )
+
+        # =====================================================
+        # EMAIL 3
+        # =====================================================
+
+        empresa.email_3 = (
+            valor_o_none(
+                fila["mail3"]
+            )
+        )
+
+        # =====================================================
+        # PROVINCIA
+        # =====================================================
+
+        empresa.provincia = (
+            valor_o_none(
+                fila["Provincia"]
+            )
+        )
+
+        # =====================================================
+        # COMENTARIOS
+        # =====================================================
+
+        empresa.comentarios = (
+            valor_o_none(
+                fila["Comentarios"]
+            )
+        )
+
+        # =====================================================
+        # GUARDAR
+        # =====================================================
 
         empresa.save(
             update_fields=[
+                "nombre",
                 "telefono",
                 "email",
                 "email_2",
                 "email_3",
+                "provincia",
+                "comentarios",
             ]
         )
 
