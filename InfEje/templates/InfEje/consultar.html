@@ -314,6 +314,46 @@
             padding: 4px 0;
         }
 
+        .lote-fila {
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            min-width: 0;
+            padding: 0 5px 0 0;
+        }
+
+        .lote-fila .lote-label {
+            display: flex !important;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+            padding: 6px 4px 6px 9px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .boton-eliminar-lote {
+            border: 0;
+            background: transparent;
+            color: #adb5bd;
+            font-size: 15px;
+            line-height: 1;
+            padding: 5px 6px;
+            cursor: pointer;
+            border-radius: 5px;
+            flex: 0 0 auto;
+        }
+
+        .boton-eliminar-lote:hover {
+            color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .lote-fila:hover {
+            background: #f1f3f5;
+        }
+
         .check-lote {
             display: flex !important;
             flex-direction: row !important;
@@ -335,13 +375,18 @@
             background: #f1f3f5;
         }
 
-        .check-lote input[type="checkbox"] {
+        .check-lote input[type="checkbox"],
+        .lote-label input[type="checkbox"] {
             width: 16px !important;
             min-width: 16px !important;
+            max-width: 16px !important;
             height: 16px !important;
+            min-height: 16px !important;
+            max-height: 16px !important;
 
             margin: 0 8px 0 0;
             padding: 0;
+            flex: 0 0 16px;
         }
 
         .check-lote span {
@@ -522,6 +567,13 @@
 
         .boton-toggle-email:hover {
             background: #f1f3f5;
+        }
+
+        /* COLUMNAS QUE SE ABREN CON + */
+        .columna-telefono,
+        .columna-email,
+        .columna-competidores {
+            background: #f7f8f9;
         }
 
 
@@ -892,6 +944,24 @@
         <p>Consulta de procesos, oferentes y proveedores</p>
     </div>
 
+    {% if messages %}
+        <div style="margin: 10px 0 12px;">
+            {% for message in messages %}
+                <div style="
+                    padding: 10px 14px;
+                    border-radius: 6px;
+                    background: #eef5ee;
+                    color: #285c2a;
+                    font-size: 13px;
+                    font-weight: 600;
+                    border: 1px solid #d7e8d7;
+                ">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <div class="filtros">
 
         <form method="get">
@@ -923,24 +993,39 @@
 
                         {% for lote in lotes %}
 
-                            <label class="check-lote">
+                            <div class="lote-fila">
 
-                                <input
-                                    type="checkbox"
-                                    name="lote"
-                                    value="{{ lote.id }}"
-                                    class="lote-checkbox"
+                                <label class="lote-label">
 
-                                    {% if lote.id|stringformat:"s" in lotes_seleccionados %}
-                                        checked
-                                    {% endif %}
+                                    <input
+                                        type="checkbox"
+                                        name="lote"
+                                        value="{{ lote.id }}"
+                                        class="lote-checkbox"
+
+                                        {% if lote.id|stringformat:"s" in lotes_seleccionados %}
+                                            checked
+                                        {% endif %}
+                                    >
+
+                                    <span>
+                                        {{ lote.nombre_archivo }}
+                                    </span>
+
+                                </label>
+
+                                <button
+                                    type="button"
+                                    class="boton-eliminar-lote"
+                                    title="Eliminar lote"
+                                    data-action="{% url 'eliminar_lote' lote.id %}"
+                                    data-nombre="{{ lote.nombre_archivo }}"
+                                    onclick="confirmarEliminarLote(this);"
                                 >
+                                    🗑
+                                </button>
 
-                                <span>
-                                    {{ lote.nombre_archivo }}
-                                </span>
-
-                            </label>
+                            </div>
 
                         {% endfor %}
 
@@ -1639,6 +1724,13 @@
 
                 empresaResultados.style.display =
                     "none";
+
+                const formulario =
+                    document.querySelector(".filtros form");
+
+                if (formulario) {
+                    formulario.submit();
+                }
             }
         );
 
@@ -1731,6 +1823,15 @@
 
                 empresaResultados.style.display =
                     "none";
+
+                // Al seleccionar una empresa del desplegable,
+                // aplicar el filtro automáticamente.
+                const formulario =
+                    document.querySelector(".filtros form");
+
+                if (formulario) {
+                    formulario.submit();
+                }
             }
         );
 
@@ -1824,6 +1925,55 @@
                 empresaResultados.style.display =
                     "none";
             }
+        }
+    );
+
+
+    // =========================================================
+    // DOBLE CLICK EN EMPRESA -> FILTRAR AUTOMÁTICAMENTE
+    // =========================================================
+
+    document.querySelectorAll("td.empresa").forEach(
+        function (celda) {
+
+            celda.title =
+                "Doble clic para filtrar esta empresa";
+
+            celda.addEventListener("dblclick", function () {
+
+                const nombreEmpresa =
+                    celda.textContent.trim();
+
+                if (!nombreEmpresa || nombreEmpresa === "-") {
+                    return;
+                }
+
+                const empresa = empresas.find(
+                    function (e) {
+                        return e.nombre.trim().toLowerCase() ===
+                            nombreEmpresa.toLowerCase();
+                    }
+                );
+
+                if (empresa) {
+                    inputEmpresa.value =
+                        `${empresa.nombre} — CUIT ${empresa.cuit}`;
+                    empresaId.value = empresa.id;
+                } else {
+                    inputEmpresa.value = nombreEmpresa;
+                    empresaId.value = "";
+                }
+
+                empresaResultados.innerHTML = "";
+                empresaResultados.style.display = "none";
+
+                const formulario =
+                    document.querySelector(".filtros form");
+
+                if (formulario) {
+                    formulario.submit();
+                }
+            });
         }
     );
 
@@ -2545,6 +2695,42 @@ document.getElementById("btnCSVdoppler").addEventListener(
 </script>
 
 
+<form
+    id="formEliminarLote"
+    method="post"
+    style="display:none;"
+>
+    {% csrf_token %}
+</form>
+
+<script>
+
+    function confirmarEliminarLote(boton) {
+
+        const nombreLote = boton.dataset.nombre || "este lote";
+        const accion = boton.dataset.action;
+
+        const confirmar = confirm(
+            "¿Eliminar el lote \"" +
+            nombreLote +
+            "\"?\n\n" +
+            "Se eliminarán también todos los movimientos asociados a este lote.\n" +
+            "Esta acción no se puede deshacer."
+        );
+
+        if (!confirmar) {
+            return;
+        }
+
+        const formulario =
+            document.getElementById("formEliminarLote");
+
+        formulario.action = accion;
+        formulario.submit();
+    }
+
+</script>
+
 <script>
 
     // =========================================================
@@ -2622,15 +2808,74 @@ document.getElementById("btnCSVdoppler").addEventListener(
     // ESTADO INICIAL
     // ---------------------------------------------------------
 
-    if (
-        lotesCheckbox.length > 0 &&
-        document.querySelectorAll(
-            ".lote-checkbox:checked"
-        ).length === lotesCheckbox.length
-    ) {
+    if (lotesCheckbox.length > 0) {
 
-        todosLotes.checked = true;
+        const cantidadMarcadosInicial =
+            document.querySelectorAll(
+                ".lote-checkbox:checked"
+            ).length;
 
+        // Si la pantalla muestra TODOS los movimientos y no vino
+        // ningún lote seleccionado desde el servidor, visualmente
+        // dejamos TODOS y todos los lotes marcados.
+        if (cantidadMarcadosInicial === 0) {
+
+            todosLotes.checked = true;
+
+            lotesCheckbox.forEach(function (checkbox) {
+                checkbox.checked = true;
+            });
+
+        } else if (
+            cantidadMarcadosInicial === lotesCheckbox.length
+        ) {
+
+            todosLotes.checked = true;
+        }
+    }
+
+</script>
+<script>
+
+    // =========================================================
+    // FILTROS AUTOMÁTICOS
+    // =========================================================
+    // Selectores y Lotes: búsqueda automática al cambiar.
+    // Campos de texto (Empresa / Número de proceso): búsqueda
+    // manual mediante el botón BUSCAR.
+
+    const formularioFiltros =
+        document.querySelector(".filtros form");
+
+    if (formularioFiltros) {
+
+        formularioFiltros
+            .querySelectorAll('select[name="estado"], select[name="oc"]')
+            .forEach(function (campo) {
+                campo.addEventListener("change", function () {
+                    formularioFiltros.submit();
+                });
+            });
+
+        const todosLotesAuto =
+            document.getElementById("todosLotes");
+
+        const lotesAuto =
+            document.querySelectorAll(".lote-checkbox");
+
+        if (todosLotesAuto) {
+            todosLotesAuto.addEventListener("change", function () {
+                setTimeout(function () {
+                    formularioFiltros.submit();
+                }, 0);
+            });
+        }
+
+        lotesAuto.forEach(function (checkbox) {
+            checkbox.addEventListener("change", function () {
+                formularioFiltros.submit();
+            });
+        });
     }
 
 </script>

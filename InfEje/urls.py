@@ -66,4 +66,10 @@ urlpatterns = [
         views.guardar_ficha_empresa,
         name="guardar_ficha_empresa",
     ),
+    path(
+        "lotes/<int:lote_id>/eliminar/",
+        views.eliminar_lote,
+        name="eliminar_lote",
+    ),
+
 ]

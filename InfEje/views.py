@@ -17,10 +17,11 @@ from .models import (
 import csv
 from datetime import datetime
 from django.contrib import messages
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from .importadores import importar_excel
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
 
 from django.db.models import Q, Count
 from .exportar_pdf import (
@@ -443,6 +444,29 @@ def consultar(request):
         contexto
     )
 
+@require_POST
+def eliminar_lote(request, lote_id):
+    # ========================================================
+    # ELIMINAR LOTE Y SUS REGISTROS
+    # ========================================================
+
+    lote = get_object_or_404(Lote, id=lote_id)
+    nombre = lote.nombre_archivo
+    cantidad = lote.registros.count()
+
+    # RegistroLicitacion.lote usa on_delete=models.CASCADE,
+    # por lo que al eliminar el lote se eliminan sus registros.
+    lote.delete()
+
+    messages.success(
+        request,
+        f"Lote '{nombre}' eliminado correctamente. "
+        f"Se eliminaron {cantidad} registros."
+    )
+
+    return redirect("consultar")
+
+
 def importar(request):
 
     if request.method == "POST":
@@ -543,11 +567,9 @@ def empresas_para_pdf(request):
         "empresas": resultado
     })
 
-
 def exportar_pdf_empresa(request, empresa_id):
 
     try:
-
         empresa = Empresa.objects.get(
             id=empresa_id
         )
@@ -559,16 +581,82 @@ def exportar_pdf_empresa(request, empresa_id):
             status=404,
         )
 
-    registros, _ = obtener_registros_filtrados(request)
+    # ========================================================
+    # OBTENER TODOS LOS REGISTROS DE LA CONSULTA
+    # (sin filtro de empresa)
+    # para poder encontrar competidores
+    # ========================================================
 
-    registros = registros.filter(
+    registros_todos, _ = obtener_registros_filtrados(
+        request,
+        ignorar_empresa=True,
+    )
+
+    # ========================================================
+    # ARMAR COMPETIDORES POR PROCESO + RENGLÓN
+    # ========================================================
+
+    competidores_por_clave = {}
+
+    for otro in registros_todos:
+
+        clave = (
+            otro.numero_proceso,
+            otro.numero_renglon,
+        )
+
+        empresa_otro = None
+
+        if otro.empresa_oferente:
+            empresa_otro = otro.empresa_oferente
+
+        elif otro.empresa_proveedor:
+            empresa_otro = otro.empresa_proveedor
+
+        if not empresa_otro:
+            continue
+
+        if clave not in competidores_por_clave:
+            competidores_por_clave[clave] = {}
+
+        competidores_por_clave[clave][
+            empresa_otro.cuit
+        ] = empresa_otro.nombre
+
+    # ========================================================
+    # FILTRAR SOLAMENTE LA EMPRESA SELECCIONADA
+    # ========================================================
+
+    registros = registros_todos.filter(
         Q(cuit_oferente=empresa.cuit) |
         Q(cuit_proveedor=empresa.cuit)
     )
 
+    # ========================================================
+    # SACAR LA EMPRESA PROPIA DE LOS COMPETIDORES
+    # ========================================================
+
+    for clave, empresas_competidoras in competidores_por_clave.items():
+
+        competidores_por_clave[clave] = [
+            nombre
+            for cuit, nombre
+            in empresas_competidoras.items()
+            if cuit != empresa.cuit
+        ]
+
+        competidores_por_clave[clave].sort(
+            key=str.lower
+        )
+
+    # ========================================================
+    # GENERAR PDF
+    # ========================================================
+
     buffer = construir_pdf(
         registros,
         empresa=empresa,
+        competidores_por_clave=competidores_por_clave,
     )
 
     nombre_archivo = (
@@ -588,7 +676,7 @@ def exportar_pdf_empresa(request, empresa_id):
     )
 
     return respuesta
-
+    
 def empresas(request):
 
 

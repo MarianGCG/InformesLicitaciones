@@ -73,7 +73,7 @@ def agregar_encabezado_pagina(canvas, documento):
 # FILTROS
 # ============================================================
 
-def obtener_registros_filtrados(request):
+def obtener_registros_filtrados(request, ignorar_empresa=False):
 
     registros = RegistroLicitacion.objects.all()
 
@@ -97,7 +97,7 @@ def obtener_registros_filtrados(request):
 
     empresa_seleccionada = None
 
-    if empresa_id:
+    if empresa_id and not ignorar_empresa:
 
         try:
 
@@ -288,6 +288,7 @@ def limpiar_nombre_archivo(nombre):
 def construir_pdf(
     registros,
     empresa=None,
+    competidores_por_clave=None,
 ):
 
     buffer = BytesIO()
@@ -401,13 +402,14 @@ def construir_pdf(
     # TABLA
     # --------------------------------------------------------
 
-    datos = [
-        [
+    cabecera = [
             Paragraph(
                 "<b>Empresa</b>",
                 estilo_encabezado,
             ),
+        ]
 
+    cabecera.extend([
             Paragraph(
                 "<b>OC</b>",
                 estilo_encabezado,
@@ -427,6 +429,17 @@ def construir_pdf(
                 "<b>Renglón</b>",
                 estilo_encabezado,
             ),
+        ])
+
+    if competidores_por_clave is not None:
+        cabecera.append(
+            Paragraph(
+                "<b>Empresas que también licitaron</b>",
+                estilo_encabezado,
+            )
+        )
+
+    cabecera.extend([
 
             Paragraph(
                 "<b>Apertura</b>",
@@ -462,8 +475,9 @@ def construir_pdf(
                 "<b>Descripción</b>",
                 estilo_encabezado,
             ),
-        ]
-    ]
+        ])
+
+    datos = [cabecera]
 
     # --------------------------------------------------------
     # FILAS
@@ -471,14 +485,14 @@ def construir_pdf(
 
     for registro in registros:
 
-        datos.append(
-            [
+        fila = [
+            Paragraph(
+                nombre_empresa(registro),
+                estilo_celda_negrita,
+            ),
+        ]
 
-                Paragraph(
-                    nombre_empresa(registro),
-                    estilo_celda_negrita,
-                ),
-
+        fila.extend([
                 Paragraph(
                     registro.numero_oc or "-",
                     estilo_celda_negrita,
@@ -501,6 +515,24 @@ def construir_pdf(
                     ),
                     estilo_celda,
                 ),
+
+                *([
+                    Paragraph(
+                        (
+                            " ; ".join(
+                                competidores_por_clave.get(
+                                    (
+                                        registro.numero_proceso,
+                                        registro.numero_renglon,
+                                    ),
+                                    [],
+                                )
+                            )
+                            or "-"
+                        ),
+                        estilo_celda,
+                    )
+                ] if competidores_por_clave is not None else []),
 
                 Paragraph(
                     (
@@ -556,17 +588,32 @@ def construir_pdf(
                     registro.descripcion_renglon or "-",
                     estilo_descripcion,
                 ),
-            ]
-        )
+            ])
+
+        datos.append(fila)
 
     # --------------------------------------------------------
     # TABLA
     # --------------------------------------------------------
 
-    tabla = Table(
-        datos,
-
-        colWidths=[
+    if competidores_por_clave is not None:
+        anchos_columnas = [
+            26 * mm,   # Empresa
+            20 * mm,   # OC
+            34 * mm,   # Comprador
+            22 * mm,   # Proceso
+            8 * mm,    # Renglón
+            40 * mm,   # Empresas que también licitaron
+            13 * mm,   # Apertura
+            13 * mm,   # Inicio
+            13 * mm,   # Fin
+            15 * mm,   # Estado
+            18 * mm,   # Oferta
+            9 * mm,    # Moneda
+            50 * mm,   # Descripción
+        ]
+    else:
+        anchos_columnas = [
             30 * mm,   # Empresa
             22 * mm,   # OC
             38 * mm,   # Comprador
@@ -579,10 +626,12 @@ def construir_pdf(
             20 * mm,   # Oferta
             10 * mm,   # Moneda
             65 * mm,   # Descripción
-        ],
+        ]
 
+    tabla = Table(
+        datos,
+        colWidths=anchos_columnas,
         repeatRows=1,
-
         hAlign="CENTER",
     )
 
@@ -802,18 +851,66 @@ def exportar_pdf_empresa(
     # APLICAR LOS MISMOS FILTROS DE LA CONSULTA
     # --------------------------------------------------------
 
-    registros, _ = obtener_registros_filtrados(
-        request
+    # --------------------------------------------------------
+    # OBTENER TODOS LOS REGISTROS DE LA CONSULTA
+    # (sin el filtro de empresa), para poder identificar
+    # quiénes también licitaron cada Proceso + Renglón.
+    # --------------------------------------------------------
+
+    registros_todos, _ = obtener_registros_filtrados(
+        request,
+        ignorar_empresa=True,
     )
+
+    competidores_por_clave = {}
+
+    for otro in registros_todos:
+        clave = (
+            otro.numero_proceso,
+            otro.numero_renglon,
+        )
+
+        empresa_otro = None
+
+        if otro.empresa_oferente:
+            empresa_otro = otro.empresa_oferente
+        elif otro.empresa_proveedor:
+            empresa_otro = otro.empresa_proveedor
+
+        if not empresa_otro:
+            continue
+
+        if clave not in competidores_por_clave:
+            competidores_por_clave[clave] = {}
+
+        competidores_por_clave[clave][
+            empresa_otro.cuit
+        ] = empresa_otro.nombre
 
     # --------------------------------------------------------
     # FILTRAR POR CUIT
     # --------------------------------------------------------
 
-    registros = registros.filter(
+    registros = registros_todos.filter(
         Q(cuit_oferente=empresa.cuit) |
         Q(cuit_proveedor=empresa.cuit)
     )
+
+    # --------------------------------------------------------
+    # QUITAR LA EMPRESA PROPIA DE LA LISTA
+    # --------------------------------------------------------
+
+    for clave, empresas_competidoras in competidores_por_clave.items():
+        competidores_por_clave[clave] = [
+            nombre
+            for cuit, nombre
+            in empresas_competidoras.items()
+            if cuit != empresa.cuit
+        ]
+
+        competidores_por_clave[clave].sort(
+            key=str.lower
+        )
 
     # --------------------------------------------------------
     # GENERAR PDF
@@ -822,6 +919,7 @@ def exportar_pdf_empresa(
     buffer = construir_pdf(
         registros,
         empresa=empresa,
+        competidores_por_clave=competidores_por_clave,
     )
 
     nombre_archivo = (
