@@ -151,9 +151,7 @@ def limpiar_fecha(valor):
 # ============================================================
 # EMPRESA
 # ============================================================
-
-def obtener_empresa(cuit, nombre):
-
+def obtener_empresa(cuit, nombre, archivo_inicial=None):
     cuit = limpiar_cuit(cuit)
 
     if not cuit:
@@ -167,9 +165,16 @@ def obtener_empresa(cuit, nombre):
     empresa, creada = Empresa.objects.get_or_create(
         cuit=cuit,
         defaults={
-            "nombre": nombre
+            "nombre": nombre,
+            "archivo_inicial": archivo_inicial,
         }
     )
+
+    # Si la empresa ya existía y todavía no tiene
+    # archivo_inicial, guardamos el archivo que estamos importando.
+    if not creada and not empresa.archivo_inicial and archivo_inicial:
+        empresa.archivo_inicial = archivo_inicial
+        empresa.save(update_fields=["archivo_inicial"])
 
     return empresa, creada
 
@@ -284,6 +289,7 @@ def importar_excel(archivo, nombre_archivo):
         empresa_oferente, creada = obtener_empresa(
             datos.get("cuit_oferente"),
             datos.get("oferente"),
+            nombre_archivo,
         )
 
         if empresa_oferente:
@@ -300,6 +306,7 @@ def importar_excel(archivo, nombre_archivo):
         empresa_proveedor, creada = obtener_empresa(
             datos.get("cuit_proveedor"),
             datos.get("proveedor"),
+            nombre_archivo,
         )
 
         if empresa_proveedor:
@@ -405,6 +412,7 @@ def importar_emails_excel(archivo):
     El Excel debe tener:
         CUIT
         Nombre
+        Archivo inicial
         mail1
         mail2
         mail3
@@ -430,6 +438,7 @@ def importar_emails_excel(archivo):
     columnas_obligatorias = {
         "CUIT",
         "Nombre",
+        "Archivo inicial",
         "mail1",
         "mail2",
         "mail3",
@@ -490,6 +499,16 @@ def importar_emails_excel(archivo):
         empresa.nombre = (
             valor_o_none(
                 fila["Nombre"]
+            )
+        )
+
+        # =====================================================
+        # ARCHIVO INICIAL
+        # =====================================================
+
+        empresa.archivo_inicial = (
+            valor_o_none(
+                fila["Archivo inicial"]
             )
         )
 
@@ -560,6 +579,7 @@ def importar_emails_excel(archivo):
         empresa.save(
             update_fields=[
                 "nombre",
+                "archivo_inicial",
                 "telefono",
                 "email",
                 "email_2",

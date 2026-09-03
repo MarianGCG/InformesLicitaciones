@@ -400,8 +400,8 @@
 
 
         .campo-lotes {
-            width: 300px;
-            min-width: 300px;
+            width: 250px;
+            min-width: 250px;
         }
 
         .selector-lotes {
@@ -826,13 +826,6 @@
             padding: 12px 16px;
         }
 
-        .filtros-layout {
-            display: grid;
-            grid-template-columns: 230px 1fr;
-            column-gap: 16px;
-            width: 100%;
-            align-items: stretch;
-        }
 
         .campo-lotes {
             grid-column: 1;
@@ -877,13 +870,53 @@
         /* =========================================================
         AJUSTE FILA DE FILTROS
         ========================================================= */
-
         .filtros-layout {
-            grid-template-columns: 300px 1fr !important;
+            display: grid;
+            grid-template-columns: 300px 340px 260px 280px 1fr;
+            column-gap: 16px;
+            width: 100%;
+            align-items: stretch;
         }
 
         .zona-filtros {
+            grid-column: 2 / span 2;
+            grid-row: 1;
             width: 100%;
+        }
+
+        .campo-archivo-inicial {
+            grid-column: 4;
+            grid-row: 1;
+            width: 240px;
+            display: block !important;
+        }
+
+        .zona-botones {
+            grid-column: 5;
+            grid-row: 1;
+            width: 100%;
+            padding-top: 14px;
+        }
+        .campo-archivo-inicial .selector-lotes {
+            display: block !important;
+            width: 100%;
+        }
+        .zona-botones .botones-filtros {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .zona-botones .boton,
+        .zona-botones .boton-pdf {
+            flex: 1;
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            padding: 0 8px;
+            text-align: center;
+            padding-top: 16px;
+
         }
 
 
@@ -906,8 +939,8 @@
         .fila-inferior {
             display: grid;
             grid-template-columns:
-                360px
-                280px
+                320px
+                240px
                 auto;
             gap: 12px;
             align-items: end;
@@ -1025,6 +1058,7 @@
         .ficha-comentarios {
             margin-top: 0;
         }
+
     </style>
 </head>
 
@@ -1183,6 +1217,48 @@
 
                 </div>
 
+                <div class="campo campo-archivo-inicial" style="display: none !important;">
+
+                    <label>Archivo inicial</label>
+
+                    <div class="selector-lotes">
+
+                        <label class="check-lote todos">
+                            <input
+                                type="checkbox"
+                                id="todasArchivos"
+                                name="todas_archivos"
+                                value="1"
+                                {% if todas_archivos %}checked{% endif %}
+                            >
+
+
+
+                            <span><strong>Todas</strong></span>
+                        </label>
+
+                        {% for archivo in archivos_iniciales %}
+                            <div class="lote-fila">
+                                <label class="lote-label">
+                                    <input
+                                        type="checkbox"
+                                        name="archivo_inicial"
+                                        value="{{ archivo }}"
+                                        class="archivo-checkbox"
+                                        {% if todas_archivos or archivo in archivos_iniciales_seleccionados %}
+                                            checked
+                                        {% endif %}
+                                    >
+                                    <span>{{ archivo }}</span>
+                                </label>
+                            </div>
+                        {% endfor %}
+
+                    </div>
+                </div>
+
+
+
 
                 <!-- =====================================================
                     ZONA DERECHA
@@ -1269,36 +1345,6 @@
                         </div>
 
 
-                        <!-- BOTONES -->
-
-                        <div class="botones-filtros botones-filtros-superior">
-
-                            <button
-                                type="submit"
-                                class="boton"
-                                style="background:#198754;"
-                            >
-                                BUSCAR
-                            </button>
-
-                            <a
-                                href="{% url 'empresas' %}"
-                                class="boton-pdf"
-                                style="background:#374151;"
-                            >
-                                EMPRESAS
-                            </a>
-
-                            <a
-                                href="{% url 'importar' %}"
-                                class="boton-pdf"
-                                style="background:#fd7e14;"
-                            >
-                                Importar EXCEL
-                            </a>
-
-                        </div>
-
                     </div>
 
 
@@ -1371,48 +1417,89 @@
                         </div>
 
 
-                        <div class="botones-filtros botones-filtros-inferior">
-
-                            <a
-                                href="#"
-                                id="btnExportarPDF"
-                                class="boton-pdf"
-                            >
-                                Exportar PDF
-                            </a>
-
-                            <button
-                                type="button"
-                                id="btnPDFEmpresas"
-                                class="boton-pdf"
-                            >
-                                Exportar PDF por EMPRESA
-                            </button>
-
-                            <a
-                                href="#"
-                                id="btnCSVdoppler"
-                                class="boton-pdf"
-                                style="background:#6f42c1;"
-                            >
-                                CSV DOPPLER
-                            </a>
-
-                        </div>
-
-
-
-
                     </div>
+
+
+
+
+
 
                 </div>
 
+
+                <!-- BOTONES -->
+                <div class="zona-botones">
+
+                    <div class="botones-filtros botones-filtros-superior">
+
+                        <button
+                            type="submit"
+                            class="boton"
+                            style="background:#198754;"
+                        >
+                            BUSCAR
+                        </button>
+
+                        <a
+                            href="{% url 'empresas' %}"
+                            class="boton-pdf"
+                            style="background:#374151;"
+                        >
+                            EMPRESAS
+                        </a>
+
+                        <a
+                            href="{% url 'importar' %}"
+                            class="boton-pdf"
+                            style="background:#fd7e14;"
+                        >
+                            Importar EXCEL
+                        </a>
+
+                    </div>
+
+                    <div class="botones-filtros botones-filtros-inferior">
+
+                        <a
+                            href="#"
+                            id="btnExportarPDF"
+                            class="boton-pdf"
+                        >
+                            Exportar PDF
+                        </a>
+
+                        <button
+                            type="button"
+                            id="btnPDFEmpresas"
+                            class="boton-pdf"
+                        >
+                            Exportar PDF por EMPRESA
+                        </button>
+
+                        <a
+                            href="#"
+                            id="btnCSVdoppler"
+                            class="boton-pdf"
+                            style="background:#6f42c1;"
+                        >
+                            CSV DOPPLER
+                        </a>
+
+                    </div>
+                </div>
+                
             </div>
+
+
+
+
+
 
         </form>
 
     </div>
         
+
 
     {% if empresa_seleccionada %}
 
@@ -3207,6 +3294,26 @@ document.getElementById("btnCSVdoppler").addEventListener(
             todosLotes.checked = true;
         }
     }
+
+    // ===============================
+    // SELECTOR "ARCHIVO INICIAL"
+    // ===============================
+
+    const todasArchivos = document.getElementById("todasArchivos");
+    const archivosCheckbox = document.querySelectorAll(".archivo-checkbox");
+
+    if (todasArchivos) {
+
+        todasArchivos.addEventListener("change", function () {
+
+            archivosCheckbox.forEach(function (checkbox) {
+                checkbox.checked = todasArchivos.checked;
+            });
+
+        });
+
+    }
+
 
 </script>
 <script>

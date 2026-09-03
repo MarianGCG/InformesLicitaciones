@@ -60,6 +60,15 @@ def consultar(request):
         .order_by("nombre_orden")
     )
 
+    archivos_iniciales = (
+        Empresa.objects
+        .exclude(archivo_inicial__isnull=True)
+        .exclude(archivo_inicial="")
+        .values_list("archivo_inicial", flat=True)
+        .distinct()
+        .order_by("-archivo_inicial")
+    )
+
     estados = (
         RegistroLicitacion.objects
         .exclude(estado__isnull=True)
@@ -75,6 +84,14 @@ def consultar(request):
 
     registros = RegistroLicitacion.objects.all()
 
+    archivos_iniciales_seleccionados = request.GET.getlist(
+        "archivo_inicial"
+    )
+
+    todas_archivos = (
+        request.GET.get("todas_archivos", "1") == "1"
+    )
+
     # ========================================================
     # FILTRO POR LOTE
     # ========================================================
@@ -85,6 +102,27 @@ def consultar(request):
         registros = registros.filter(
             lote_id__in=lotes_seleccionados
         )
+
+    # ========================================================
+    # FILTRO POR archivos_iniciales_seleccionados
+    # ========================================================
+
+    if not todas_archivos:
+        if archivos_iniciales_seleccionados:
+            registros = registros.filter(
+                Q(
+                    empresa_oferente__archivo_inicial__in=
+                    archivos_iniciales_seleccionados
+                )
+                |
+                Q(
+                    empresa_proveedor__archivo_inicial__in=
+                    archivos_iniciales_seleccionados
+                )
+            )
+        else:
+            registros = registros.none()
+
 
     # ========================================================
     # FILTRO POR EMPRESA
@@ -650,22 +688,16 @@ def consultar(request):
     contexto = {
 
         "lotes": lotes,
-
         "empresas": empresas,
-
+        "archivos_iniciales": archivos_iniciales,
+        "archivos_iniciales_seleccionados": archivos_iniciales_seleccionados,
+        "todas_archivos": todas_archivos,
         "estados": estados,
-
         "registros": registros,
-
         "lotes_seleccionados": lotes_seleccionados,
-
         "empresa_seleccionada": empresa_seleccionada,
-
-
         "estado_seleccionado": estado,
-
         "oc_seleccionado": oc,
-
         "proceso_seleccionado": proceso,
 
         # Segunda pestaña: Totales por Empresa
@@ -992,6 +1024,7 @@ def exportar_empresas(request):
     hoja.append([
         "CUIT",
         "Nombre",
+        "Archivo inicial",
         "mail1",
         "mail2",
         "mail3",
@@ -1008,6 +1041,7 @@ def exportar_empresas(request):
         hoja.append([
             empresa.cuit or "",
             empresa.nombre or "",
+            empresa.archivo_inicial or "",
             empresa.email or "",
             empresa.email_2 or "",
             empresa.email_3 or "",
@@ -1026,12 +1060,13 @@ def exportar_empresas(request):
     anchos = {
         "A": 18,  # CUIT
         "B": 45,  # Nombre
-        "C": 35,  # mail1
-        "D": 35,  # mail2
-        "E": 35,  # mail3
-        "F": 22,  # Telefono
-        "G": 22,  # Provincia
-        "H": 50,  # Comentarios
+        "C": 35,  # Archivo inicial
+        "D": 35,  # mail1
+        "E": 35,  # mail2
+        "F": 35,  # mail3
+        "G": 22,  # Telefono
+        "H": 22,  # Provincia
+        "I": 50,  # Comentarios
     }
 
     for columna, ancho in anchos.items():
@@ -1171,6 +1206,13 @@ def guardar_emails(request, empresa_id):
     )
 
     # ========================================================
+    # archivo_inicial
+    # ========================================================
+    empresa.archivo_inicial = (
+        request.POST.get("archivo_inicial") or None
+    )
+
+    # ========================================================
     # GUARDAR
     # ========================================================
 
@@ -1183,7 +1225,7 @@ def guardar_emails(request, empresa_id):
             "email_2",
             "email_3",
             "comentarios",
-
+            "archivo_inicial",
         ]
     )
 

@@ -113,24 +113,25 @@
         td:nth-child(1) {
             width: 105px;
         }
-
+        th:nth-child(3),
+        td:nth-child(3),
         th:nth-child(2),
         td:nth-child(2) {
             width: 240px;
         }
 
-        th:nth-child(3),
-        td:nth-child(3) {
+        th:nth-child(4),
+        td:nth-child(4) {
             width: 90px;
         }
 
-        th:nth-child(4),
-        td:nth-child(4) {
+        th:nth-child(5),
+        td:nth-child(5) {
             width: 170px;
         }
 
-        th:nth-child(5),
-        td:nth-child(5),
+        th:nth-child(8),
+        td:nth-child(8),
         th:nth-child(6),
         td:nth-child(6),
         th:nth-child(7),
@@ -138,13 +139,13 @@
             width: 175px;
         }
 
-        th:nth-child(8),
-        td:nth-child(8) {
+        th:nth-child(9),
+        td:nth-child(9) {
             width: 250px;
         }
 
-        th:nth-child(9),
-        td:nth-child(9) {
+        th:nth-child(10),
+        td:nth-child(10) {
             width: 95px;
         }
 
@@ -271,6 +272,14 @@
                 <tr>
                     <th>CUIT</th>
                     <th>Empresa</th>
+
+                    <th
+                        id="ordenarArchivo"
+                        style="cursor: pointer;"
+                    >
+                        Archivo inicial ↕
+                    </th>
+
                     <th>Provincia</th>
                     <th>Teléfono</th>
 
@@ -320,6 +329,16 @@
                             <td>
                                 {{ empresa.nombre }}
                             </td>
+
+                            <td>
+                                <input
+                                    type="text"
+                                    name="archivo_inicial"
+                                    value="{{ empresa.archivo_inicial|default:'' }}"
+                                    placeholder="Archivo inicial"
+                                >
+                            </td>
+
                             <td>
                                 <input
                                     type="text"
@@ -461,7 +480,60 @@
 
 
 </script>
+<script>
 
+    const ordenarArchivo =
+        document.getElementById("ordenarArchivo");
+
+    const cuerpoTabla =
+        document.querySelector("table tbody");
+
+    let ordenArchivoAscendente = true;
+
+    ordenarArchivo.addEventListener(
+        "click",
+        function () {
+
+            const filas = Array.from(
+                cuerpoTabla.querySelectorAll(".fila-empresa")
+            );
+
+            filas.sort(
+                function (a, b) {
+
+                    const archivoA =
+                        a.cells[2].querySelector("input").value
+                            .trim()
+                            .toLowerCase();
+
+                    const archivoB =
+                        b.cells[2].querySelector("input").value
+                            .trim()
+                            .toLowerCase();
+
+                    return ordenArchivoAscendente
+                        ? archivoA.localeCompare(archivoB)
+                        : archivoB.localeCompare(archivoA);
+                }
+            );
+
+            filas.forEach(
+                function (fila) {
+                    cuerpoTabla.appendChild(fila);
+                }
+            );
+
+            ordenArchivoAscendente =
+                !ordenArchivoAscendente;
+
+            ordenarArchivo.textContent =
+                ordenArchivoAscendente
+                    ? "Archivo inicial ↑"
+                    : "Archivo inicial ↓";
+        }
+    );
+
+</script>
 <script>
 
     setTimeout(
