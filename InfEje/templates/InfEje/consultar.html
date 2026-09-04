@@ -1059,6 +1059,78 @@
             margin-top: 0;
         }
 
+
+
+        .boton-quitar-fila {
+            width: 20px;
+            height: 20px;
+            margin-left: 8px;
+            padding: 0;
+            border: 1px solid #adb5bd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        .boton-quitar-fila::before {
+            content: "×";
+            position: absolute;
+            left: 0;
+            top: -1px;
+            width: 100%;
+            height: 100%;
+            line-height: 18px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #6c757d;
+        }
+
+        .boton-quitar-fila:hover {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .boton-quitar-fila:hover::before {
+            color: #dc3545;
+        }
+
+        .campo-adjudicados {
+            min-width: 230px;
+        }
+
+        .campo-adjudicados > label {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .opciones-adjudicados {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 18px;
+            width: 100%;
+        }
+
+        .opciones-adjudicados label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin: 0;
+            font-weight: normal;
+            white-space: nowrap;
+        }
+
+        .opciones-adjudicados input[type="radio"] {
+            width: 14px !important;
+            min-width: 14px !important;
+            height: 14px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
     </style>
 </head>
 
@@ -1401,6 +1473,42 @@
                         </div>
 
 
+                        <!-- MUESTRA ADJUDICADOS A OTRA EMPRESA -->
+
+                        <div class="campo campo-adjudicados">
+
+                            <label>Muestra adjudicados a otra empresa?</label>
+
+                            <div class="opciones-adjudicados">
+
+                                <label>
+                                    <input
+                                        type="radio"
+                                        name="mostrar_adjudicados"
+                                        value="0"
+                                        {% if not mostrar_adjudicados %}checked{% endif %}
+                                    >
+                                    No
+                                </label>
+
+                                <label>
+                                    <input
+                                        type="radio"
+                                        name="mostrar_adjudicados"
+                                        value="1"
+                                        {% if mostrar_adjudicados %}checked{% endif %}
+                                    >
+                                    Sí
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                        <!-- FIN  MUESTRA ADJUDICADOS A OTRA EMPRESA-->
+
+
+
                         <!-- NÚMERO DE PROCESO -->
 
                         <div class="campo">
@@ -1648,7 +1756,7 @@
 
             <h2>Resultados</h2>
 
-            <div>
+            <div id="cantidadRegistros">
                 {{ registros|length }} registros
             </div>
 
@@ -1737,7 +1845,7 @@
 
                     {% for registro in registros %}
 
-                        <tr>
+                        <tr class="fila-resultado">
 
                             <!-- EMPRESA -->
 
@@ -1752,6 +1860,16 @@
                                 {% else %}
                                     -
                                 {% endif %}
+
+                                {% if empresa_seleccionada %}
+                                    <button
+                                        type="button"
+                                        class="boton-quitar-fila"
+                                        title="Quitar esta fila de la vista"
+                                        aria-label="Quitar esta fila"
+                                    ></button>
+                                {% endif %}
+
                             </td>
 
                             <td
@@ -1787,12 +1905,15 @@
 
 
                             <td class="orden-compra">
-                                {% if registro.numero_oc %}
+                                {% if registro.id in ids_adjudicados_otra_empresa %}
+                                    Ya asignado
+                                {% elif registro.numero_oc %}
                                     {{ registro.numero_oc }}
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
+
 
                             <td
                                 class="comprador"
@@ -3494,6 +3615,54 @@ document.getElementById("btnCSVdoppler").addEventListener(
     });
 
 </script>
+<script>
+    document.addEventListener("click", function (event) {
+
+        const boton = event.target.closest(".boton-quitar-fila");
+
+        if (!boton) {
+            return;
+        }
+
+        const fila = boton.closest("tr.fila-resultado");
+
+        if (!fila) {
+            return;
+        }
+
+        // Quitar solamente de la pantalla
+        fila.remove();
+
+        // Si se quitó una fila, ocultar el total
+        const totalFinal =
+            document.querySelector(".total-final");
+
+        if (totalFinal) {
+            totalFinal.style.display = "none";
+        }
+
+        // Ocultar cantidad de registros
+        const cantidadRegistros =
+            document.getElementById("cantidadRegistros");
+
+        if (cantidadRegistros) {
+            cantidadRegistros.style.display = "none";
+        }
+
+    });
+</script>
+<script>
+    document.querySelectorAll(
+        'input[name="mostrar_adjudicados"]'
+    ).forEach(function (radio) {
+
+        radio.addEventListener("change", function () {
+            this.form.submit();
+        });
+
+    });
+</script>
+
 
 </body>
 

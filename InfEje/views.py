@@ -229,7 +229,137 @@ def consultar(request):
     # tabla Resultados, como consulta rápida.
     registros_para_totales = registros
 
+    # ========================================================
+    # EXCLUIR EN RESULTADOS PROCESOS + RENGLONES
+    # ADJUDICADOS A OTRA EMPRESA
+    #
+    # Solo afecta la pestaña RESULTADOS.
+    # ========================================================
+    
+    mostrar_adjudicados = (
+        request.GET.get("mostrar_adjudicados", "0") == "1"
+    )
 
+    ids_adjudicados_otra_empresa = []
+
+    # Detectamos qué procesos/renglones tienen alguna adjudicación.
+    adjudicaciones = (
+        RegistroLicitacion.objects
+        .exclude(
+            Q(numero_oc__isnull=True) |
+            Q(numero_oc="")
+        )
+        .exclude(numero_proceso__isnull=True)
+        .exclude(numero_proceso="")
+        .exclude(numero_renglon__isnull=True)
+        .exclude(numero_renglon="")
+        .values_list(
+            "numero_proceso",
+            "numero_renglon",
+            "cuit_oferente",
+            "cuit_proveedor",
+        )
+    )
+
+    empresas_con_oc = {}
+
+    for (
+        numero_proceso,
+        numero_renglon,
+        cuit_oferente,
+        cuit_proveedor,
+    ) in adjudicaciones:
+
+        clave = (
+            numero_proceso,
+            numero_renglon,
+        )
+
+        cuit_empresa = (
+            cuit_oferente
+            or cuit_proveedor
+        )
+
+        if not cuit_empresa:
+            continue
+
+        empresas_con_oc.setdefault(
+            clave,
+            set()
+        ).add(cuit_empresa)
+
+
+    # Revisamos solamente los registros que ya quedaron
+    # dentro de la búsqueda actual.
+    ids_a_excluir = []
+
+    registros_actuales = registros.values_list(
+        "id",
+        "numero_proceso",
+        "numero_renglon",
+        "numero_oc",
+        "cuit_oferente",
+        "cuit_proveedor",
+    )
+
+    for (
+        registro_id,
+        numero_proceso,
+        numero_renglon,
+        numero_oc,
+        cuit_oferente,
+        cuit_proveedor,
+    ) in registros_actuales:
+
+        # Si esta fila ya tiene OC, se conserva.
+        if numero_oc:
+            continue
+
+        if not numero_proceso or not numero_renglon:
+            continue
+
+        clave = (
+            numero_proceso,
+            numero_renglon,
+        )
+
+        empresas_adjudicadas = empresas_con_oc.get(
+            clave,
+            set()
+        )
+
+        if not empresas_adjudicadas:
+            continue
+
+        cuit_empresa = (
+            cuit_oferente
+            or cuit_proveedor
+        )
+
+        if not cuit_empresa:
+            continue
+
+        # Si otra empresa tiene la OC,
+        # esta fila queda identificada como "Asig".
+        if cuit_empresa not in empresas_adjudicadas:
+
+            ids_adjudicados_otra_empresa.append(
+                registro_id
+            )
+
+            if not mostrar_adjudicados:
+                ids_a_excluir.append(
+                    registro_id
+                )
+
+
+    # Con "No" ocultamos esas filas.
+    # Con "Sí" quedan visibles y se marcarán como "Asig".
+    if ids_a_excluir:
+        registros = registros.exclude(
+            id__in=ids_a_excluir
+        )
+                
     # ========================================================
     # COMPETIDORES POR PROCESO + RENGLÓN
     #
@@ -699,7 +829,8 @@ def consultar(request):
         "estado_seleccionado": estado,
         "oc_seleccionado": oc,
         "proceso_seleccionado": proceso,
-
+        "mostrar_adjudicados": mostrar_adjudicados,
+        "ids_adjudicados_otra_empresa": ids_adjudicados_otra_empresa,
         # Segunda pestaña: Totales por Empresa
         "totales_empresas": totales_empresas,
         "total_procesos_distintos": total_procesos_distintos,
