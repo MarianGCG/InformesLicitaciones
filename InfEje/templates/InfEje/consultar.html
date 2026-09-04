@@ -3662,7 +3662,15 @@ document.getElementById("btnCSVdoppler").addEventListener(
 
     });
 </script>
+<script>
+    const empresaBusqueda = document.getElementById("empresaBusqueda");
 
+    if (empresaBusqueda) {
+        empresaBusqueda.addEventListener("focus", function () {
+            this.select();
+        });
+    }
+</script>
 
 </body>
 
