@@ -438,12 +438,14 @@ def importar_emails_excel(archivo):
     columnas_obligatorias = {
         "CUIT",
         "Nombre",
+        "Nombre pila",
         "Archivo inicial",
         "mail1",
         "mail2",
         "mail3",
         "Telefono",
         "Provincia",
+        "Tipo destinatario",
         "Comentarios",
     }
 
@@ -459,6 +461,7 @@ def importar_emails_excel(archivo):
         )
 
     actualizadas = 0
+    nuevas = 0
     no_encontradas = []
 
     for _, fila in df.iterrows():
@@ -475,7 +478,7 @@ def importar_emails_excel(archivo):
             continue
 
         # =====================================================
-        # BUSCAR EMPRESA POR CUIT
+        # BUSCAR O CREAR EMPRESA POR CUIT
         # =====================================================
 
         try:
@@ -484,13 +487,15 @@ def importar_emails_excel(archivo):
                 cuit=cuit
             )
 
+            es_nueva = False
+
         except Empresa.DoesNotExist:
 
-            no_encontradas.append(
-                cuit
+            empresa = Empresa(
+                cuit=cuit
             )
 
-            continue
+            es_nueva = True
 
         # =====================================================
         # NOMBRE
@@ -501,6 +506,15 @@ def importar_emails_excel(archivo):
                 fila["Nombre"]
             )
         )
+
+        # =====================================================
+        # NOMBRE de PILA
+        # =====================================================
+
+        empresa.nombre_pila = valor_o_none(
+            fila["Nombre pila"]
+        )
+
 
         # =====================================================
         # ARCHIVO INICIAL
@@ -573,25 +587,58 @@ def importar_emails_excel(archivo):
         )
 
         # =====================================================
+        # TIPO DESTINATARIO
+        # =====================================================
+        tipo_destinatario = valor_o_none(
+            fila["Tipo destinatario"]
+        )
+
+        if tipo_destinatario:
+
+            tipo_destinatario = (
+                str(tipo_destinatario)
+                .strip()
+                .lower()
+            )
+
+            if tipo_destinatario == "empresa":
+                empresa.tipo_destinatario = "empresa"
+
+            elif tipo_destinatario == "persona":
+                empresa.tipo_destinatario = "persona"
+                
+        # =====================================================
         # GUARDAR
         # =====================================================
 
-        empresa.save(
-            update_fields=[
-                "nombre",
-                "archivo_inicial",
-                "telefono",
-                "email",
-                "email_2",
-                "email_3",
-                "provincia",
-                "comentarios",
-            ]
-        )
 
-        actualizadas += 1
+        if es_nueva:
+
+            empresa.save()
+
+            nuevas += 1
+
+        else:
+
+            empresa.save(
+                update_fields=[
+                    "nombre",
+                    "nombre_pila",
+                    "archivo_inicial",
+                    "telefono",
+                    "email",
+                    "email_2",
+                    "email_3",
+                    "provincia",
+                    "tipo_destinatario",
+                    "comentarios",
+                ]
+            )
+
+            actualizadas += 1
 
     return (
         actualizadas,
+        nuevas,
         no_encontradas,
     )

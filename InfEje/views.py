@@ -36,6 +36,7 @@ from .importadores import (
     importar_excel,
     importar_emails_excel,
 )
+from .exportar_word import generar_word_mails
 
 def consultar(request):
 
@@ -235,7 +236,7 @@ def consultar(request):
     #
     # Solo afecta la pestaña RESULTADOS.
     # ========================================================
-    
+
     mostrar_adjudicados = (
         request.GET.get("mostrar_adjudicados", "0") == "1"
     )
@@ -595,6 +596,7 @@ def consultar(request):
         if cuit not in acumulado_empresas:
             acumulado_empresas[cuit] = {
                 "empresa": empresa_registro.nombre,
+                "cuit": cuit,
                 "procesos": set(),
                 "procesos_renglones": 0,
                 "total_ofertas": Decimal("0"),
@@ -618,6 +620,7 @@ def consultar(request):
     for datos in acumulado_empresas.values():
         totales_empresas.append({
             "empresa": datos["empresa"],
+            "cuit": datos["cuit"],
             "procesos_distintos": len(datos["procesos"]),
             "procesos_renglones": datos["procesos_renglones"],
             "total_ofertas": datos["total_ofertas"],
@@ -1155,12 +1158,14 @@ def exportar_empresas(request):
     hoja.append([
         "CUIT",
         "Nombre",
+        "Nombre pila",
         "Archivo inicial",
         "mail1",
         "mail2",
         "mail3",
         "Telefono",
         "Provincia",
+        "Tipo destinatario",
         "Comentarios",
     ])
 
@@ -1172,12 +1177,14 @@ def exportar_empresas(request):
         hoja.append([
             empresa.cuit or "",
             empresa.nombre or "",
+            empresa.nombre_pila or "",
             empresa.archivo_inicial or "",
             empresa.email or "",
             empresa.email_2 or "",
             empresa.email_3 or "",
             empresa.telefono or "",
             empresa.provincia or "",
+            empresa.tipo_destinatario or "empresa",
             empresa.comentarios or "",
         ])
 
@@ -1191,13 +1198,15 @@ def exportar_empresas(request):
     anchos = {
         "A": 18,  # CUIT
         "B": 45,  # Nombre
-        "C": 35,  # Archivo inicial
-        "D": 35,  # mail1
-        "E": 35,  # mail2
-        "F": 35,  # mail3
-        "G": 22,  # Telefono
-        "H": 22,  # Provincia
-        "I": 50,  # Comentarios
+        "C": 30,  # nombre pila
+        "D": 35,  # Archivo inicial
+        "E": 35,  # mail1
+        "F": 35,  # mail2
+        "G": 35,  # mail3
+        "H": 22,  # Telefono
+        "I": 22,  # Provincia
+        "J": 20,  # Tipo destinatario
+        "K": 50,  # Comentarios
     }
 
     for columna, ancho in anchos.items():
@@ -1246,6 +1255,7 @@ def importar_emails(request):
 
             (
                 actualizadas,
+                nuevas,
                 no_encontradas,
             ) = importar_emails_excel(
                 archivo
@@ -1253,7 +1263,9 @@ def importar_emails(request):
 
             mensaje = (
                 f"Empresas actualizadas: "
-                f"{actualizadas}."
+                f"{actualizadas}. "
+                f"Empresas nuevas: "
+                f"{nuevas}."
             )
 
             if no_encontradas:
@@ -1328,6 +1340,16 @@ def guardar_emails(request, empresa_id):
     empresa.email_3 = (
         request.POST.get("email_3") or None
     )
+
+    # ========================================================
+    # nombre_pila
+    # ========================================================
+
+    empresa.nombre_pila = (
+        request.POST.get("nombre_pila") or None
+    )
+
+
     # ========================================================
     # COMENTARIOS
     # ========================================================
@@ -1341,6 +1363,12 @@ def guardar_emails(request, empresa_id):
     # ========================================================
     empresa.archivo_inicial = (
         request.POST.get("archivo_inicial") or None
+    )
+
+    empresa.tipo_destinatario = (
+        "empresa"
+        if request.POST.get("tipo_destinatario")
+        else "persona"
     )
 
     # ========================================================
@@ -1357,6 +1385,8 @@ def guardar_emails(request, empresa_id):
             "email_3",
             "comentarios",
             "archivo_inicial",
+            "tipo_destinatario",
+            "nombre_pila",
         ]
     )
 
@@ -1633,12 +1663,17 @@ def guardar_ficha_empresa(request, empresa_id):
     empresa.email_3 = (
         request.POST.get("email_3") or None
     )
-
+    empresa.nombre_pila = (
+        request.POST.get("nombre_pila") or None
+    )
     empresa.comentarios = (
         request.POST.get("comentarios") or None
     )
     empresa.novedades = (
         request.POST.get("novedades") or None
+    )
+    empresa.tipo_destinatario = (
+        "empresa" if request.POST.get("tipo_destinatario") else "persona"
     )
     empresa.save(
         update_fields=[
@@ -1648,6 +1683,8 @@ def guardar_ficha_empresa(request, empresa_id):
             "email_3",
             "comentarios",
             "novedades",
+            "tipo_destinatario",
+            "nombre_pila",
         ]
     )
 
@@ -1659,3 +1696,209 @@ def guardar_ficha_empresa(request, empresa_id):
     return redirect(
         f"{reverse('consultar')}?{request.GET.urlencode()}"
     )
+    
+def exportar_word_mails(request):
+
+    # ========================================================
+    # TOMAR LOS REGISTROS SEGÚN LOS FILTROS DE LA PANTALLA
+    # ========================================================
+
+    registros, _ = obtener_registros_filtrados(request)
+
+    registros = (
+        registros
+        .select_related(
+            "empresa_oferente",
+            "empresa_proveedor",
+            "lote",
+        )
+    )
+
+    # ========================================================
+    # COMPETIDORES POR PROCESO + RENGLÓN
+    # ========================================================
+
+    competidores_por_clave = {}
+
+    claves_consulta = set(
+        registros
+        .exclude(numero_proceso__isnull=True)
+        .exclude(numero_proceso="")
+        .exclude(numero_renglon__isnull=True)
+        .values_list(
+            "numero_proceso",
+            "numero_renglon",
+        )
+    )
+
+    if claves_consulta:
+
+        registros_competidores = (
+            RegistroLicitacion.objects
+            .filter(
+                numero_proceso__in=[
+                    clave[0]
+                    for clave in claves_consulta
+                ],
+                numero_renglon__in=[
+                    clave[1]
+                    for clave in claves_consulta
+                ],
+            )
+            .select_related(
+                "empresa_oferente",
+                "empresa_proveedor",
+            )
+        )
+
+        for otro in registros_competidores:
+
+            clave = (
+                otro.numero_proceso,
+                otro.numero_renglon,
+            )
+
+            if clave not in claves_consulta:
+                continue
+
+            empresa = None
+
+            if otro.empresa_oferente:
+                empresa = otro.empresa_oferente
+
+            elif otro.empresa_proveedor:
+                empresa = otro.empresa_proveedor
+
+            if not empresa:
+                continue
+
+            if clave not in competidores_por_clave:
+                competidores_por_clave[clave] = {}
+
+            competidores_por_clave[
+                clave
+            ][empresa.cuit] = empresa.nombre
+
+    # ========================================================
+    # ASIGNAR COMPETIDORES A CADA REGISTRO
+    # ========================================================
+
+    for registro in registros:
+
+        clave = (
+            registro.numero_proceso,
+            registro.numero_renglon,
+        )
+
+        empresas_competidoras = (
+            competidores_por_clave.get(
+                clave,
+                {}
+            )
+        )
+
+        # ----------------------------------------------------
+        # Identificar la empresa de esta fila
+        # ----------------------------------------------------
+
+        cuit_actual = None
+
+        if registro.empresa_oferente:
+            cuit_actual = (
+                registro.empresa_oferente.cuit
+            )
+
+        elif registro.empresa_proveedor:
+            cuit_actual = (
+                registro.empresa_proveedor.cuit
+            )
+
+        # ----------------------------------------------------
+        # Excluir la propia empresa
+        # ----------------------------------------------------
+
+        nombres = [
+            nombre
+            for cuit, nombre
+            in empresas_competidoras.items()
+            if cuit != cuit_actual
+        ]
+
+        registro.competidores = " ; ".join(
+            sorted(
+                nombres,
+                key=str.lower
+            )
+        )
+
+    # ========================================================
+    # AGRUPAR POR EMPRESA
+    # ========================================================
+
+    empresas = {}
+
+    for registro in registros:
+
+        empresa = None
+
+        if registro.empresa_oferente:
+            empresa = registro.empresa_oferente
+
+        elif registro.empresa_proveedor:
+            empresa = registro.empresa_proveedor
+
+        if not empresa:
+            continue
+
+        if empresa.id not in empresas:
+            empresas[empresa.id] = {
+                "empresa": empresa,
+                "registros": [],
+            }
+
+        empresas[empresa.id]["registros"].append(
+            registro
+        )
+
+    # ========================================================
+    # ORDENAR EMPRESAS
+    # ========================================================
+
+    empresas_ordenadas = sorted(
+        empresas.values(),
+        key=lambda x: (
+            x["empresa"].nombre or ""
+        ).lower()
+    )
+
+    empresas_con_registros = [
+        (
+            datos["empresa"],
+            datos["registros"],
+        )
+        for datos in empresas_ordenadas
+    ]
+
+    # ========================================================
+    # GENERAR WORD
+    # ========================================================
+
+    buffer = generar_word_mails(
+        empresas_con_registros
+    )
+
+    respuesta = HttpResponse(
+        buffer.getvalue(),
+        content_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "wordprocessingml.document"
+        )
+    )
+
+    respuesta["Content-Disposition"] = (
+        'attachment; '
+        'filename="mails_licitaciones.docx"'
+    )
+
+    return respuesta
+    

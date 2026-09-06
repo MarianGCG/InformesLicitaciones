@@ -173,14 +173,14 @@
         }
 
         .totales-tabla {
-            width: 920px;
-            max-width: 100%;
-            min-width: 0 !important;
+            width: 1100px !important;
+            min-width: 1100px !important;
+            max-width: 1100px !important;
             table-layout: fixed;
         }
 
-        .totales-tabla th:first-child,
-        .totales-tabla td:first-child {
+        .totales-tabla th:nth-child(1),
+        .totales-tabla td:nth-child(1) {
             width: 440px;
         }
 
@@ -197,6 +197,11 @@
         .totales-tabla th:nth-child(4),
         .totales-tabla td:nth-child(4) {
             width: 160px;
+        }
+
+        .totales-tabla th:nth-child(5),
+        .totales-tabla td:nth-child(5) {
+            width: 180px;
         }
 
         .totales-tabla .numero {
@@ -804,7 +809,9 @@
             min-width: 500px;
             max-width: 500px;
         }
-        .tabla-contenedor table {
+
+
+        .tabla-contenedor table:not(.totales-tabla) {
             min-width: 1800px;
         }
 
@@ -1593,7 +1600,38 @@
                             CSV DOPPLER
                         </a>
 
+
                     </div>
+                    <div class="botones-filtros botones-filtros-inferior">
+
+                        <button
+                            type="button"
+                            id="btnWordMails"
+                            class="boton-pdf"
+                            style="background:#6B8EAD; width:580px;"
+                        >
+                            Word mails
+                        </button>
+
+                        <button
+                            type="button"
+                            id=""
+                            class="boton-pdf"
+                            style="background:#374151; width:580px; visibility:hidden;"
+                        >
+                        </button>
+
+                        <button
+                            type="button"
+                            id=""
+                            class="boton-pdf"
+                            style="background:#374151; width:580px; visibility:hidden;"
+                        >
+                        </button>
+
+                    </div>
+
+
                 </div>
                 
             </div>
@@ -2085,6 +2123,7 @@
                     <thead>
                         <tr>
                             <th>Empresa</th>
+                            <th>CUIT</th>
                             <th class="numero">Procesos distintos</th>
                             <th class="numero">Procesos / Renglones</th>
                             <th class="numero">Total Ofertas</th>
@@ -2094,6 +2133,7 @@
                         {% for total in totales_empresas %}
                             <tr>
                                 <td class="empresa" title="Doble clic para filtrar esta empresa">{{ total.empresa }}</td>
+                                <td>{{total.cuit }}</td>
                                 <td class="numero">{{ total.procesos_distintos }}</td>
                                 <td class="numero">{{ total.procesos_renglones }}</td>
                                 <td class="numero">{{ total.total_ofertas|floatformat:2 }}</td>
@@ -3671,7 +3711,22 @@ document.getElementById("btnCSVdoppler").addEventListener(
         });
     }
 </script>
+<script>
+document.getElementById("btnWordMails").addEventListener(
+    "click",
+    function () {
 
+        const params = new URLSearchParams(
+            window.location.search
+        );
+
+        window.location.href =
+            "{% url 'exportar_word_mails' %}"
+            + "?"
+            + params.toString();
+    }
+);
+</script>
 </body>
 
 </html>

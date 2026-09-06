@@ -71,16 +71,25 @@
 
     <div class="tarjeta">
 
-        <h1>
-            Importar Emails
-        </h1>
+        <h1>Importar Emails</h1>
+        {% if messages %}
 
+            {% for message in messages %}
+
+                <div class="mensaje">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
         <p>
             El Excel debe tener las columnas:
         </p>
 
         <strong>
-            CUIT | Nombre | mail1 | mail2 | mail3
+            CUIT | Nombre | Nombre pila |Archivo inicial | mail1 | mail2 | mail3 |
+            Telefono | Provincia | Tipo destinatario | Comentarios
         </strong>
 
         <form

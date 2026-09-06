@@ -55,6 +55,20 @@ class Empresa(models.Model):
         blank=True,
         null=True
     )
+
+    tipo_destinatario = models.CharField(
+        max_length=20,
+        choices=[
+            ("persona", "Persona"),
+            ("empresa", "Empresa"),
+        ],
+        default="empresa",
+    )
+    nombre_pila = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
     
     def __str__(self):
         return self.nombre

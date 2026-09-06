@@ -76,4 +76,10 @@ urlpatterns = [
         views.exportar_empresas,
         name="exportar_empresas",
     ),
+        
+    path(
+        "exportar-word-mails/",
+        views.exportar_word_mails,
+        name="exportar_word_mails",
+    ),
 ]

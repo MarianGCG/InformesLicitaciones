@@ -1,0 +1,924 @@
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
+
+from docx import Document
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.section import WD_SECTION
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+
+def obtener_fuente(tamano, negrita=False):
+    """
+    Busca una fuente disponible en Windows o Linux.
+    """
+
+    rutas = []
+
+    if negrita:
+        rutas.extend([
+            r"C:\Windows\Fonts\arialbd.ttf",
+            "/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+        ])
+    else:
+        rutas.extend([
+            r"C:\Windows\Fonts\arial.ttf",
+            "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        ])
+
+    for ruta in rutas:
+        try:
+            return ImageFont.truetype(ruta, tamano)
+        except Exception:
+            pass
+
+    return ImageFont.load_default()
+
+
+def texto(valor):
+    """
+    Convierte cualquier valor a texto limpio.
+    """
+    if valor is None:
+        return "-"
+
+    valor = str(valor).strip()
+
+    return valor if valor else "-"
+
+
+def formatear_fecha(fecha):
+    if not fecha:
+        return "-"
+
+    return fecha.strftime("%d/%m/%Y")
+
+
+def obtener_empresa_registro(registro):
+    """
+    Devuelve la Empresa asociada al registro.
+    """
+
+    if registro.empresa_oferente:
+        return registro.empresa_oferente
+
+    if registro.empresa_proveedor:
+        return registro.empresa_proveedor
+
+    return None
+
+def agregar_tabla_resultados(documento, registros, empresa):
+    """
+    Genera la tabla de resultados como imagen
+    y la inserta en el documento Word.
+
+    Los anchos son fijos.
+    Los competidores se muestran TODOS,
+    separados por comas y sin recortar.
+    """
+
+    columnas = [
+        ("Proceso", 200),
+        ("R", 35),
+        ("OC", 45),
+        ("Comprador", 380),
+        ("Empresas que también licitaron", 700),
+        ("Apertura", 110),
+        ("Estado", 120),
+        ("Oferta", 120),
+        ("Mon", 50),
+        ("Descripción", 320),
+    ]
+    
+
+    columnas = [
+        (nombre, ancho )
+        for nombre, ancho in columnas
+    ]
+    # ========================================================
+    # FUENTES
+    # ========================================================
+
+    fuente_encabezado = obtener_fuente(
+        20 ,
+        negrita=True
+    )
+
+    fuente_normal = obtener_fuente(
+        19 
+    )
+
+    # SOLO esta columna lleva letra más chica
+    fuente_competidores = obtener_fuente(
+        18 
+    )
+
+    # ========================================================
+    # PREPARAR FILAS
+    # ========================================================
+
+    filas = []
+
+    for registro in registros:
+
+        oc = (
+            registro.numero_oc
+            if registro.numero_oc
+            else "-"
+        )
+
+        oferta = (
+            f"{registro.precio_total_oferta:,.2f}"
+            if registro.precio_total_oferta is not None
+            else "-"
+        )
+
+        # ----------------------------------------------------
+        # COMPETIDORES
+        # ----------------------------------------------------
+
+        competidores = getattr(
+            registro,
+            "competidores",
+            None
+        )
+
+        if competidores:
+
+            if isinstance(
+                competidores,
+                (list, tuple, set)
+            ):
+                competidores = ", ".join(
+                    str(nombre).strip()
+                    for nombre in competidores
+                    if str(nombre).strip()
+                )
+
+            else:
+                competidores = str(
+                    competidores
+                ).strip()
+
+                competidores = (
+                    competidores
+                    .replace(" ; ", ", ")
+                    .replace(";", ", ")
+                )
+
+        else:
+            competidores = "-"
+
+        # ----------------------------------------------------
+        # FILA
+        # ----------------------------------------------------
+
+        filas.append([
+            texto(registro.numero_proceso),
+            texto(registro.numero_renglon),
+            texto(oc),
+            texto(registro.comprador),
+            competidores,
+            formatear_fecha(
+                registro.fecha_apertura
+            ),
+            texto(registro.estado),
+            oferta,
+            texto(registro.moneda_oferta),
+            texto(registro.descripcion_renglon),
+        ])
+
+    # ========================================================
+    # CONFIGURACIÓN
+    # ========================================================
+
+    margen = 14  
+    alto_linea = 22 
+    alto_encabezado = 30 
+
+    ancho_total = (
+        sum(
+            ancho
+            for _, ancho in columnas
+        )
+        + margen * 1
+    )
+
+    # ========================================================
+    # IMAGEN PROVISORIA PARA MEDIR TEXTO
+    # ========================================================
+
+    imagen_provisoria = Image.new(
+        "RGB",
+        (
+            ancho_total,
+            100
+        ),
+        "white"
+    )
+
+    dibujo = ImageDraw.Draw(
+        imagen_provisoria
+    )
+
+    # ========================================================
+    # ENVOLVER TEXTO
+    # ========================================================
+
+    def envolver_texto(
+        valor,
+        fuente,
+        ancho_disponible
+    ):
+        valor = str(valor)
+
+        if not valor:
+            return ["-"]
+
+        palabras = valor.split()
+        lineas = []
+        linea_actual = ""
+
+        for palabra in palabras:
+
+            if not linea_actual:
+                candidata = palabra
+            else:
+                candidata = (
+                    linea_actual
+                    + " "
+                    + palabra
+                )
+
+            bbox = dibujo.textbbox(
+                (0, 0),
+                candidata,
+                font=fuente
+            )
+
+            ancho_texto = (
+                bbox[2] - bbox[0]
+            )
+
+            if ancho_texto <= ancho_disponible:
+                linea_actual = candidata
+            else:
+
+                if linea_actual:
+                    lineas.append(
+                        linea_actual
+                    )
+
+                linea_actual = palabra
+
+        if linea_actual:
+            lineas.append(
+                linea_actual
+            )
+
+        return lineas or ["-"]
+
+
+    
+    def envolver_competidores(
+        valor,
+        ancho_disponible
+    ):
+        """
+        Muestra TODOS los competidores,
+        separados por comas y acomodados
+        en un máximo de 2 líneas.
+
+        Reduce solamente el tamaño de letra
+        si es necesario para que entren.
+        """
+
+        valor = str(valor).strip()
+
+        if not valor:
+            return [("-", fuente_competidores)]
+
+        # --------------------------------------------------------
+        # SEPARAR EMPRESAS
+        # --------------------------------------------------------
+
+        empresas = [
+            empresa.strip()
+            for empresa in valor.split(",")
+            if empresa.strip()
+        ]
+
+        if not empresas:
+            return [("-", fuente_competidores)]
+
+        # --------------------------------------------------------
+        # USAR SIEMPRE LA MISMA FUENTE
+        # --------------------------------------------------------
+
+        
+
+        fuente = fuente_competidores
+
+
+        linea_1 = ""
+        linea_2 = ""
+
+        for empresa in empresas:
+
+            candidata_1 = (
+                empresa
+                if not linea_1
+                else linea_1 + ", " + empresa
+            )
+
+            ancho_1 = dibujo.textbbox(
+                (0, 0),
+                candidata_1,
+                font=fuente
+            )[2]
+
+            if ancho_1 <= ancho_disponible:
+                linea_1 = candidata_1
+                continue
+
+            candidata_2 = (
+                empresa
+                if not linea_2
+                else linea_2 + ", " + empresa
+            )
+
+            linea_2 = candidata_2
+
+        lineas = []
+
+        if linea_1:
+            lineas.append(
+                (linea_1, fuente)
+            )
+
+        if linea_2:
+            lineas.append(
+                (linea_2, fuente)
+            )
+
+        return lineas
+        
+    def texto_una_linea(valor, fuente, ancho_disponible):
+        """
+        Muestra el texto en una sola línea.
+        Si no entra, lo corta y agrega ...
+        """
+
+        valor = str(valor).strip()
+
+        if not valor:
+            return "-"
+
+        # Sacamos saltos de línea y espacios repetidos
+        valor = " ".join(valor.split())
+
+        bbox = dibujo.textbbox(
+            (0, 0),
+            valor,
+            font=fuente
+        )
+
+        ancho_texto = bbox[2] - bbox[0]
+
+        if ancho_texto <= ancho_disponible:
+            return valor
+
+        sufijo = "..."
+
+        texto_cortado = ""
+
+        for caracter in valor:
+
+            candidata = (
+                texto_cortado
+                + caracter
+                + sufijo
+            )
+
+            bbox = dibujo.textbbox(
+                (0, 0),
+                candidata,
+                font=fuente
+            )
+
+            ancho_candidata = (
+                bbox[2] - bbox[0]
+            )
+
+            if ancho_candidata > ancho_disponible:
+                break
+
+            texto_cortado += caracter
+
+        return texto_cortado.rstrip() + sufijo
+
+    # ========================================================
+    # CALCULAR ALTURA DE CADA FILA
+    # ========================================================
+
+    # ========================================================
+    # CALCULAR ALTURA DE CADA FILA
+    # ========================================================
+
+    alturas_filas = []
+
+    for fila in filas:
+
+        # --------------------------------------------
+        # Competidores: SIEMPRE máximo 2 líneas
+        # --------------------------------------------
+
+        competidores = fila[4]
+
+        lineas_competidores = envolver_competidores(
+            competidores,
+            columnas[4][1] - 12
+        )
+
+        cantidad_lineas = 1
+
+        # Los competidores pueden ocupar hasta 2 líneas
+        cantidad_lineas = max(
+            cantidad_lineas,
+            len(lineas_competidores)
+        )
+
+        # --------------------------------------------
+        # Resto de las columnas
+        # --------------------------------------------
+
+        for indice, valor in enumerate(fila):
+
+            # Competidores ya los calculamos arriba
+            if indice == 4:
+                continue
+
+            _, ancho = columnas[indice]
+
+            # Descripción: una sola línea
+            if indice == 9:
+                cantidad_lineas = max(
+                    cantidad_lineas,
+                    1
+                )
+                continue
+
+            lineas = envolver_texto(
+                valor,
+                fuente_normal,
+                ancho - 12
+            )
+
+            cantidad_lineas = max(
+                cantidad_lineas,
+                len(lineas)
+            )
+
+        # --------------------------------------------
+        # Altura de la fila
+        # --------------------------------------------
+
+        alturas_filas.append(
+            cantidad_lineas * alto_linea
+        )
+
+
+
+    # ========================================================
+    # ALTURA TOTAL
+    # ========================================================
+
+    alto_total = (
+         margen
+         + alto_encabezado
+         + sum(alturas_filas)
+         + margen
+    )
+
+    # ========================================================
+    # CREAR IMAGEN DEFINITIVA
+    # ========================================================
+
+    imagen = Image.new(
+        "RGB",
+        (
+            ancho_total,
+            alto_total
+        ),
+        "white"
+    )
+
+    dibujo = ImageDraw.Draw(
+        imagen
+    )
+
+    # ========================================================
+    # ENCABEZADOS
+    # ========================================================
+
+    x = margen
+    y = margen
+
+    for nombre_columna, ancho in columnas:
+
+        dibujo.rectangle(
+            [
+                (x, y),
+                (
+                    x + ancho,
+                    y + alto_encabezado
+                )
+            ],
+            outline="black",
+            fill="#EAEAEA"
+        )
+
+        lineas = envolver_texto(
+            nombre_columna,
+            fuente_encabezado,
+            ancho - 10
+        )
+
+        y_texto = (
+            y
+            + (
+                alto_encabezado
+                - len(lineas) * alto_linea
+            ) / 2
+        )
+
+        for linea in lineas:
+
+            dibujo.text(
+                (
+                    x + 5,
+                    y_texto
+                ),
+                linea,
+                font=fuente_encabezado,
+                fill="black"
+            )
+
+            y_texto += alto_linea
+
+        x += ancho
+
+    y += alto_encabezado
+
+    # ========================================================
+    # FILAS
+    # ========================================================
+
+    for numero_fila, fila in enumerate(filas):
+
+        alto_fila = alturas_filas[
+            numero_fila
+        ]
+
+        x = margen
+
+        for indice, valor in enumerate(fila):
+
+            _, ancho = columnas[indice]
+
+            # Competidores con letra más chica
+            if indice == 4:
+
+                lineas_competidores = envolver_competidores(
+                    valor,
+                    ancho - 12
+                )
+
+                lineas = [
+                    linea
+                    for linea, fuente
+                    in lineas_competidores
+                ]
+
+                fuente = (
+                    lineas_competidores[0][1]
+                    if lineas_competidores
+                    else fuente_competidores
+                )
+
+            elif indice == 9:
+
+                # ============================================
+                # DESCRIPCIÓN: UNA SOLA LÍNEA + ...
+                # ============================================
+
+                fuente = fuente_normal
+
+                descripcion = texto_una_linea(
+                    valor,
+                    fuente,
+                    ancho - 12
+                )
+
+                lineas = [
+                    descripcion
+                ]
+
+            else:
+
+                fuente = fuente_normal
+
+                lineas = envolver_texto(
+                    valor,
+                    fuente,
+                    ancho - 12
+                )
+
+            dibujo.rectangle(
+                [
+                    (x, y),
+                    (
+                        x + ancho,
+                        y + alto_fila
+                    )
+                ],
+                outline="black"
+            )
+
+            y_texto = (
+                y
+                + (
+                    alto_fila
+                    - len(lineas) * alto_linea
+                ) / 2
+            )
+
+            for linea in lineas:
+
+                dibujo.text(
+                    (
+                        x + 6,
+                        y_texto
+                    ),
+                    linea,
+                    font=fuente,
+                    fill="black"
+                )
+
+                y_texto += alto_linea
+
+            x += ancho
+
+        y += alto_fila
+
+    # ========================================================
+    # RECORTAR LA IMAGEN AL ALTO REAL DE LA TABLA
+    # ========================================================
+
+    alto_real = y + margen
+
+    imagen = imagen.crop(
+        (
+            0,
+            0,
+            ancho_total,
+            alto_real
+        )
+    )
+    # ========================================================
+    # GUARDAR IMAGEN EN MEMORIA
+    # ========================================================
+
+    buffer = BytesIO()
+
+    imagen.save(
+        buffer,
+        format="PNG",
+        dpi=(300, 300),
+        optimize=True
+    )
+
+    buffer.seek(0)
+
+    # ========================================================
+    # INSERTAR IMAGEN EN WORD
+    # ========================================================
+
+    parrafo = documento.add_paragraph()
+
+    parrafo.alignment = (
+        WD_ALIGN_PARAGRAPH.CENTER
+    )
+
+    run = parrafo.add_run()
+
+    run.add_picture(
+        buffer,
+        width=Inches(8.0)
+    )
+
+
+def agregar_linea(documento, etiqueta, valor):
+    """
+    Agrega una línea:
+    Etiqueta: valor
+    """
+
+    parrafo = documento.add_paragraph()
+
+    run = parrafo.add_run(
+        f"{etiqueta}: "
+    )
+
+    run.bold = True
+
+    parrafo.add_run(
+        texto(valor)
+    )
+
+    return parrafo
+
+
+def generar_word_mails(empresas_con_registros):
+    """
+    Genera un único Word.
+
+    empresas_con_registros:
+        [
+            (empresa, [registro1, registro2, ...]),
+            ...
+        ]
+    """
+
+    documento = Document()
+
+    # --------------------------------------------------------
+    # CONFIGURACIÓN DE PÁGINA
+    # --------------------------------------------------------
+
+    seccion = documento.sections[0]
+
+    seccion.top_margin = Inches(0.55)
+    seccion.bottom_margin = Inches(0.55)
+    seccion.left_margin = Inches(0.55)
+    seccion.right_margin = Inches(0.55)
+
+    for indice, (
+        empresa,
+        registros
+    ) in enumerate(empresas_con_registros):
+
+        # ----------------------------------------------------
+        # NUEVA PÁGINA
+        # ----------------------------------------------------
+
+        if indice > 0:
+            documento.add_page_break()
+
+        # ----------------------------------------------------
+        # DESTINATARIO
+        # ----------------------------------------------------
+
+        nombre_pila = (
+            empresa.nombre_pila
+            or empresa.nombre
+            or ""
+        ).strip()
+
+        tipo = (
+            empresa.tipo_destinatario
+            or "empresa"
+        ).lower()
+
+        if tipo == "persona":
+
+            destinatario = (
+                f"Hola {nombre_pila}, "
+                f"¿Cómo estás?"
+            )
+
+            texto_mail = (
+                f"Hola {nombre_pila}, ¿Cómo estás?\n\n"
+                "Quería acercarte algo concreto: "
+                "preparamos una simulación de cotización "
+                "de las Cauciones de Mantenimiento de Oferta "
+                "(MO) de algunos procesos que identificamos "
+                "a partir de información pública, para que "
+                "puedas conocer cuánto te hubiéramos cotizado "
+                "nosotros.\n\n"
+                "Tenemos dos alternativas:\n\n"
+                "1. Te cotizamos la MO para mostrarte cuál "
+                "hubiera sido nuestro costo.\n\n"
+                "2. Si me enviás la póliza que contrataste "
+                "oportunamente, podemos comparar y evaluar "
+                "la posibilidad de mejorar el costo hasta un 30%.\n\n"
+                "Sujeto, naturalmente, a las condiciones de "
+                "emisión y evaluación de la compañía.\n\n"
+                "La idea es que tengas una referencia concreta "
+                "para próximas licitaciones.\n\n"
+                "Saludos,\n"
+                "Andrés"
+            )
+
+        else:
+
+            destinatario = (
+                f"Estimados {nombre_pila},"
+            )
+
+            texto_mail = (
+                f"Estimados {nombre_pila},\n\n"
+                "Quería acercarles algo concreto: "
+                "preparamos una simulación de cotización "
+                "de las Cauciones de Mantenimiento de Oferta "
+                "(MO) de algunos procesos que identificamos "
+                "a partir de información pública, para que "
+                "puedan conocer cuánto les hubiéramos cotizado "
+                "nosotros.\n\n"
+                "Tenemos dos alternativas:\n\n"
+                "1. Les cotizamos la MO para mostrarles cuál "
+                "hubiera sido nuestro costo.\n\n"
+                "2. Si nos envían la póliza que contrataron "
+                "oportunamente, podemos comparar y evaluar "
+                "la posibilidad de mejorar el costo hasta un 30%.\n\n"
+                "Sujeto, naturalmente, a las condiciones de "
+                "emisión y evaluación de la compañía.\n\n"
+                "La idea es que tengan una referencia concreta "
+                "para próximas licitaciones.\n\n"
+                "Saludos,\n"
+                "Andrés"
+            )
+
+        # ----------------------------------------------------
+        # DESTINATARIO
+        # ----------------------------------------------------
+
+        agregar_linea(
+            documento,
+            "Destinatario",
+            destinatario
+        )
+
+        # ----------------------------------------------------
+        # ASUNTO
+        # ----------------------------------------------------
+
+        agregar_linea(
+            documento,
+            "Asunto",
+            "Simulación de cotización de Cauciones de MO"
+        )
+
+        # ----------------------------------------------------
+        # TEXTO
+        # ----------------------------------------------------
+
+        parrafo = documento.add_paragraph()
+
+        run = parrafo.add_run(
+            "Texto del mail:"
+        )
+
+        run.bold = True
+
+        # ----------------------------------------------------
+        # CUERPO DEL MAIL
+        # ----------------------------------------------------
+
+        for linea in texto_mail.split("\n"):
+
+            parrafo = documento.add_paragraph()
+
+            parrafo.paragraph_format.space_after = Pt(0)
+
+            run = parrafo.add_run(linea)
+
+            run.font.size = Pt(10)
+
+        # ----------------------------------------------------
+        # RESULTADOS
+        # ----------------------------------------------------
+
+
+
+        agregar_tabla_resultados(
+            documento,
+            registros,
+            empresa
+        )
+
+
+    # --------------------------------------------------------
+    # GUARDAR
+    # --------------------------------------------------------
+
+    buffer = BytesIO()
+
+    documento.save(buffer)
+
+    buffer.seek(0)
+
+    return buffer
