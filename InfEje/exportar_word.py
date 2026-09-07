@@ -7,7 +7,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.section import WD_SECTION
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-
+from decimal import Decimal, ROUND_HALF_UP
 
 def obtener_fuente(tamano, negrita=False):
     """
@@ -719,9 +719,7 @@ def agregar_tabla_resultados(documento, registros, empresa):
         buffer,
         width=Inches(8.0)
     )
-
-
-def agregar_linea(documento, etiqueta, valor):
+def agregar_linea(documento, etiqueta, valor, tamano=None):
     """
     Agrega una línea:
     Etiqueta: valor
@@ -729,18 +727,241 @@ def agregar_linea(documento, etiqueta, valor):
 
     parrafo = documento.add_paragraph()
 
+    parrafo.paragraph_format.space_after = Pt(0)
+
     run = parrafo.add_run(
         f"{etiqueta}: "
     )
 
     run.bold = True
 
-    parrafo.add_run(
+    run_valor = parrafo.add_run(
         texto(valor)
     )
 
+    if tamano is not None:
+        run.font.size = Pt(tamano)
+        run_valor.font.size = Pt(tamano)
+
     return parrafo
 
+    
+def calcular_cotizacion(registro, porcentaje_sa):
+    """
+    Calcula la cotización de Mantenimiento de Oferta
+    tomando solamente un registro.
+
+    Reglas actuales:
+        - SA = 5% de la oferta
+        - Tasa = 1%
+        - Período = trimestral (4)
+        - Prima = fórmula PRIMA del cotizador
+        - Premio simple = fórmula PREMIO FINAL del cotizador
+    """
+
+    if registro is None:
+        return None
+
+    if registro.precio_total_oferta is None:
+        return None
+
+    oferta = Decimal(
+        str(registro.precio_total_oferta)
+    )
+
+
+    suma_asegurada = (
+        oferta * Decimal(str(porcentaje_sa))
+        / Decimal("100")
+    )
+    tasa = Decimal("1")
+    periodos = Decimal("4")
+
+    moneda = (
+        registro.moneda_oferta
+        or ""
+    ).strip().upper()
+
+    # ========================================================
+    # COTIZADOR USD
+    # ========================================================
+
+    if "USD" in moneda or "U$S" in moneda or "$US" in moneda:
+
+        # PRIMA MINIMA USD
+        prima_minima = (
+            Decimal("17500")
+            / Decimal("1510")
+        )
+
+        # DERECHO DE EMISION USD
+        derecho_emision = (
+            Decimal("15500")
+            / Decimal("1510")
+        )
+
+        prima_calculada = (
+            suma_asegurada
+            * tasa
+            / Decimal("100")
+            / periodos
+        )
+
+        # Fórmula PRIMA del Excel
+        prima = max(
+            prima_calculada,
+            prima_minima
+        )
+
+        # Fórmula PREMIO FINAL del Excel
+        recargo_administrativo = (
+            prima * Decimal("0.10")
+        )
+
+        subtotal = (
+            prima
+            + derecho_emision
+            + recargo_administrativo
+        )
+
+        intereses_internos = (
+            subtotal * Decimal("0.001")
+        )
+
+        tasa_ssn = (
+            subtotal * Decimal("0.006")
+        )
+
+        osseg = (
+            subtotal * Decimal("0.005")
+        )
+
+        sellos = (
+            subtotal * Decimal("0.0171")
+        )
+
+        iva = (
+            subtotal * Decimal("0.21")
+        )
+
+        total_impuestos = (
+            intereses_internos
+            + tasa_ssn
+            + osseg
+            + sellos
+            + iva
+        )
+
+        premio_final = (
+            subtotal
+            + total_impuestos
+        )
+
+        moneda_texto = "USD"
+
+    # ========================================================
+    # COTIZADOR PESOS
+    # ========================================================
+
+    else:
+
+        # PRIMA MINIMA $
+        prima_minima = Decimal("18000")
+
+        # DERECHO DE EMISION $
+        derecho_emision = Decimal("15500")
+
+        prima_calculada = (
+            suma_asegurada
+            * tasa
+            / Decimal("100")
+            / periodos
+        )
+
+        # Fórmula PRIMA del Excel
+        prima = max(
+            prima_calculada,
+            prima_minima
+        )
+
+        # Fórmula PREMIO FINAL del Excel
+        escribania = Decimal("18500")
+        colegio = Decimal("16500")
+
+        recargo_administrativo = (
+            prima * Decimal("0.10")
+        )
+
+        subtotal = (
+            prima
+            + derecho_emision
+            + escribania
+            + colegio
+            + recargo_administrativo
+        )
+
+        intereses_internos = (
+            subtotal * Decimal("0.001")
+        )
+
+        tasa_ssn = (
+            subtotal * Decimal("0.006")
+        )
+
+        osseg = (
+            subtotal * Decimal("0.005")
+        )
+
+        sellos = (
+            subtotal * Decimal("0.0171")
+        )
+
+        iva = (
+            subtotal * Decimal("0.21")
+        )
+
+        total_impuestos = (
+            intereses_internos
+            + tasa_ssn
+            + osseg
+            + sellos
+            + iva
+        )
+
+        premio_final = (
+            subtotal
+            + total_impuestos
+        )
+
+        moneda_texto = "$"
+
+    # ========================================================
+    # REDONDEO
+    # ========================================================
+
+    def redondear(valor):
+        return valor.quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP
+        )
+
+    return {
+        "oferta": redondear(oferta),
+        "suma_asegurada": redondear(
+            suma_asegurada
+        ),
+        "prima": redondear(prima),
+        "premio_final": redondear(
+            premio_final
+        ),
+        "moneda": moneda_texto,
+        "proceso": texto(
+            registro.numero_proceso
+        ),
+        "renglon": texto(
+            registro.numero_renglon
+        ),
+    }
 
 def generar_word_mails(empresas_con_registros):
     """
@@ -800,57 +1021,71 @@ def generar_word_mails(empresas_con_registros):
                 f"¿Cómo estás?"
             )
 
+
             texto_mail = (
                 f"Hola {nombre_pila}, ¿Cómo estás?\n\n"
-                "Quería acercarte algo concreto: "
-                "preparamos una simulación de cotización "
-                "de las Cauciones de Mantenimiento de Oferta "
-                "(MO) de algunos procesos que identificamos "
-                "a partir de información pública, para que "
-                "puedas conocer cuánto te hubiéramos cotizado "
-                "nosotros.\n\n"
-                "Tenemos dos alternativas:\n\n"
-                "1. Te cotizamos la MO para mostrarte cuál "
-                "hubiera sido nuestro costo.\n\n"
-                "2. Si me enviás la póliza que contrataste "
-                "oportunamente, podemos comparar y evaluar "
-                "la posibilidad de mejorar el costo hasta un 30%.\n\n"
+                "Siguiendo con el contacto que tuvimos "
+                "oportunamente, y a modo de ejemplo, te "
+                "acercamos una simulación de cotización de "
+                "las Cauciones de Mantenimiento de Oferta\n"
+                "correspondientes a algunos procesos "
+                "que identificamos a partir de información "
+                "pública.\n\n"
+                "En este caso, te mostramos cuánto hubiera "
+                "sido nuestra cotización para una de esas MO.\n\n"
                 "Sujeto, naturalmente, a las condiciones de "
                 "emisión y evaluación de la compañía.\n\n"
                 "La idea es que tengas una referencia concreta "
                 "para próximas licitaciones.\n\n"
+                "Por otro lado, si me enviás la póliza que "
+                "contrataste oportunamente, podemos compararla "
+                "y evaluar la posibilidad de mejorar el costo "
+                "hasta un 30%.\n\n"
                 "Saludos,\n"
                 "Andrés"
             )
-
         else:
 
             destinatario = (
                 f"Estimados {nombre_pila},"
             )
 
+
             texto_mail = (
                 f"Estimados {nombre_pila},\n\n"
-                "Quería acercarles algo concreto: "
-                "preparamos una simulación de cotización "
-                "de las Cauciones de Mantenimiento de Oferta "
-                "(MO) de algunos procesos que identificamos "
-                "a partir de información pública, para que "
-                "puedan conocer cuánto les hubiéramos cotizado "
-                "nosotros.\n\n"
-                "Tenemos dos alternativas:\n\n"
-                "1. Les cotizamos la MO para mostrarles cuál "
-                "hubiera sido nuestro costo.\n\n"
-                "2. Si nos envían la póliza que contrataron "
-                "oportunamente, podemos comparar y evaluar "
-                "la posibilidad de mejorar el costo hasta un 30%.\n\n"
+                "Siguiendo con el contacto que tuvimos "
+                "oportunamente, y a modo de ejemplo, les "
+                "acercamos una simulación de cotización de "
+                "las Cauciones de Mantenimiento de Oferta\n"
+                "correspondientes a algunos procesos "
+                "que identificamos a partir de información "
+                "pública.\n\n"
+                "En este caso, les mostramos cuánto hubiera "
+                "sido nuestra cotización para una de esas MO.\n"
                 "Sujeto, naturalmente, a las condiciones de "
-                "emisión y evaluación de la compañía.\n\n"
+                "emisión y evaluación de la compañía.\n\n\n"
                 "La idea es que tengan una referencia concreta "
-                "para próximas licitaciones.\n\n"
+                "para próximas licitaciones.\n"
+                "Por otro lado, si nos envían la póliza que "
+                "contrataron oportunamente, podemos compararla "
+                "y evaluar la posibilidad de mejorar el costo "
+                "hasta un 30%.\n\n"
                 "Saludos,\n"
                 "Andrés"
             )
+
+        mails_destinatario = [
+            mail
+            for mail in [
+                empresa.email,
+                empresa.email_2,
+                empresa.email_3,
+            ]
+            if mail
+        ]
+
+        mails_destinatario = ", ".join(mails_destinatario)
+
 
         # ----------------------------------------------------
         # DESTINATARIO
@@ -859,7 +1094,7 @@ def generar_word_mails(empresas_con_registros):
         agregar_linea(
             documento,
             "Destinatario",
-            destinatario
+            mails_destinatario
         )
 
         # ----------------------------------------------------
@@ -879,7 +1114,7 @@ def generar_word_mails(empresas_con_registros):
         parrafo = documento.add_paragraph()
 
         run = parrafo.add_run(
-            "Texto del mail:"
+            ""
         )
 
         run.bold = True
@@ -890,13 +1125,23 @@ def generar_word_mails(empresas_con_registros):
 
         for linea in texto_mail.split("\n"):
 
+            if not linea.strip():
+                continue
+
             parrafo = documento.add_paragraph()
 
-            parrafo.paragraph_format.space_after = Pt(0)
+            parrafo.paragraph_format.space_after = Pt(6)
 
             run = parrafo.add_run(linea)
 
-            run.font.size = Pt(10)
+            run.font.size = Pt(11)
+
+            if linea.startswith("Estimados ") or linea.startswith("Hola ") or linea.startswith("correspondientes ") or linea.startswith("Sujeto") or linea.startswith("Por otro lado") :
+                parrafo.paragraph_format.space_after = Pt(12)
+
+
+
+
 
         # ----------------------------------------------------
         # RESULTADOS
@@ -909,7 +1154,132 @@ def generar_word_mails(empresas_con_registros):
             registros,
             empresa
         )
+        # ----------------------------------------------------
+        # COTIZACIÓN MANTENIMIENTO DE OFERTA
+        # ----------------------------------------------------
 
+        # ----------------------------------------------------
+        # COTIZACIÓN
+        # ----------------------------------------------------
+
+        registro_cotizacion = next(
+            (
+                registro
+                for registro in registros
+                if registro.precio_total_oferta is not None
+            ),
+            None
+        )
+
+        cotizacion = calcular_cotizacion(
+            registro_cotizacion,
+            5
+        )
+
+        if cotizacion:
+
+            # Título
+            parrafo = documento.add_paragraph()
+            run = parrafo.add_run("Cotización")
+            run.bold = True
+            run.font.size = Pt(9)
+
+            # Proceso + Renglón + Oferta
+            parrafo = documento.add_paragraph()
+
+            run = parrafo.add_run("Proceso: ")
+            run.bold = True
+            run.font.size = Pt(9)
+
+            run = parrafo.add_run(
+                f'{cotizacion["proceso"]}  /  '
+            )
+            run.font.size = Pt(9)
+
+            run = parrafo.add_run("Renglón: ")
+            run.bold = True
+            run.font.size = Pt(9)
+
+            run = parrafo.add_run(
+                f'{cotizacion["renglon"]}  /  '
+            )
+            run.font.size = Pt(9)
+
+            run = parrafo.add_run("Oferta: ")
+            run.bold = True
+            run.font.size = Pt(9)
+
+            run = parrafo.add_run(
+                f'{cotizacion["moneda"]} '
+                f'{cotizacion["oferta"]:,.2f}'
+            )
+            run.font.size = Pt(9)
+
+            # Mantenimiento de Oferta
+            agregar_linea(
+                documento,
+                "— Mantenimiento de Oferta 5%",
+                "-"
+            ).runs[0].font.size = Pt(9)
+
+            agregar_linea(
+                documento,
+                "Suma Asegurada (5%)",
+                f'{cotizacion["moneda"]} '
+                f'{cotizacion["suma_asegurada"]:,.2f}'
+            ).runs[0].font.size = Pt(9)
+
+            agregar_linea(
+                documento,
+                "Prima neta",
+                f'{cotizacion["moneda"]} '
+                f'{cotizacion["prima"]:,.2f}'
+            ).runs[0].font.size = Pt(9)
+
+            agregar_linea(
+                documento,
+                "Premio simple",
+                f'{cotizacion["moneda"]} '
+                f'{cotizacion["premio_final"]:,.2f}'
+            ).runs[0].font.size = Pt(9)
+
+            # Línea en blanco entre cotizaciones
+            documento.add_paragraph()
+
+            # Adjudicación 10%
+            cotizacion_adjudicacion = calcular_cotizacion(
+                registro_cotizacion,
+                10
+            )
+
+            if cotizacion_adjudicacion:
+
+                agregar_linea(
+                    documento,
+                    "— Adjudicación 10%",
+                    "-"
+                ).runs[0].font.size = Pt(9)
+
+                agregar_linea(
+                    documento,
+                    "Suma Asegurada (10%)",
+                    f'{cotizacion_adjudicacion["moneda"]} '
+                    f'{cotizacion_adjudicacion["suma_asegurada"]:,.2f}'
+                ).runs[0].font.size = Pt(9)
+
+                agregar_linea(
+                    documento,
+                    "Prima neta",
+                    f'{cotizacion_adjudicacion["moneda"]} '
+                    f'{cotizacion_adjudicacion["prima"]:,.2f}'
+                ).runs[0].font.size = Pt(9)
+
+                agregar_linea(
+                    documento,
+                    "Premio simple",
+                    f'{cotizacion_adjudicacion["moneda"]} '
+                    f'{cotizacion_adjudicacion["premio_final"]:,.2f}'
+                ).runs[0].font.size = Pt(9)
 
     # --------------------------------------------------------
     # GUARDAR

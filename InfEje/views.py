@@ -1714,6 +1714,24 @@ def exportar_word_mails(request):
         )
     )
 
+
+    # ========================================================
+    # FILTRO ADICIONAL: EMPRESAS SELECCIONADAS PARA WORD
+    # ========================================================
+
+    empresa_ids = request.GET.getlist("empresa_ids")
+
+    if empresa_ids:
+
+        registros = registros.filter(
+            Q(
+                empresa_oferente_id__in=empresa_ids
+            )
+            |
+            Q(
+                empresa_proveedor_id__in=empresa_ids
+            )
+        )
     # ========================================================
     # COMPETIDORES POR PROCESO + RENGLÓN
     # ========================================================

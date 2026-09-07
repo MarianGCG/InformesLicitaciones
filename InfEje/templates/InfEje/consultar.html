@@ -1150,6 +1150,20 @@
 
 
     </style>
+    <style>
+
+    @keyframes girarWord {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    </style>
+
 </head>
 
 <body>
@@ -1187,6 +1201,7 @@
         </div>
 
         <div
+            id="tituloProcesando"
             style="
                 font-size:18px;
                 font-weight:700;
@@ -1195,6 +1210,7 @@
         >
             Generando PDFs...
         </div>
+
 
         <div
             id="textoProcesando"
@@ -2793,7 +2809,8 @@
                 document.getElementById(
                     "textoProcesando"
                 );
-
+            const tituloProcesando =
+                document.getElementById("tituloProcesando");
 
             if (modalProcesando) {
 
@@ -3722,22 +3739,548 @@ document.getElementById("btnCSVdoppler").addEventListener(
         });
     }
 </script>
-<script>
-document.getElementById("btnWordMails").addEventListener(
-    "click",
-    function () {
 
-        const params = new URLSearchParams(
-            window.location.search
+
+<!-- =========================================================
+     VENTANA SELECCIONAR EMPRESAS PARA WORD
+     ========================================================= -->
+
+<div
+    id="modalEmpresasWord"
+    style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    "
+>
+
+    <div
+        style="
+            background: white;
+            width: 750px;
+            max-width: 90%;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        "
+    >
+
+        <div
+            style="
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 15px;
+            "
+        >
+            Empresas para Word
+        </div>
+
+
+        <!-- TODAS -->
+
+        <label
+            style="
+                display: block;
+                padding: 8px 5px;
+                border-bottom: 1px solid #ddd;
+                font-weight: bold;
+                cursor: pointer;
+            "
+        >
+
+            <input
+                type="checkbox"
+                id="wordTodas"
+                style="
+                    width: 15px;
+                    height: 15px;
+                    margin-right: 8px;
+                "
+            >
+
+            TODAS
+
+        </label>
+
+
+        <!-- LISTA DE EMPRESAS -->
+
+        <div
+            id="listaEmpresasWord"
+            style="
+                max-height: 470px;
+                overflow-y: auto;
+                margin-top: 5px;
+                border-top: 1px solid #ddd;
+                padding-top: 4px;
+            "
+        >
+
+            {% for empresa in empresas %}
+
+                <label
+                    style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 5px 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        line-height: 1.2;
+                    "
+                >
+
+                    <input
+                        type="checkbox"
+                        class="empresa-word-checkbox"
+                        value="{{ empresa.id }}"
+                        style="
+                            width: 14px;
+                            height: 14px;
+                            margin: 0;
+                            padding: 0;
+                            flex-shrink: 0;
+                        "
+                    >
+
+                    <span>
+                        {{ empresa.nombre }}
+                    </span>
+
+                </label>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- ESPERA GENERANDO WORD -->
+
+        <!-- ESPERA GENERANDO WORD -->
+
+        <div
+            id="esperandoWord"
+            style="
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 99999;
+                background: rgba(255,255,255,0.88);
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+            "
+        >
+
+            <div
+                style="
+                    width: 45px;
+                    height: 45px;
+                    border: 5px solid #d9d9d9;
+                    border-top: 5px solid #6B8EAD;
+                    border-radius: 50%;
+                    animation: girarWord 0.8s linear infinite;
+                "
+            ></div>
+
+            <div
+                style="
+                    margin-top: 18px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #555;
+                "
+            >
+                Generando Word...
+            </div>
+
+            <div
+                style="
+                    margin-top: 6px;
+                    font-size: 14px;
+                    color: #777;
+                "
+            >
+                Puede tardar unos segundos. Por favor esperá.
+            </div>
+
+        </div>
+
+
+
+
+
+
+        <!-- BOTONES -->
+
+        <div
+            style="
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                margin-top: 18px;
+            "
+        >
+
+            <button
+                type="button"
+                id="btnCancelarWord"
+                style="
+                    padding: 8px 18px;
+                    border: 1px solid #aaa;
+                    background: white;
+                    border-radius: 5px;
+                    cursor: pointer;
+                "
+            >
+                CANCELAR
+            </button>
+
+
+            <button
+                type="button"
+                id="btnAceptarWord"
+                style="
+                    padding: 8px 18px;
+                    border: none;
+                    background: #6B8EAD;
+                    color: white;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: bold;
+                "
+            >
+                OK
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    const btnWordMails =
+        document.getElementById("btnWordMails");
+
+    const modalEmpresasWord =
+        document.getElementById("modalEmpresasWord");
+
+    const wordTodas =
+        document.getElementById("wordTodas");
+
+    const btnCancelarWord =
+        document.getElementById("btnCancelarWord");
+
+    const btnAceptarWord =
+        document.getElementById("btnAceptarWord");
+
+    const checkboxesEmpresasWord =
+        document.querySelectorAll(
+            ".empresa-word-checkbox"
         );
 
-        window.location.href =
-            "{% url 'exportar_word_mails' %}"
-            + "?"
-            + params.toString();
+    // =========================================================
+    // RECORDAR ÚLTIMA SELECCIÓN DE EMPRESAS PARA WORD
+    // =========================================================
+
+    const seleccionGuardada =
+        JSON.parse(
+            localStorage.getItem(
+                "empresasSeleccionadasWord"
+            ) || "[]"
+        );
+
+    checkboxesEmpresasWord.forEach(
+        function (checkbox) {
+
+            checkbox.checked =
+                seleccionGuardada.includes(
+                    checkbox.value
+                );
+
+        }
+    );
+
+
+    // Si estaban seleccionadas todas,
+    // marcar también TODAS
+
+    if (
+        seleccionGuardada.length > 0 &&
+        seleccionGuardada.length ===
+            checkboxesEmpresasWord.length
+    ) {
+        wordTodas.checked = true;
     }
-);
+    // =========================================================
+    // ABRIR VENTANA
+    // =========================================================
+
+    btnWordMails.addEventListener(
+        "click",
+        function () {
+
+            modalEmpresasWord.style.display =
+                "flex";
+
+        }
+    );
+
+
+    // =========================================================
+    // TODAS
+    // =========================================================
+
+    wordTodas.addEventListener(
+        "change",
+        function () {
+
+            checkboxesEmpresasWord.forEach(
+                function (checkbox) {
+
+                    checkbox.checked =
+                        wordTodas.checked;
+
+                }
+            );
+
+
+            // Guardar la selección
+
+            const seleccionadas = [];
+
+            checkboxesEmpresasWord.forEach(
+                function (checkbox) {
+
+                    if (checkbox.checked) {
+
+                        seleccionadas.push(
+                            checkbox.value
+                        );
+
+                    }
+
+                }
+            );
+
+            localStorage.setItem(
+                "empresasSeleccionadasWord",
+                JSON.stringify(seleccionadas)
+            );
+
+        }
+    );
+
+    // =========================================================
+    // SI SE DESMARCA UNA EMPRESA,
+    // DESMARCAR TODAS
+    // =========================================================
+
+    checkboxesEmpresasWord.forEach(
+        function (checkbox) {
+
+            checkbox.addEventListener(
+                "change",
+                function () {
+
+                    if (!checkbox.checked) {
+                        wordTodas.checked = false;
+                    }
+
+                    const seleccionadas = [];
+
+                    checkboxesEmpresasWord.forEach(
+                        function (checkbox) {
+
+                            if (checkbox.checked) {
+                                seleccionadas.push(
+                                    checkbox.value
+                                );
+                            }
+
+                        }
+                    );
+
+                    localStorage.setItem(
+                        "empresasSeleccionadasWord",
+                        JSON.stringify(seleccionadas)
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+    // =========================================================
+    // CANCELAR
+    // =========================================================
+
+    btnCancelarWord.addEventListener(
+        "click",
+        function () {
+
+            modalEmpresasWord.style.display =
+                "none";
+
+        }
+    );
+
+
+    // =========================================================
+    // OK
+    // =========================================================
+
+    btnAceptarWord.addEventListener(
+        "click",
+        function () {
+
+            const seleccionadas = [];
+
+            checkboxesEmpresasWord.forEach(
+                function (checkbox) {
+
+                    if (checkbox.checked) {
+
+                        seleccionadas.push(
+                            checkbox.value
+                        );
+
+                    }
+
+                }
+            );
+
+
+            // -----------------------------------------------
+            // TOMAR LOS FILTROS ACTUALES
+            // -----------------------------------------------
+
+            const params =
+                new URLSearchParams(
+                    window.location.search
+                );
+
+
+            // -----------------------------------------------
+            // TODAS
+            // -----------------------------------------------
+
+            if (wordTodas.checked) {
+
+                params.delete("empresa_ids");
+
+            }
+
+            // -----------------------------------------------
+            // EMPRESAS SELECCIONADAS
+            // -----------------------------------------------
+
+            else {
+
+                if (seleccionadas.length === 0) {
+
+                    alert(
+                        "Seleccioná al menos una empresa."
+                    );
+
+                    return;
+
+                }
+
+
+                params.delete("empresa_ids");
+
+                seleccionadas.forEach(
+                    function (id) {
+
+                        params.append(
+                            "empresa_ids",
+                            id
+                        );
+
+                    }
+                );
+
+            }
+
+
+            // -----------------------------------------------
+            // GENERAR WORD
+            // -----------------------------------------------
+
+            // -----------------------------------------------
+            // MOSTRAR RELOJITO EXISTENTE
+            // -----------------------------------------------
+
+            const modalProcesando =
+                document.getElementById("modalProcesando");
+
+            const textoProcesando =
+                document.getElementById("textoProcesando");
+
+            if (modalProcesando) {
+
+                modalProcesando.style.display = "flex";
+
+            }
+
+            if (tituloProcesando) {
+
+                tituloProcesando.textContent =
+                    "Generando Word mails...";
+
+            }
+
+            if (textoProcesando) {
+
+                textoProcesando.textContent =
+                    "Por favor esperá...";
+
+            }
+
+
+            // -----------------------------------------------
+            // GENERAR WORD
+            // -----------------------------------------------
+
+            window.location.href =
+                "{% url 'exportar_word_mails' %}"
+                + "?"
+                + params.toString();
+
+
+
+            // APAGAR RELOJITO
+
+            setTimeout(
+                function () {
+
+                    if (modalProcesando) {
+                        modalProcesando.style.display = "none";
+                    }
+
+                },
+                5000
+            );
+
+
+
+
+        }
+    );
+
 </script>
+
+
 </body>
 
 </html>
