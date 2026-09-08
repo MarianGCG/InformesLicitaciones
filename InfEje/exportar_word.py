@@ -870,19 +870,19 @@ def calcular_cotizacion(registro, porcentaje_sa, tipo_destinatario="persona"):
     # COTIZADOR USD
     # ========================================================
 
+    # ========================================================
+    # COTIZADOR USD
+    # ========================================================
+
     if "USD" in moneda or "U$S" in moneda or "$US" in moneda:
 
-        # PRIMA MINIMA USD
-        prima_minima = (
-            Decimal("17500")
-            / Decimal("1510")
-        )
+        # PRIMA MÍNIMA USD
+        # Corresponde al valor de P25 del COTIZADORUSD
+        prima_minima = Decimal("11.92")
 
-        # DERECHO DE EMISION USD
-        derecho_emision = (
-            Decimal("15500")
-            / Decimal("1510")
-        )
+        # DERECHO DE EMISIÓN USD
+        # Corresponde al valor en USD del COTIZADORUSD
+        derecho_emision = Decimal("10.26")
 
         prima_calculada = (
             suma_asegurada
