@@ -18,7 +18,7 @@ import csv
 import re
 from openpyxl import Workbook
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -443,10 +443,22 @@ def consultar(request):
 
                 competidores_por_clave[clave] = {}
 
+
+            if empresa.tipo_destinatario == "empresa":
+                nombre_competidor = (
+                    empresa.nombre_pila
+                    or empresa.nombre
+                    or ""
+                )
+            else:
+                nombre_competidor = (
+                    empresa.nombre
+                    or ""
+                )
+
             competidores_por_clave[
                 clave
-            ][empresa.cuit] = empresa.nombre
-
+            ][empresa.cuit] = nombre_competidor
             
     # ========================================================
     # TOTALES POR EMPRESA
@@ -1713,7 +1725,24 @@ def exportar_word_mails(request):
             "lote",
         )
     )
+    # ========================================================
+    # EMPRESAS SELECCIONADAS PARA LA PLANILLA DE ENVÍOS
+    # ========================================================
 
+    empresa_ids = request.GET.getlist(
+        "empresa_ids"
+    )
+
+    if empresa_ids:
+        empresas_para_registro = (
+            Empresa.objects
+            .filter(
+                id__in=empresa_ids
+            )
+            .order_by("nombre")
+        )
+    else:
+        empresas_para_registro = None
 
     # ========================================================
     # FILTRO ADICIONAL: EMPRESAS SELECCIONADAS PARA WORD
@@ -1793,10 +1822,17 @@ def exportar_word_mails(request):
             if clave not in competidores_por_clave:
                 competidores_por_clave[clave] = {}
 
+
+            if empresa.tipo_destinatario == "empresa":
+                nombre_competidor = (
+                    empresa.nombre_pila                    
+                )
+            else:
+                nombre_competidor = empresa.nombre
+
             competidores_por_clave[
                 clave
-            ][empresa.cuit] = empresa.nombre
-
+            ][empresa.cuit] = nombre_competidor
     # ========================================================
     # ASIGNAR COMPETIDORES A CADA REGISTRO
     # ========================================================
@@ -1901,10 +1937,13 @@ def exportar_word_mails(request):
     # GENERAR WORD
     # ========================================================
 
-    buffer = generar_word_mails(
-        empresas_con_registros
-    )
 
+    buffer = generar_word_mails(
+        empresas_con_registros,
+        empresas_para_registro=empresas_para_registro,
+        fecha_envio=date.today().strftime("%d/%m/%Y"),
+    )
+    
     respuesta = HttpResponse(
         buffer.getvalue(),
         content_type=(

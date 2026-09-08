@@ -4141,7 +4141,7 @@ document.getElementById("btnCSVdoppler").addEventListener(
 
     btnAceptarWord.addEventListener(
         "click",
-        function () {
+        async function () {
 
             const seleccionadas = [];
 
@@ -4217,9 +4217,22 @@ document.getElementById("btnCSVdoppler").addEventListener(
             // GENERAR WORD
             // -----------------------------------------------
 
+
+
+            // -----------------------------------------------
+            // CERRAR MODAL DE EMPRESAS
+            // -----------------------------------------------
+
+            modalEmpresasWord.style.display = "none";
+
+
+
             // -----------------------------------------------
             // MOSTRAR RELOJITO EXISTENTE
             // -----------------------------------------------
+
+
+
 
             const modalProcesando =
                 document.getElementById("modalProcesando");
@@ -4252,25 +4265,99 @@ document.getElementById("btnCSVdoppler").addEventListener(
             // GENERAR WORD
             // -----------------------------------------------
 
-            window.location.href =
+            // -----------------------------------------------
+            // GENERAR WORD
+            // -----------------------------------------------
+
+            const urlWord =
                 "{% url 'exportar_word_mails' %}"
                 + "?"
                 + params.toString();
 
 
+            try {
 
-            // APAGAR RELOJITO
+                const respuesta =
+                    await fetch(urlWord);
 
-            setTimeout(
-                function () {
 
-                    if (modalProcesando) {
-                        modalProcesando.style.display = "none";
-                    }
+                if (!respuesta.ok) {
 
-                },
-                5000
-            );
+                    throw new Error(
+                        "No se pudo generar el Word."
+                    );
+
+                }
+
+
+                const blob =
+                    await respuesta.blob();
+
+
+                // -------------------------------------------
+                // DESCARGAR EL WORD
+                // -------------------------------------------
+
+                const urlDescarga =
+                    window.URL.createObjectURL(blob);
+
+                const enlace =
+                    document.createElement("a");
+
+                enlace.href =
+                    urlDescarga;
+
+                enlace.download =
+                    "Word_mails.docx";
+
+                document.body.appendChild(
+                    enlace
+                );
+
+                enlace.click();
+
+                enlace.remove();
+
+                window.URL.revokeObjectURL(
+                    urlDescarga
+                );
+
+
+                // -------------------------------------------
+                // APAGAR RELOJITO
+                // -------------------------------------------
+
+                if (modalProcesando) {
+
+                    modalProcesando.style.display =
+                        "none";
+
+                }
+
+
+            } catch (error) {
+
+                // -------------------------------------------
+                // SI HUBO ERROR
+                // -------------------------------------------
+
+                if (modalProcesando) {
+
+                    modalProcesando.style.display =
+                        "none";
+
+                }
+
+                alert(
+                    "Hubo un error al generar el Word."
+                );
+
+                console.error(
+                    error
+                );
+
+            }
+
 
 
 
