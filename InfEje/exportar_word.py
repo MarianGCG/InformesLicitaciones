@@ -501,7 +501,7 @@ def agregar_tabla_resultados(documento, registros, empresa, hay_mas_registros=Fa
     )
 
     if hay_mas_registros:
-        alto_total += 10
+        alto_total += 28
 
     # ========================================================
     # CREAR IMAGEN DEFINITIVA
@@ -716,9 +716,14 @@ def agregar_tabla_resultados(documento, registros, empresa, hay_mas_registros=Fa
     # Si había más de 6 registros, dejamos visible
     # solamente el comienzo de la siguiente fila.
     # No se muestra ningún dato adicional.
+
     if hay_mas_registros:
 
-        alto_continuacion = 10
+        # --------------------------------------------------------
+        # FILA 7 - CONTINUACIÓN
+        # --------------------------------------------------------
+
+        alto_continuacion = 28
 
         x_continuacion = margen
 
@@ -737,19 +742,37 @@ def agregar_tabla_resultados(documento, registros, empresa, hay_mas_registros=Fa
 
             x_continuacion += ancho
 
-        # Puntos suspensivos en la primera columna
+        # --------------------------------------------------------
+        # PUNTOS SUSPENSIVOS DENTRO DE LA FILA
+        # --------------------------------------------------------
+
+        texto_puntos = "  ....."
+
+        bbox = dibujo.textbbox(
+            (0, 0),
+            texto_puntos,
+            font=fuente_competidores
+        )
+
+        alto_puntos = bbox[3] - bbox[1]
+
+        # Puntos suspensivos en negrita y 2 puntos más grandes
+        fuente_puntos = obtener_fuente(
+            20,
+            negrita=True
+        )
+
         dibujo.text(
             (
                 margen + 6,
-                y - 9
+                y + 2
             ),
-            "...",
-            font=fuente_competidores,
+            " ......",
+            font=fuente_puntos,
             fill="black"
         )
 
         y += alto_continuacion
-
 
 
     # ========================================================
@@ -824,7 +847,7 @@ def agregar_linea(documento, etiqueta, valor, tamano=None):
     return parrafo
 
     
-def calcular_cotizacion(registro, porcentaje_sa, tipo_destinatario="persona"):
+def calcular_cotizacion(registro, porcentaje_sa, tipo_destinatario="persona", prima_minima_pesos=None, tc=None,):
 
     """
     Calcula la cotización de Mantenimiento de Oferta
@@ -878,12 +901,10 @@ def calcular_cotizacion(registro, porcentaje_sa, tipo_destinatario="persona"):
 
         # PRIMA MÍNIMA USD
         # Corresponde al valor de P25 del COTIZADORUSD
-        prima_minima = Decimal("11.92")
-
+        prima_minima = ( prima_minima_pesos / tc)
         # DERECHO DE EMISIÓN USD
         # Corresponde al valor en USD del COTIZADORUSD
-        derecho_emision = Decimal("10.26")
-
+        derecho_emision = ( Decimal("15500") / tc)
         prima_calculada = (
             suma_asegurada
             * tasa
@@ -1047,8 +1068,8 @@ def calcular_cotizacion(registro, porcentaje_sa, tipo_destinatario="persona"):
         ),
     }
 
-def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fecha_envio=None,):
 
+def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fecha_envio=None, prima_minima_pesos=None,  tc=None,):
     """
     Genera un único Word.
 
@@ -1226,25 +1247,109 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
         # CUERPO DEL MAIL
         # ----------------------------------------------------
 
+
         for linea in texto_mail.split("\n"):
 
             if not linea.strip():
                 continue
 
             parrafo = documento.add_paragraph()
-
             parrafo.paragraph_format.space_after = Pt(6)
 
-            run = parrafo.add_run(linea)
+            # ----------------------------------------------------
+            # LÍNEAS COMPLETAS EN NEGRITA
+            # ----------------------------------------------------
+            # ----------------------------------------------------
+            # LÍNEAS COMPLETAS EN NEGRITA
+            # ----------------------------------------------------
 
-            run.font.size = Pt(11)
+            if (
+                linea.startswith(
+                    "La idea es que tengan una referencia concreta"
+                )
+                or linea.startswith(
+                    "Por otro lado, si nos envían la póliza"
+                )
+            ):
 
-            if linea.startswith("Estimados ") or linea.startswith("Hola ") or linea.startswith("correspondientes ") or linea.startswith("Sujeto") or linea.startswith("Por otro lado") :
-                parrafo.paragraph_format.space_after = Pt(15)
+                run = parrafo.add_run(linea)
+                run.bold = True
+                run.font.size = Pt(11)
 
 
+            # ----------------------------------------------------
+            # FRASE DE COTIZACIÓN EN NEGRITA
+            # ----------------------------------------------------
+
+            elif linea.startswith(
+                "Retomando el mail que te enviamos hace unos días"
+            ):
+
+                texto_normal = (
+                    "Retomando el mail que te enviamos hace unos días, "
+                    "quisimos acercarte, y a modo de ejemplo,  "
+                )
+
+                texto_negrita = (
+                    "una simulación de cotización de "
+                    "las Cauciones de Mantenimiento de Oferta"
+                )
+
+                run = parrafo.add_run(texto_normal)
+                run.font.size = Pt(11)
+
+                run = parrafo.add_run(texto_negrita)
+                run.bold = True
+                run.font.size = Pt(11)
 
 
+            # ----------------------------------------------------
+            # "A PARTIR DE INFORMACIÓN PÚBLICA"
+            # ----------------------------------------------------
+
+            elif linea.startswith(
+                "correspondientes a algunos procesos"
+            ):
+
+                texto_normal = (
+                    "correspondientes a algunos procesos "
+                    "que identificamos "
+                )
+
+                texto_negrita = (
+                    "a partir de información pública."
+                )
+
+                run = parrafo.add_run(texto_normal)
+                run.font.size = Pt(11)
+
+                run = parrafo.add_run(texto_negrita)
+                run.bold = True
+                run.font.size = Pt(11)
+
+
+            # ----------------------------------------------------
+            # RESTO DEL TEXTO
+            # ----------------------------------------------------
+
+            else:
+
+                run = parrafo.add_run(linea)
+                run.font.size = Pt(11)
+
+
+            # ----------------------------------------------------
+            # ESPACIADO EXISTENTE
+            # ----------------------------------------------------
+
+            if (
+                linea.startswith("Estimados ")
+                or linea.startswith("Hola ")
+                or linea.startswith("correspondientes ")
+                or linea.startswith("Sujeto")
+                or linea.startswith("Por otro lado")
+            ):
+                parrafo.paragraph_format.space_after = Pt(12)
 
         # ----------------------------------------------------
         # RESULTADOS
@@ -1278,10 +1383,15 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
         )
 
 
+
+
+        # Mantenimiento de Oferta 5%
         cotizacion = calcular_cotizacion(
             registro_cotizacion,
             5,
-            tipo
+            tipo,
+            prima_minima_pesos=prima_minima_pesos,
+            tc=tc,
         )
 
         if cotizacion:
@@ -1319,7 +1429,12 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
 
             run = parrafo.add_run(
                 f'{cotizacion["moneda"]} '
-                f'{cotizacion["oferta"]:,.2f}'
+                f"{cotizacion['oferta']:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+
+
             )
             run.font.size = Pt(11)
 
@@ -1351,7 +1466,9 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
             cotizacion_adjudicacion = calcular_cotizacion(
                 registro_cotizacion,
                 10,
-                tipo
+                tipo,
+                prima_minima_pesos=prima_minima_pesos,
+                tc=tc,
             )
 
             if cotizacion_adjudicacion:
@@ -1402,10 +1519,52 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
     )
 
     run.font.size = Pt(12)
+    # ========================================================
+    # DATOS DE COTIZACIÓN
+    # ========================================================
+
+    datos_cotizacion = documento.add_paragraph()
+    datos_cotizacion.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    run = datos_cotizacion.add_run(
+        "Prima Mínima: "
+    )
+    run.bold = True
+    run.font.size = Pt(11)
+
+    run = datos_cotizacion.add_run(
+        f"$ {prima_minima_pesos:,.2f}"
+        .replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    )
+    run.font.size = Pt(11)
+
+    run = datos_cotizacion.add_run(
+        "     TC: "
+    )
+    run.bold = True
+    run.font.size = Pt(11)
+
+    run = datos_cotizacion.add_run(
+        f"$ {tc:,.2f}"
+        .replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    )
+    run.font.size = Pt(11)
+
+    run = datos_cotizacion.add_run(
+        "     Trimestral"
+    )
+    run.bold = True
+    run.font.size = Pt(11)
+
+
 
     tabla_envios = documento.add_table(
         rows=1,
-        cols=3
+        cols=8
     )
 
     tabla_envios.style = "Table Grid"
@@ -1415,10 +1574,16 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
     # --------------------------------------------------------
     tabla_envios.autofit = False
 
+
     anchos = [
-        Inches(1.10),   # Fecha envío
-        Inches(1.10),   # CUIT
-        Inches(3.20),   # Proveedor/Oferente
+        Inches(1.00),   # Fecha envío
+        Inches(0.80),   # CUIT
+        Inches(1.70),   # Proveedor/Oferente
+        Inches(1.05),   # Oferta
+        Inches(0.95),   # Suma Asegurada 5%
+        Inches(0.75),   # Premio simple 5%
+        Inches(0.95),   # Suma Asegurada 10%
+        Inches(0.75),   # Premio simple 10%
     ]
 
     for fila in tabla_envios.rows:
@@ -1433,6 +1598,11 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
     encabezados[0].text = "Fecha envío"
     encabezados[1].text = "CUIT"
     encabezados[2].text = "Proveedor/Oferente"
+    encabezados[3].text = "Oferta"
+    encabezados[4].text = "Suma Asegurada 5%"
+    encabezados[5].text = "Premio simple 5%"
+    encabezados[6].text = "Suma Asegurada 10%"
+    encabezados[7].text = "Premio simple 10%"
 
     for celda in encabezados:
 
@@ -1453,17 +1623,161 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
         ]
     )
 
+
+    # ----------------------------------------------------
+    # ORDENAR PROVEEDORES POR OFERTA
+    # DE MAYOR A MENOR
+    # ----------------------------------------------------
+
+    def oferta_empresa(empresa):
+
+        registros_empresa = []
+
+        for empresa_lista, registros_lista in empresas_con_registros:
+
+            if empresa_lista.id == empresa.id:
+                registros_empresa = registros_lista
+                break
+
+        registro_cotizacion = next(
+            (
+                registro
+                for registro in registros_empresa
+                if registro.precio_total_oferta is not None
+            ),
+            None
+        )
+
+        if registro_cotizacion:
+            return registro_cotizacion.precio_total_oferta
+
+        return Decimal("-1")
+
+
+    empresas_registro = sorted(
+        empresas_registro,
+        key=oferta_empresa,
+        reverse=True
+    )
+    
+    numero_proveedor = 1
+
     for empresa in empresas_registro:
+
+        # ----------------------------------------------------
+        # BUSCAR EL REGISTRO DE COTIZACIÓN DE ESTA EMPRESA
+        # ----------------------------------------------------
+
+        registros_empresa = []
+
+        for empresa_lista, registros_lista in empresas_con_registros:
+
+            if empresa_lista.id == empresa.id:
+                registros_empresa = registros_lista
+                break
+
+        registro_cotizacion = next(
+            (
+                registro
+                for registro in registros_empresa
+                if registro.precio_total_oferta is not None
+            ),
+            None
+        )
+
+        # ----------------------------------------------------
+        # CALCULAR 5%
+        # ----------------------------------------------------
+
+        cotizacion_5 = calcular_cotizacion(
+            registro_cotizacion,
+            5,
+            empresa.tipo_destinatario or "empresa",
+            prima_minima_pesos,
+            tc,
+        )
+
+        # ----------------------------------------------------
+        # CALCULAR 10%
+        # ----------------------------------------------------
+
+        cotizacion_10 = calcular_cotizacion(
+            registro_cotizacion,
+            10,
+            empresa.tipo_destinatario or "empresa",
+            prima_minima_pesos,
+            tc,
+        )
+
+        # ----------------------------------------------------
+        # NUEVA FILA
+        # ----------------------------------------------------
 
         fila = tabla_envios.add_row().cells
 
-        fila[0].text = fecha_envio or ""
-        fila[1].text = empresa.cuit or ""
-        fila[2].text = empresa.nombre or ""
 
-        # Evitar que el nombre del proveedor se parta en varias líneas
-        for run in fila[2].paragraphs[0].runs:
-            run.font.size = Pt(10)
+        fila[0].text = (
+            f"{numero_proveedor}. {fecha_envio or ''}"
+        )
+
+        fila[1].text = empresa.cuit or ""
+        
+
+
+        nombre_proveedor = empresa.nombre or ""
+
+        # Una sola línea: si es muy largo, lo cortamos
+        if len(nombre_proveedor) > 27:
+            nombre_proveedor = nombre_proveedor[:24] + "..."
+
+
+        fila[2].text = nombre_proveedor
+        numero_proveedor += 1
+
+
+        if cotizacion_5:
+
+            fila[3].text = (
+                f'{cotizacion_5["moneda"]} '
+                f'{cotizacion_5["oferta"]:,.2f}'
+            )
+
+            fila[4].text = (
+                f'{cotizacion_5["moneda"]} '
+                f'{cotizacion_5["suma_asegurada"]:,.2f}'
+            )
+
+            fila[5].text = (
+                f'{cotizacion_5["moneda"]} '
+                f'{cotizacion_5["premio_final"]:,.2f}'
+            )
+
+        else:
+
+            fila[3].text = "-"
+            fila[4].text = "-"
+            fila[5].text = "-"
+
+        if cotizacion_10:
+
+            fila[6].text = (
+                f'{cotizacion_10["moneda"]} '
+                f'{cotizacion_10["suma_asegurada"]:,.2f}'
+            )
+
+            fila[7].text = (
+                f'{cotizacion_10["moneda"]} '
+                f'{cotizacion_10["premio_final"]:,.2f}'
+            )
+
+        else:
+
+            fila[6].text = "-"
+            fila[7].text = "-"
+
+        # ----------------------------------------------------
+        # FUENTE
+        # ----------------------------------------------------
 
         for celda in fila:
 
@@ -1471,8 +1785,7 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None,  fec
 
                 for run in parrafo.runs:
 
-                    run.font.size = Pt(10)
-
+                    run.font.size = Pt(7)
 
 
 

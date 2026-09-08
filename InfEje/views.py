@@ -1793,6 +1793,20 @@ def exportar_word_mails(request):
         "empresa_ids"
     )
 
+    prima_minima_pesos = Decimal(
+        request.GET.get(
+            "prima_minima_pesos",
+            "18000"
+        )
+    )
+
+    tc = Decimal(
+        request.GET.get(
+            "tc",
+            "1510"
+        )
+    )
+
     if empresa_ids:
         empresas_para_registro = (
             Empresa.objects
@@ -1994,16 +2008,38 @@ def exportar_word_mails(request):
     ]
 
     # ========================================================
+    # DATOS DE COTIZACIÓN
+    # ========================================================
+
+    prima_minima_pesos = Decimal(
+        request.GET.get(
+            "prima_minima_pesos",
+            "18000"
+        )
+    )
+
+    tc = Decimal(
+        request.GET.get(
+            "tc",
+            "1510"
+        )
+    )
+
+
+    # ========================================================
     # GENERAR WORD
     # ========================================================
 
 
+    
     buffer = generar_word_mails(
         empresas_con_registros,
         empresas_para_registro=empresas_para_registro,
         fecha_envio=date.today().strftime("%d/%m/%Y"),
+        prima_minima_pesos=prima_minima_pesos,
+        tc=tc,
     )
-    
+
     respuesta = HttpResponse(
         buffer.getvalue(),
         content_type=(
