@@ -332,26 +332,24 @@ def consultar(request):
         if not empresas_adjudicadas:
             continue
 
-        cuit_empresa = (
-            cuit_oferente
-            or cuit_proveedor
+
+
+
+
+        # Este Proceso + Renglón ya fue adjudicado.
+        # Por lo tanto, esta fila queda identificada
+        # como "Asig", independientemente de cuál
+        # sea la empresa.
+
+        ids_adjudicados_otra_empresa.append(
+            registro_id
         )
 
-        if not cuit_empresa:
-            continue
-
-        # Si otra empresa tiene la OC,
-        # esta fila queda identificada como "Asig".
-        if cuit_empresa not in empresas_adjudicadas:
-
-            ids_adjudicados_otra_empresa.append(
+        if not mostrar_adjudicados:
+            ids_a_excluir.append(
                 registro_id
             )
 
-            if not mostrar_adjudicados:
-                ids_a_excluir.append(
-                    registro_id
-                )
 
 
     # Con "No" ocultamos esas filas.
@@ -1725,6 +1723,68 @@ def exportar_word_mails(request):
             "lote",
         )
     )
+
+    # ========================================================
+    # EXCLUIR EN WORD PROCESOS + RENGLONES
+    # YA ADJUDICADOS
+    #
+    # Si el Proceso + Renglón tiene OC:
+    # - la fila que tiene OC se conserva
+    # - cualquier otra fila sin OC se excluye
+    #   aunque sea de la misma empresa adjudicataria.
+    # ========================================================
+
+    mostrar_adjudicados = (
+        request.GET.get("mostrar_adjudicados", "0") == "1"
+    )
+
+    if not mostrar_adjudicados:
+
+        claves_con_oc = set(
+            RegistroLicitacion.objects
+            .exclude(
+                Q(numero_oc__isnull=True) |
+                Q(numero_oc="")
+            )
+            .exclude(numero_proceso__isnull=True)
+            .exclude(numero_proceso="")
+            .exclude(numero_renglon__isnull=True)
+            .exclude(numero_renglon="")
+            .values_list(
+                "numero_proceso",
+                "numero_renglon",
+            )
+        )
+
+        ids_a_excluir_word = []
+
+        for registro in registros:
+
+            if registro.numero_oc:
+                continue
+
+            if (
+                not registro.numero_proceso
+                or not registro.numero_renglon
+            ):
+                continue
+
+            clave = (
+                registro.numero_proceso,
+                registro.numero_renglon,
+            )
+
+            if clave in claves_con_oc:
+                ids_a_excluir_word.append(
+                    registro.id
+                )
+
+        if ids_a_excluir_word:
+            registros = registros.exclude(
+                id__in=ids_a_excluir_word
+            )
+
+            
     # ========================================================
     # EMPRESAS SELECCIONADAS PARA LA PLANILLA DE ENVÍOS
     # ========================================================
