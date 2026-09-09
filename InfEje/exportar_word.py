@@ -1373,123 +1373,139 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fech
         # COTIZACIÓN
         # ----------------------------------------------------
 
-        registro_cotizacion = next(
-            (
-                registro
-                for registro in registros
-                if registro.precio_total_oferta is not None
-            ),
-            None
+
+        # ----------------------------------------------------
+        # COTIZAR SOLAMENTE LA OFERTA MÁS ALTA
+        # ----------------------------------------------------
+
+        registro_cotizacion = (
+            registros[0]
+            if registros
+            else None
         )
 
+        if registro_cotizacion:
 
+            # ------------------------------------------------
+            # Mantenimiento de Oferta 5%
+            # ------------------------------------------------
 
-
-        # Mantenimiento de Oferta 5%
-        cotizacion = calcular_cotizacion(
-            registro_cotizacion,
-            5,
-            tipo,
-            prima_minima_pesos=prima_minima_pesos,
-            tc=tc,
-        )
-
-        if cotizacion:
-
-            # Título
-            parrafo = documento.add_paragraph()
-            run = parrafo.add_run("Cotización")
-            run.bold = True
-            run.font.size = Pt(12)
-
-            # Proceso + Renglón + Oferta
-            parrafo = documento.add_paragraph()
-
-            run = parrafo.add_run("Proceso: ")
-            run.bold = True
-            run.font.size =  Pt(11)
-
-            run = parrafo.add_run(
-                f'{cotizacion["proceso"]}  /  '
-            )
-            run.font.size = Pt(11)
-
-            run = parrafo.add_run("Renglón: ")
-            run.bold = True
-            run.font.size = Pt(11)
-
-            run = parrafo.add_run(
-                f'{cotizacion["renglon"]}  /  '
-            )
-            run.font.size = Pt(11)
-
-            run = parrafo.add_run("Oferta: ")
-            run.bold = True
-            run.font.size = Pt(11)
-
-            run = parrafo.add_run(
-                f'{cotizacion["moneda"]} '
-                f"{cotizacion['oferta']:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
-
-
-            )
-            run.font.size = Pt(11)
-
-            for run in parrafo.runs:
-                run.bold = True
-                run.underline = True
-
-
-            # Mantenimiento de Oferta
-            agregar_linea(documento, "— Mantenimiento de Oferta 5%", "-" ).runs[0].font.size = Pt(11)
-            agregar_linea(
-                documento,
-                "Suma Asegurada (5%)",
-                f'{cotizacion["moneda"]} '
-                f'{cotizacion["suma_asegurada"]:,.2f}'
-            ).runs[0].font.size = Pt(11)
-
-            agregar_linea(
-                documento,
-                "Premio simple",
-                f'{cotizacion["moneda"]} '
-                f'{cotizacion["premio_final"]:,.2f}'
-            ).runs[0].font.size = Pt(11)
-
-            # Línea en blanco entre cotizaciones
-            documento.add_paragraph()
-
-            # Adjudicación 10%
-            cotizacion_adjudicacion = calcular_cotizacion(
+            cotizacion = calcular_cotizacion(
                 registro_cotizacion,
-                10,
+                5,
                 tipo,
                 prima_minima_pesos=prima_minima_pesos,
                 tc=tc,
             )
 
-            if cotizacion_adjudicacion:
+            if cotizacion:
 
-                agregar_linea( documento, "— Adjudicación 10%", "-" ).runs[0].font.size = Pt(11)
+                # Título
+                parrafo = documento.add_paragraph()
+
+                run = parrafo.add_run("Cotización")
+                run.bold = True
+                run.font.size = Pt(12)
+
+                # Proceso + Renglón + Oferta
+                parrafo = documento.add_paragraph()
+
+                run = parrafo.add_run("Proceso: ")
+                run.bold = True
+                run.font.size = Pt(11)
+
+                run = parrafo.add_run(
+                    f'{cotizacion["proceso"]}  /  '
+                )
+                run.font.size = Pt(11)
+
+                run = parrafo.add_run("Renglón: ")
+                run.bold = True
+                run.font.size = Pt(11)
+
+                run = parrafo.add_run(
+                    f'{cotizacion["renglon"]}  /  '
+                )
+                run.font.size = Pt(11)
+
+                run = parrafo.add_run("Oferta: ")
+                run.bold = True
+                run.font.size = Pt(11)
+
+                run = parrafo.add_run(
+                    f'{cotizacion["moneda"]} '
+                    f"{cotizacion['oferta']:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                )
+                run.font.size = Pt(11)
+
+                for run in parrafo.runs:
+                    run.bold = True
+                    run.underline = True
+
+                # ------------------------------------------------
+                # Mantenimiento de Oferta
+                # ------------------------------------------------
+
                 agregar_linea(
                     documento,
-                    "Suma Asegurada (10%)",
-                    f'{cotizacion_adjudicacion["moneda"]} '
-                    f'{cotizacion_adjudicacion["suma_asegurada"]:,.2f}'
+                    "— Mantenimiento de Oferta 5%",
+                    "-"
                 ).runs[0].font.size = Pt(11)
 
+                agregar_linea(
+                    documento,
+                    "Suma Asegurada (5%)",
+                    f'{cotizacion["moneda"]} '
+                    f'{cotizacion["suma_asegurada"]:,.2f}'
+                ).runs[0].font.size = Pt(11)
 
                 agregar_linea(
                     documento,
                     "Premio simple",
-                    f'{cotizacion_adjudicacion["moneda"]} '
-                    f'{cotizacion_adjudicacion["premio_final"]:,.2f}'
+                    f'{cotizacion["moneda"]} '
+                    f'{cotizacion["premio_final"]:,.2f}'
                 ).runs[0].font.size = Pt(11)
 
+                documento.add_paragraph()
 
+                # ------------------------------------------------
+                # Adjudicación 10%
+                # ------------------------------------------------
+
+                cotizacion_adjudicacion = calcular_cotizacion(
+                    registro_cotizacion,
+                    10,
+                    tipo,
+                    prima_minima_pesos=prima_minima_pesos,
+                    tc=tc,
+                )
+
+                if cotizacion_adjudicacion:
+
+                    agregar_linea(
+                        documento,
+                        "— Adjudicación 10%",
+                        "-"
+                    ).runs[0].font.size = Pt(11)
+
+                    agregar_linea(
+                        documento,
+                        "Suma Asegurada (10%)",
+                        f'{cotizacion_adjudicacion["moneda"]} '
+                        f'{cotizacion_adjudicacion["suma_asegurada"]:,.2f}'
+                    ).runs[0].font.size = Pt(11)
+
+                    agregar_linea(
+                        documento,
+                        "Premio simple",
+                        f'{cotizacion_adjudicacion["moneda"]} '
+                        f'{cotizacion_adjudicacion["premio_final"]:,.2f}'
+                    ).runs[0].font.size = Pt(11)
+
+                documento.add_paragraph()
 
     # ========================================================
     # PLANILLA DE ENVÍO DE MAIL A EMPRESAS PROVEEDORAS
@@ -1639,14 +1655,20 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fech
                 registros_empresa = registros_lista
                 break
 
-        registro_cotizacion = next(
-            (
-                registro
-                for registro in registros_empresa
-                if registro.precio_total_oferta is not None
-            ),
-            None
-        )
+        # ----------------------------------------------------
+        # TOMAR LA OFERTA MÁS ALTA DEL PROVEEDOR
+        # ----------------------------------------------------
+
+        registros_con_oferta = [
+            registro
+            for registro in registros_empresa
+            if registro.precio_total_oferta is not None
+        ]
+
+        registro_cotizacion = max(
+            registros_con_oferta,
+            key=lambda registro: registro.precio_total_oferta
+        ) if registros_con_oferta else None
 
         if registro_cotizacion:
             return registro_cotizacion.precio_total_oferta
@@ -1676,42 +1698,85 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fech
                 registros_empresa = registros_lista
                 break
 
-        registro_cotizacion = next(
-            (
-                registro
-                for registro in registros_empresa
-                if registro.precio_total_oferta is not None
-            ),
-            None
+
+
+        # ----------------------------------------------------
+        # TOMAR LAS 6 OFERTAS MÁS ALTAS DEL PROVEEDOR
+        # ----------------------------------------------------
+
+        registros_con_oferta = [
+            registro
+            for registro in registros_empresa
+            if registro.precio_total_oferta is not None
+        ]
+
+        registros_cotizacion = sorted(
+            registros_con_oferta,
+            key=lambda registro: registro.precio_total_oferta,
+            reverse=True
+        )[:6]
+
+        # ----------------------------------------------------
+        # COTIZAR SOLAMENTE LA OFERTA MÁS ALTA
+        # ----------------------------------------------------
+
+        registro_cotizacion = (
+            registros_cotizacion[0]
+            if registros_cotizacion
+            else None
         )
 
-        # ----------------------------------------------------
-        # CALCULAR 5%
-        # ----------------------------------------------------
+        cotizacion_5 = None
+        cotizacion_10 = None
 
-        cotizacion_5 = calcular_cotizacion(
-            registro_cotizacion,
-            5,
-            empresa.tipo_destinatario or "empresa",
-            prima_minima_pesos,
-            tc,
-        )
+        if registro_cotizacion:
 
-        # ----------------------------------------------------
-        # CALCULAR 10%
-        # ----------------------------------------------------
+            cotizacion_5 = calcular_cotizacion(
+                registro_cotizacion,
+                5,
+                empresa.tipo_destinatario or "empresa",
+                prima_minima_pesos,
+                tc,
+            )
 
-        cotizacion_10 = calcular_cotizacion(
-            registro_cotizacion,
-            10,
-            empresa.tipo_destinatario or "empresa",
-            prima_minima_pesos,
-            tc,
-        )
+            cotizacion_10 = calcular_cotizacion(
+                registro_cotizacion,
+                10,
+                empresa.tipo_destinatario or "empresa",
+                prima_minima_pesos,
+                tc,
+            )
 
         # ----------------------------------------------------
         # NUEVA FILA
         # ----------------------------------------------------
+        # ----------------------------------------------------
+        # LA PLANILLA USA LA OFERTA MÁS ALTA
+        # ----------------------------------------------------
+
+        cotizacion_5 = None
+        cotizacion_10 = None
+
+        if registro_cotizacion:
+            cotizacion_5 = calcular_cotizacion(
+                registro_cotizacion,
+                5,
+                empresa.tipo_destinatario or "empresa",
+                prima_minima_pesos,
+                tc,
+            )
+
+            cotizacion_10 = calcular_cotizacion(
+                registro_cotizacion,
+                10,
+                empresa.tipo_destinatario or "empresa",
+                prima_minima_pesos,
+                tc,
+            )
+        else:
+            cotizacion_5 = None
+            cotizacion_10 = None
+
 
         fila = tabla_envios.add_row().cells
 

@@ -1896,7 +1896,20 @@
                         <th>Inicio</th>
                         <th>Fin</th>
                         <th>Estado</th>
-                        <th>Oferta</th>
+                        <th
+                            id="thOferta"
+                            style="cursor: pointer;"
+                            title="Ordenar por Oferta"
+                        >
+                            Oferta
+                            <span
+                                id="flechaOferta"
+                                style="
+                                    font-size: 11px;
+                                    margin-left: 4px;
+                                "
+                            >▼</span>
+                        </th>
                         <th>Mon</th>
                         <th>Descripción</th>
 
@@ -4487,7 +4500,109 @@ document.getElementById("btnCSVdoppler").addEventListener(
     );
 
 </script>
+<script>
+/* =========================================================
+   ORDENAR RESULTADOS POR OFERTA
+   Clic en "Oferta":
+   1er clic  → mayor a menor
+   2do clic  → menor a mayor
+   ========================================================= */
 
+document.addEventListener("DOMContentLoaded", function () {
+
+    const tabla = document.querySelector(
+        ".tabla-contenedor table"
+    );
+
+    if (!tabla) return;
+
+    const thOferta =
+        document.getElementById("thOferta");
+
+    if (!thOferta) return;
+
+    if (!thOferta) return;
+
+    let ordenOfertaDescendente = true;
+    const flechaOferta =
+        document.getElementById("flechaOferta");
+
+
+    thOferta.style.cursor = "pointer";
+    thOferta.title = "Ordenar por Oferta";
+
+    thOferta.addEventListener("click", function () {
+
+        const tbody = tabla.querySelector("tbody");
+
+        if (!tbody) return;
+
+        const filas = Array.from(
+            tbody.querySelectorAll("tr.fila-resultado")
+        );
+
+        filas.sort(function (filaA, filaB) {
+
+            const celdaA = filaA.cells[
+                thOferta.cellIndex
+            ];
+
+            const celdaB = filaB.cells[
+                thOferta.cellIndex
+            ];
+
+            if (!celdaA || !celdaB) return 0;
+
+            const textoA = celdaA.textContent.trim();
+            const textoB = celdaB.textContent.trim();
+
+            // Los "-" quedan al final
+            if (textoA === "-" && textoB === "-") return 0;
+            if (textoA === "-") return 1;
+            if (textoB === "-") return -1;
+
+            // Convierte formato argentino:
+            // 2.397.942,50 → 2397942.50
+            const valorA = parseFloat(
+                textoA
+                    .replace(/\./g, "")
+                    .replace(",", ".")
+                    .replace(/[^\d.-]/g, "")
+            );
+
+            const valorB = parseFloat(
+                textoB
+                    .replace(/\./g, "")
+                    .replace(",", ".")
+                    .replace(/[^\d.-]/g, "")
+            );
+
+            if (isNaN(valorA) && isNaN(valorB)) return 0;
+            if (isNaN(valorA)) return 1;
+            if (isNaN(valorB)) return -1;
+
+            return ordenOfertaDescendente
+                ? valorB - valorA
+                : valorA - valorB;
+        });
+
+        filas.forEach(function (fila) {
+            tbody.appendChild(fila);
+        });
+
+        ordenOfertaDescendente =
+            !ordenOfertaDescendente;
+
+        if (flechaOferta) {
+            flechaOferta.textContent =
+                ordenOfertaDescendente ? "▼" : "▲";
+        }
+
+
+    });
+
+});
+</script>
 
 </body>
 
