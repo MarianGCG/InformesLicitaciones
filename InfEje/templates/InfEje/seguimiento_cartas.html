@@ -1,0 +1,5311 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Seguimiento de Cartas</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        .contenedor {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 26px;
+        }
+
+        .boton-volver {
+            border: 1px solid #6c757d;
+            background: white;
+            color: #495057;
+            border-radius: 5px;
+            padding: 7px 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+
+        .boton-volver:hover {
+            background: #f1f3f5;
+        }
+
+        /* =================================================
+           SELECTOR CARTA
+        ================================================= */
+
+        .selector-carta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .selector-carta label {
+            font-weight: bold;
+        }
+
+        .selector-carta select {
+            width: 250px;
+            padding: 8px 10px;
+            border: 1px solid #bbb;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .selector-generacion {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 30px;
+        }
+
+        .selector-generacion label {
+            font-weight: bold;
+        }
+
+        .boton-destino {
+            border: none;
+            border-radius: 4px;
+            padding: 9px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .boton-word {
+            background: #7E2285;
+            color: white;
+        }
+
+        .boton-gmail {
+            background: #7E2285;
+            color: white;
+        }
+
+        .boton-destino.seleccionado {
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.18);
+        }
+        /* =================================================
+           PESTAÑAS
+        ================================================= */
+
+        .pestanas {
+            display: flex;
+            border-bottom: 2px solid #777;
+            margin-bottom: 20px;
+        }
+
+        .pestana {
+            padding: 11px 22px;
+            background: #e9ecef;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 3px;
+            border-radius: 7px 7px 0 0;
+        }
+
+        .pestana.activa {
+            background: white;
+            color: #198754;
+            border-top: 3px solid #198754;
+        }
+
+        .contenido-pestana {
+            display: none;
+        }
+
+        .contenido-pestana.activo {
+            display: block;
+        }
+
+        /* =================================================
+           DOS TABLAS LADO A LADO
+        ================================================= */
+
+        .listas-cartas {
+            display: grid;
+
+            grid-template-columns:
+                0.9fr
+                1.1fr
+                1.5fr;
+
+            gap: 10px;
+            align-items: start;
+        }
+
+        .panel-lista {
+            border: 1px solid #d5dbe3;
+            border-radius: 6px;
+            overflow: hidden;
+            background: white;
+        }
+
+
+        .panel-titulo {
+            padding: 10px 12px;
+            background: #dcecf8;
+            font-size: 17px;
+            font-weight: bold;
+        }
+
+        .panel-subtitulo {
+            padding: 5px 12px 10px;
+            color: #666;
+            font-size: 12px;
+            background: #eef3f8;
+            
+        }
+
+        /* =================================================
+           BUSCADOR
+        ================================================= */
+
+        .buscador {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .buscador input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        /* =================================================
+           TABLAS
+        ================================================= */
+
+        .tabla-contenedor {
+            overflow-x: auto;
+            max-height: 620px;
+            overflow-y: scroll;
+            scrollbar-gutter: stable;
+            border-top: 8px solid white;
+
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #e9eef5;
+            padding: 8px;
+            border: 1px solid #d5dbe3;
+            text-align: left;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+        }
+
+        tr:hover {
+            background: #f5f9ff;
+        }
+
+        .checkbox {
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+        }
+
+        /* =================================================
+           BOTONES CENTRALES
+        ================================================= */
+
+        .botones-centro {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-top: 95px;
+            margin-top: 95px;
+        }
+
+        .boton {
+            width: 95px;
+            border: none;
+            border-radius: 5px;
+            padding: 9px 5px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+        }
+
+        .boton-agregar {
+            background: #198754;
+        }
+
+        .boton-quitar {
+            background: #6c757d;
+        }
+
+        .boton-quitar-todos {
+            background: #dc3545;
+        }
+
+        /* =================================================
+           PESTAÑA 2
+        ================================================= */
+
+        .opciones-historial {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 42px;
+            padding: 10px 14px;
+            background: #eef3f8;
+            border: 0px solid #d5dbe3;
+            border-radius: 6px;
+        }
+
+        .opciones-historial label {
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .opcion-radio {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .opcion-radio input {
+            cursor: pointer;
+        }
+
+        .tabla-historial th,
+        .tabla-historial td {
+            font-size: 12px;
+        }
+
+
+
+        .tabla-historial {
+            width: 100%;
+            table-layout: fixed;
+        }
+        .tabla-historial th:nth-child(1),
+        .tabla-historial td:nth-child(1) {
+            width: 1%;
+        }
+25
+        .tabla-historial th:nth-child(2),
+        .tabla-historial td:nth-child(2) {
+            width: 39%;
+        }
+
+        .tabla-historial th:nth-child(3),
+        .tabla-historial td:nth-child(3) {
+            width: 8%;
+        }
+
+        .tabla-historial th:nth-child(4),
+        .tabla-historial td:nth-child(4) {
+            width: 12%;
+        }
+
+        .tabla-historial th:nth-child(5),
+        .tabla-historial td:nth-child(5) {
+            width: 10%;
+        }
+
+        .tabla-historial th:nth-child(6),
+        .tabla-historial td:nth-child(6) {
+            width: 12%;
+        }
+        .tabla-historial th:nth-child(7),
+        .tabla-historial td:nth-child(7) {
+            width: 10%;
+        }
+        .campo-recibio {
+            width: 75px;
+            padding: 5px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .campo-fecha {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 5px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .campo-acciones {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 6px 7px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* =================================================
+           BOTÓN GENERAR
+        ================================================= */
+
+        .zona-generar {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .boton-generar {
+            background: #6B8EAD;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+
+
+
+
+        /* =================================================
+        EDITORES DE CARTAS
+        ================================================= */
+
+        .campo {
+            margin-bottom: 18px;
+        }
+
+        .campo label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 7px;
+        }
+
+        .asunto-editor {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .toolbar-editor {
+            display: flex;
+            gap: 5px;
+            padding: 8px;
+            background: #f1f3f5;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .toolbar-editor button {
+            min-width: 34px;
+            height: 32px;
+            border: 1px solid #bbb;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .toolbar-editor button:hover {
+            background: #e9ecef;
+        }
+
+        .editor-carta {
+            min-height: 450px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 0 0 5px 5px;
+            outline: none;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            background: white;
+        }
+
+        .editor-carta:focus {
+            border-color: #888;
+        }
+
+        .tipo-carta-btn {
+            margin-left: 8px;
+            padding: 7px 14px;
+            border: 1px solid #bbb;
+            background: #f1f3f5;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .tipo-carta-btn.activo {
+            background: #198754;
+            color: white;
+            border-color: #198754;
+        }
+
+        .variables-editor {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+
+        .variables-editor button {
+            margin-left: 8px;
+            padding: 4px 7px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+
+        .th-ordenable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .th-ordenable:hover {
+            background-color: #dce6f1;
+        }
+
+        .flechas-orden {
+            font-size: 10px;
+            margin-left: 5px;
+            white-space: nowrap;
+        }
+
+
+        /* =========================================================
+        BUSCADOR EMPRESA - CARTAS ENVIADAS
+        ========================================================= */
+        .empresa-autocomplete {
+            background: #eef3f8;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .empresa-autocomplete {
+            position: relative;
+            width: 220px;
+            min-width: 220px;
+            flex-shrink: 0;
+        }
+        .empresa-autocomplete .empresa-control {
+            position: relative;
+            width: 100%;
+        }
+
+        .empresa-autocomplete .empresa-control input {
+            width: 100%;
+            height: 38px;
+            box-sizing: border-box;
+
+            padding: 8px 40px 8px 12px;
+
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+
+            font-size: 13px;
+            font-weight: 600;
+
+            background: #fff;
+        }
+
+        .empresa-autocomplete .empresa-control input:focus {
+            border-color: #86b7fe;
+            outline: none;
+            box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+        }
+
+        .empresa-autocomplete .empresa-flecha {
+            position: absolute;
+
+            right: 1px;
+            top: 1px;
+
+            width: 36px;
+            height: 36px;
+
+            border: none;
+            background: transparent;
+
+            cursor: pointer;
+
+            font-size: 11px;
+            color: #495057;
+        }
+
+        .empresa-autocomplete .empresa-resultados {
+            position: absolute;
+
+            top: 100%;
+            left: 0;
+
+            width: 100%;
+
+            max-height: 240px;
+
+            overflow-y: auto;
+
+            background: #fff;
+
+            border: 1px solid #ced4da;
+            border-top: none;
+
+            border-radius: 0 0 6px 6px;
+
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+
+            z-index: 9999;
+
+            display: none;
+        }
+
+        .empresa-autocomplete .empresa-opcion {
+            padding: 7px 10px;
+
+            font-size: 13px;
+            font-weight: 600;
+
+            cursor: pointer;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .empresa-autocomplete .empresa-opcion:hover {
+            background: #eef3f8;
+        }
+
+        .resumen-proveedores {
+            display: flex;
+            gap: 25px;
+            padding: 10px 12px;
+            background: #eef3f8;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .resumen-proveedores span {
+            white-space: nowrap;
+        }
+
+
+
+        .zona-carta {
+            background: #f1f3f5;
+            padding: 8px 10px 10px 10px;
+        }
+
+        .selector-carta-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .selector-carta-panel label {
+            font-weight: bold;
+        }
+
+        .selector-carta-panel select {
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            background: white;
+        }
+
+        .fila-botones-carta,
+        .fila-fecha-carta {
+            background: #f1f3f5;
+        }
+
+
+        .fila-botones-carta {
+            border-bottom: 1px solid #d5dce3;
+            padding-bottom: 10px;
+            margin-bottom: 8px;
+        }
+
+        .fila-fecha-carta {
+            border-bottom: 1px solid #d5dce3;
+            padding-bottom: 10px;
+            margin-bottom: 0;
+        }
+
+        .panel-titulo {
+            height: 38px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+        }
+
+        /* =========================================================
+        ALINEAR ENCABEZADOS DE LAS 3 TABLAS
+        ========================================================= */
+
+        /* Todos los proveedores */
+        .listas-cartas > .panel-lista:nth-child(1) .tabla-contenedor {
+            margin-top: 4px;
+        }
+
+        /* Carta a enviar */
+        .listas-cartas > .panel-lista:nth-child(2) .tabla-contenedor {
+            margin-top: 0px;
+        }
+
+        /* Cartas enviadas */
+        .listas-cartas > .panel-lista:nth-child(3) > .panel-lista {
+            margin-top: 4px;
+            padding-top: 0px;
+
+
+        }
+
+
+        .listas-cartas > .panel-lista:nth-child(1) {
+            background: #eef3f8;
+        }
+        .listas-cartas > .panel-lista:nth-child(1) .tabla-contenedor {
+            background: white;
+            border-top: 8px solid white;
+        }
+
+
+        .listas-cartas > .panel-lista:nth-child(3) {
+            background: #eef3f8;
+        }
+        .listas-cartas > .panel-lista:nth-child(3) .tabla-contenedor {
+            background: white;
+            border-top: 8px solid white;
+        }
+
+        #cartaSeleccionada option {
+            font-size: 16px;
+            font-weight: 600;
+            margin-left: 48px;
+        }
+
+
+        .resumen-cartas {
+            display: flex;
+            gap: 25px;
+            padding: 10px 12px;
+            background: #eef3f8;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .resumen-cartas span {
+            white-space: nowrap;
+        }
+
+        .resumen-cartas-enviar {
+            display: flex;
+            gap: 25px;
+            padding: 10px 12px;
+            background: #eef3f8;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .resumen-cartas-enviar span {
+            white-space: nowrap;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+{% csrf_token %}
+<div class="contenedor">
+
+    <div
+        style="
+            display:flex;
+            align-items:center;
+            gap:20px;
+            margin-bottom:30px;
+
+        "
+    >
+
+        <h1 style="margin:0;">
+            Seguimiento de Cartas
+        </h1>
+
+        <button
+            type="button"
+            onclick="window.history.back()"
+            style="
+                background-color:#4a90e2;
+                color:white;
+                border:none;
+                border-radius:5px;
+                padding:8px 14px;
+                font-weight:700;
+                font-size:18px;
+                cursor:pointer;
+
+            "
+        >
+            ← Volver
+            
+        </button>
+
+    </div>   
+        
+    
+
+    <!-- =================================================
+         PESTAÑAS
+    ================================================= -->
+
+    <div class="pestanas">
+
+        <div
+            class="pestana activa"
+            data-pestana="preparar-envio"
+        >
+            1. Preparar envío
+        </div>
+
+
+        <div
+            class="pestana"
+            data-pestana="carta-1"
+        >
+            3. Carta 1
+        </div>
+
+        <div
+            class="pestana"
+            data-pestana="carta-2"
+        >
+            4. Carta 2
+        </div>
+
+
+    </div>
+
+
+    <!-- =================================================
+         PESTAÑA 1
+         PREPARAR ENVÍO
+    ================================================= -->
+
+    <div
+        id="preparar-envio"
+        class="contenido-pestana activo"
+    >
+
+        <div class="listas-cartas">
+
+
+            <!-- =================================================
+                 TODOS LOS PROVEEDORES
+            ================================================= -->
+
+            <div class="panel-lista">
+
+                <div class="panel-titulo">
+                    Todos los proveedores
+                </div>
+
+                <div class="panel-subtitulo">
+                </div>
+
+
+                <div class="empresa-autocomplete">
+
+                    <div class="empresa-control">
+
+                        <input
+                            type="text"
+                            id="empresaBusquedaProveedores"
+                            placeholder="Buscar empresa..."
+                            autocomplete="off"
+                            value=""
+                        >
+
+                        <button
+                            type="button"
+                            class="empresa-flecha"
+                            id="empresaFlechaProveedores"
+                            tabindex="-1"
+                        >
+                            ▼
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="empresaResultadosProveedores"
+                        class="empresa-resultados"
+                    >
+
+                        <div
+                            class="empresa-opcion"
+                            data-empresa-id="todas"
+                        >
+                            Todas
+                        </div>
+
+                        {% for empresa in empresas %}
+
+                            <div
+                                class="empresa-opcion"
+                                data-empresa-id="{{ empresa.id }}"
+                                data-nombre="{{ empresa.nombre|escapejs }}"
+                            >
+                                {{ empresa.nombre }}
+                                {% if empresa.cuit %}
+                                    — CUIT {{ empresa.cuit }}
+                                {% endif %}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    </div>
+
+
+                    <div class="resumen-proveedores" >
+
+                        <span style="margin-top:62px;">
+                            Total Empresas:
+                            <strong id="totalEmpresas">0</strong>
+                        </span>
+
+                        <span style="margin-top:62px;">
+                            Con mail:
+                            <strong id="totalConMail">0</strong>
+                        </span>
+
+                        <span style="margin-top:62px;">
+                            Con teléfono:
+                            <strong id="totalConTelefono">0</strong>
+                        </span>
+
+                    </div>
+
+
+                    <div class="tabla-contenedor">
+
+                        <table>
+
+
+
+                        <thead>
+
+                            <tr>
+
+                                <th style="width: 30px; text-align:center;">
+                                    <input
+                                        type="checkbox"
+                                        id="todosProveedores"
+                                        class="checkbox"
+                                        title="Seleccionar todos"
+                                    >
+                                </th>
+
+                                <th>Empresa</th>
+                                <th>Email 1</th>
+                   
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="tablaTodos">
+
+                            {% for empresa in empresas %}
+
+                                <tr
+                                    data-empresa-id="{{ empresa.id }}"
+                                    data-email="{{ empresa.email|default:'' }}"
+                                    data-telefono="{{ empresa.telefono|default:'' }}"
+                                >
+                                    <td style="text-align:center;">
+
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox proveedor-checkbox"
+                                            value="{{ empresa.id }}"
+                                        >
+
+                                    </td>
+                                        <td>
+                                            {{ empresa.nombre }}
+                                        </td>
+
+                                        <td>
+                                            {{ empresa.email|default:"-" }}
+                                        </td>
+
+                                </tr>
+
+                            {% empty %}
+
+                                <tr>
+
+                                    <td
+                                        colspan="3"
+                                        style="
+                                            text-align:center;
+                                            padding:20px;
+                                            color:#777;
+                                        "
+                                    >
+                                        No hay proveedores cargados.
+
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+
+
+
+            <!-- =================================================
+                 PROVEEDORES SELECCIONADOS
+            ================================================= -->
+
+            <div class="panel-lista">
+
+            
+
+
+                <div class="panel-titulo">
+                
+
+                    <label for="cartaSeleccionada">
+                        Carta a enviar: 
+                    </label>
+
+                    <select id="cartaSeleccionada" style="margin-left:20px;font-weight:bold;font-size: 20px;">
+
+                        <option value="1">
+                            Carta 1
+                        </option>
+
+                        <option value="2">
+                            Carta 2
+                        </option>
+
+                    </select>
+
+                </div>
+                <div class="zona-carta">
+                <div class="panel-subtitulo">
+                </div>
+
+
+                <!-- =================================================
+                    BOTONES
+                ================================================= -->
+
+                <div
+                    class="fila-botones-carta"
+                    style="
+                        display:flex;
+                        align-items:center;
+                        gap:8px;
+                        margin-top:-10px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <button
+                        type="button"
+                        id="btnAgregar"
+                        class="boton boton-agregar"
+                        style="margin-left: 10px;font-size: 14px;"
+                    >
+                        Agregar
+                        <br>
+                        →
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btnQuitar"
+                        class="boton boton-quitar"
+                        style="margin-left: 10px;font-size: 14px;"
+                    >
+                        ←
+                        <br>
+                        Quitar
+                    </button>
+
+                    <label style="margin-left: 72px;">
+                          Generar:
+                    </label>
+
+                    <button
+                        type="button"
+                        id="btnGenerarWord"
+                        class="boton-destino boton-word"
+                        style="margin-left: 10px;"
+                    >
+                        a WORD 
+                        <br>
+                        →
+                        
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btnGenerarGmail"
+                        class="boton-destino boton-gmail"
+                        style="margin-left: 10px;width: 100px;"
+
+                    >
+                        Gmail → Borrador
+                       
+                    </button>
+
+
+
+                </div>
+
+                <div
+                    style="
+                        class="fila-fecha-carta"
+                        display:flex;
+                        justify-content:flex-start;
+                        align-items:center;
+                        gap:10px;
+                        margin-bottom:10px;
+                        margin-left:53px;
+                    "
+                >
+
+                    <label
+                        for="fechaEnvio"
+                        style="font-weight:bold;"
+                    >
+                        Fecha de envío:
+                    </label>
+
+                    <input
+                        type="date"
+                        id="fechaEnvio"
+                    >
+
+                    <button
+                        type="button"
+                        id="btnAplicarFecha"
+                        class="boton boton-agregar"
+                        style="font-size: 14px; width: 120px;"
+
+                    >
+                        Aplicar Fecha
+                    </button>
+
+
+
+                    <button
+                        type="button"
+                        id="btnAplicarCartaEnviada"
+                        class="boton boton-agregar"
+                        
+                        style="margin-left: 43px;font-size: 14px; width: 170px;"
+                    >
+                        Aplicar Carta enviada
+                                                
+                    </button>
+                    
+                </div>
+
+                </div>
+
+
+                <div class="resumen-cartas-enviar">
+
+                    <span>
+                        Total Cartas a enviar:
+                        <strong id="totalCartasAEnviar">0</strong>
+                    </span>
+
+                    <span>
+                        Seleccionadas:
+                        <strong id="totalCartasSeleccionadas">0</strong>
+                    </span>
+
+                </div>
+
+
+
+                <div class="tabla-contenedor">
+
+                    <table style="width:100%;">
+
+                        <thead>
+
+                            <tr>
+
+                                <th style="width: 30px; text-align:center;">
+                                    <input
+                                        type="checkbox"
+                                        id="todosSeleccionados"
+                                        class="checkbox"
+                                        title="Seleccionar todos"
+                                    >
+                                </th>
+                                <th style="width: 90%;">Empresa</th>
+                                <th>Fecha de envío</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="tablaSeleccionados">
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+
+
+
+            </div>
+
+            <!-- =================================================
+                PESTAÑA 2
+                CARTAS ENVIADAS
+            ================================================= -->
+
+
+            <div
+                id="cartas-enviadas"
+                class="panel-lista"
+            >
+
+
+            
+                <div class="panel-titulo">
+                    Cartas enviadas
+
+                </div>
+                <div class="panel-subtitulo">
+                </div>
+
+                <!-- =================================================
+                    MOSTRAR TODAS / ÚLTIMA
+                ================================================= -->
+
+
+
+                <div class="opciones-historial">
+
+                    <!-- BUSCADOR DE PROVEEDOR -->
+
+                    <div class="empresa-autocomplete">
+
+
+                        <div class="empresa-control">
+
+                            <input
+                                type="text"
+                                id="empresaBusquedaHistorial"
+                                placeholder="Buscar empresa..."
+                                autocomplete="off"
+                                value=""
+                                
+                            >
+
+                            <button
+                                type="button"
+                                class="empresa-flecha"
+                                id="empresaFlechaHistorial"
+                                tabindex="-1"
+                            >
+                                ▼
+                            </button>
+
+                        </div>
+
+
+                        <div
+                            id="empresaResultadosHistorial"
+                            class="empresa-resultados"
+                        >
+
+                            <div
+                                class="empresa-opcion"
+                                data-empresa-id="todas"
+                            >
+                                Todas
+                            </div>
+
+                            {% for empresa in empresas %}
+
+                                <div
+                                    class="empresa-opcion"
+                                    data-empresa-id="{{ empresa.id }}"
+                                    data-nombre="{{ empresa.nombre|escapejs }}"
+                                >
+                                    {{ empresa.nombre }}
+
+                                    {% if empresa.cuit %}
+                                        — CUIT {{ empresa.cuit }}
+                                    {% endif %}
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+
+
+                    </div>
+
+
+                    <!-- ÚLTIMA CARTA -->
+                    <label
+                        style="
+                            margin-left: 40px;
+                            width: 170px;
+                            min-width: 170px;
+                            line-height: 1.1;
+                        "
+                    >
+                        Última carta enviada al proveedor:
+                    </label>
+
+
+                   
+                        
+                    <label class="opcion-radio">
+                        <input
+                            type="radio"
+                            name="ultimaCarta"
+                            value="si"
+                            checked
+                        >
+                        Sí
+                    </label>
+
+                    <label  class="opcion-radio">
+                        <input
+                            type="radio"
+                            name="ultimaCarta"
+                            value="no"
+                        >
+                        No
+                    </label>
+
+
+                    <div
+                        style="
+                            display:flex;
+                            justify-content:flex-start;
+                            gap:10px;
+                            margin-bottom:10px;
+                            margin-left:12px;
+                        "
+                    >
+
+                        <button
+                            type="button"
+                            id="btnGrabarHistorial"
+                            class="boton boton-agregar"
+                        >
+                            💾 Grabar
+                        </button>
+
+                        <button
+                            type="button"
+                            id="btnEliminarHistorial"
+                            class="boton boton-quitar-todos"
+                        >
+                            🗑️ Eliminar
+                        </button>
+
+                    </div>
+
+
+
+
+                </div>
+
+
+                <div class="resumen-cartas">
+
+                    <span>
+                        Total Cartas Enviadas:
+                        <strong id="totalCartasEnviadas">0</strong>
+                    </span>
+
+                    <span>
+                        Cartas 1:
+                        <strong id="totalCartas1">0</strong>
+                    </span>
+
+                    <span>
+                        Cartas 2:
+                        <strong id="totalCartas2">0</strong>
+                    </span>
+
+                </div>
+
+
+                <!-- =================================================
+                    TABLA HISTORIAL
+                ================================================= -->
+
+                <div class="panel-lista">
+
+
+
+
+
+                    <div class="tabla-contenedor">
+
+                        <table class="tabla-historial">
+
+       
+
+                            <thead>
+                                <tr>
+
+                                    <th style="width:35px; text-align:center;">
+                                        <input
+                                            type="checkbox"
+                                            id="seleccionarTodasHistorial"
+                                            title="Seleccionar todas"
+                                        >
+                                    </th>
+
+
+                                    <th
+                                        class="th-ordenable"
+                                        data-columna="empresa"
+                                    >
+                                        Empresa
+                                        <span class="flechas-orden">▲▼</span>
+                                    </th>
+
+                                    <th
+                                        class="th-ordenable"
+                                        data-columna="carta"
+                                    >
+                                        Carta
+                                        <span class="flechas-orden">▲▼</span>
+                                    </th>
+
+                                    <th
+                                        class="th-ordenable"
+                                        data-columna="fecha_envio"
+                                    >
+                                        F/envío
+                                        <span class="flechas-orden">▲▼</span>
+                                    </th>
+
+                                    <th>
+                                        Recibió
+                                    </th>
+
+                                    <th
+                                        class="th-ordenable"
+                                        data-columna="fecha_respuesta"
+                                    >
+                                        F/respuesta
+                                        <span class="flechas-orden">▲▼</span>
+                                    </th>
+
+                                    <th>
+                                        Acciones
+                                    </th>
+
+                                </tr>
+                            </thead>
+
+
+
+
+                            <tbody id="tablaHistorial">
+
+                                {% for seguimiento in seguimientos %}
+
+                                    <tr
+                                        class="fila-historial"
+                                        data-id="{{ seguimiento.id }}"
+                                        data-empresa="{{ seguimiento.empresa.id }}"
+                                        data-carta="{{ seguimiento.carta }}"
+                                    >
+                                        <td style="text-align:center;">
+                                            <input
+                                                type="checkbox"
+                                                class="checkbox historial-checkbox"
+                                                value="{{ seguimiento.id }}"
+                                            >
+                                        </td>
+
+                                        <td>{{ seguimiento.empresa.nombre }}</td>
+                                        <td>{{ seguimiento.get_carta_display }}</td>
+                                        <td>
+                                            {% if seguimiento.fecha_envio %}
+                                                {{ seguimiento.fecha_envio|date:"d/m/Y" }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <select class="campo-recibio">
+
+                                                <option value=""
+                                                    {% if not seguimiento.recibio %}
+                                                        selected
+                                                    {% endif %}
+                                                >
+                                                    -
+                                                </option>
+
+                                                <option value="si"
+                                                    {% if seguimiento.recibio == "si" %}
+                                                        selected
+                                                    {% endif %}
+                                                >
+                                                    Sí
+                                                </option>
+
+                                                <option value="no"
+                                                    {% if seguimiento.recibio == "no" %}
+                                                        selected
+                                                    {% endif %}
+                                                >
+                                                    No
+                                                </option>
+
+                                            </select>
+
+                                        </td>
+
+                                        <td>
+
+                                            <input
+                                                type="date"
+                                                class="campo-fecha"
+                                                value="{% if seguimiento.fecha_respuesta %}{{ seguimiento.fecha_respuesta|date:'Y-m-d' }}{% endif %}"
+                                            >
+                                        </td>
+
+                                        <td>
+
+                                            <input
+                                                type="text"
+                                                class="campo-acciones"
+                                                placeholder="Observación..."
+                                                value="{{ seguimiento.acciones|default:'' }}"
+                                            >
+                                        </td>
+
+                                    </tr>
+
+                                {% empty %}
+
+                                    <tr>
+
+                                        <td
+                                            colspan="7"
+                                            style="
+                                                text-align:center;
+                                                padding:25px;
+                                                color:#777;
+                                            "
+                                        >
+                                            No hay cartas enviadas registradas.
+
+                                        </td>
+
+                                    </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+
+
+
+    </div>
+
+
+
+    <!-- =================================================
+        PESTAÑA 3
+        CARTA 1
+    ================================================= -->
+
+    <div
+        id="carta-1"
+        class="contenido-pestana"
+    >
+
+        <div class="panel-lista">
+
+            <div class="panel-titulo">
+                Editar Carta 1
+            </div>
+
+
+
+            <div class="panel-subtitulo">
+                Texto de la Carta 1 según el tipo de destinatario.
+            </div>
+
+            <div style="padding:20px;">
+
+                <div style="margin-bottom:15px;">
+
+                    <label style="font-weight:bold; cursor:pointer;">
+
+                        <input
+                            type="checkbox"
+                            id="imprimirMovimientosCarta1"
+                        >
+
+                        Imprimir Movimientos y Cotización
+
+                    </label>
+
+                </div>
+
+
+
+
+                <div style="margin-bottom:15px;">
+
+                    <label style="font-weight:bold;">
+                        Tipo de destinatario:
+                    </label>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn activo"
+                        onclick="cargarEditorCarta(1, 'empresa')"
+                    >
+                        Empresa
+                    </button>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn"
+                        onclick="cargarEditorCarta(1, 'mujer')"
+                    >
+                        Persona Mujer
+                    </button>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn"
+                        onclick="cargarEditorCarta(1, 'hombre')"
+                    >
+                        Persona Hombre
+                    </button>
+
+
+
+
+                </div>
+
+
+                <div class="campo">
+                    <label>Asunto</label>
+
+                    <input
+                        type="text"
+                        id="asuntoCarta1"
+                        class="asunto-editor"
+                        placeholder="Asunto del mail..."
+                    >
+                </div>
+
+
+                <div class="toolbar-editor">
+
+                    <button type="button"
+                        onclick="editorEjecutar(1, 'bold')">
+                        <strong>B</strong>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(1, 'italic')">
+                        <em>I</em>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(1, 'underline')">
+                        <u>U</u>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(1, 'justifyLeft')">
+                        ☰
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(1, 'justifyCenter')">
+                        ≡
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(1, 'justifyRight')">
+                        ☷
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="editorCarta1"
+                    class="editor-carta"
+                    contenteditable="true"
+                ></div>
+
+                <div class="variables-editor">
+
+                    <strong>Variables disponibles:</strong>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; nombre &#125;&#125;"
+                        onclick="insertarVariableEditor(1, this.dataset.variable)"
+                    >
+                        &#123;&#123; nombre &#125;&#125;
+                    </button>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; nombre_pila &#125;&#125;"
+                        onclick="insertarVariableEditor(1, this.dataset.variable)"
+                    >
+                        &#123;&#123; nombre_pila &#125;&#125;
+                    </button>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; organismos &#125;&#125;"
+                        onclick="insertarVariableEditor(1, this.dataset.variable)"
+                    >
+                        &#123;&#123; organismos &#125;&#125;
+                    </button>
+
+                </div>
+
+                <div style="margin-top:20px;">
+
+                    <button
+                        type="button"
+                        class="boton boton-agregar"
+                        onclick="guardarEditorCarta(1)"
+                    >
+                        💾 Guardar Carta 1
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+        PESTAÑA 4
+        CARTA 2
+    ================================================= -->
+
+    <div
+        id="carta-2"
+        class="contenido-pestana"
+    >
+
+        <div class="panel-lista">
+
+            <div class="panel-titulo">
+                Editar Carta 2
+            </div>
+
+
+
+            <div class="panel-subtitulo">
+                Solamente se modifica el texto.
+                La tabla de licitaciones y la cotización
+                se generan automáticamente.
+            </div>
+
+            <div style="padding:20px;">
+
+                <div style="margin-bottom:15px;">
+
+                    <label style="font-weight:bold; cursor:pointer;">
+
+                        <input
+                            type="checkbox"
+                            id="imprimirMovimientosCarta2"
+                            checked
+                        >
+
+                        Imprimir Movimientos y Cotización
+
+                    </label>
+
+                </div>
+
+                <div style="margin-bottom:15px;">
+
+                    <label style="font-weight:bold;">
+                        Tipo de destinatario:
+                    </label>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn activo"
+                        onclick="cargarEditorCarta(2, 'empresa')"
+                    >
+                        Empresa
+                    </button>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn"
+                        onclick="cargarEditorCarta(2, 'mujer')"
+                    >
+                        Persona Mujer
+                    </button>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn"
+                        onclick="cargarEditorCarta(2, 'hombre')"
+                    >
+                        Persona Hombre
+                    </button>
+
+
+
+
+                </div>
+
+
+                <div class="campo">
+                    <label>Asunto</label>
+
+                    <input
+                        type="text"
+                        id="asuntoCarta2"
+                        class="asunto-editor"
+                        placeholder="Asunto del mail..."
+                    >
+                </div>
+
+
+                <div class="toolbar-editor">
+
+                    <button type="button"
+                        onclick="editorEjecutar(2, 'bold')">
+                        <strong>B</strong>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(2, 'italic')">
+                        <em>I</em>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(2, 'underline')">
+                        <u>U</u>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(2, 'justifyLeft')">
+                        ☰
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(2, 'justifyCenter')">
+                        ≡
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(2, 'justifyRight')">
+                        ☷
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="editorCarta2"
+                    class="editor-carta"
+                    contenteditable="true"
+                ></div>
+
+                <div class="variables-editor">
+
+                    <strong>Variables disponibles:</strong>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; nombre &#125;&#125;"
+                        onclick="insertarVariableEditor(2, this.dataset.variable)"
+                    >
+                        &#123;&#123; nombre &#125;&#125;
+                    </button>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; nombre_pila &#125;&#125;"
+                        onclick="insertarVariableEditor(2, this.dataset.variable)"
+                    >
+                        &#123;&#123; nombre_pila &#125;&#125;
+                    </button>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; organismos &#125;&#125;"
+                        onclick="insertarVariableEditor(2, this.dataset.variable)"
+                    >
+                        &#123;&#123; organismos &#125;&#125;
+                    </button>
+
+                </div>
+
+
+                <div style="margin-top:20px;">
+
+                    <button
+                        type="button"
+                        class="boton boton-agregar"
+                        onclick="guardarEditorCarta(2)"
+                    >
+                        💾 Guardar Carta 2
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+
+</div>
+<!-- =========================================================
+     DATOS DE COTIZACIÓN PARA GENERAR WORD
+========================================================= -->
+
+<div
+    id="modalDatosCotizacionWord"
+    style="
+        display:none;
+        position:fixed;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+        background:rgba(0,0,0,0.35);
+        z-index:9999;
+        align-items:center;
+        justify-content:center;
+    "
+>
+
+    <div
+        style="
+            background:white;
+            padding:20px;
+            border-radius:8px;
+            width:420px;
+            box-shadow:0 4px 15px rgba(0,0,0,0.3);
+        "
+    >
+
+        <div
+            style="
+                font-size:18px;
+                font-weight:bold;
+                margin-bottom:18px;
+            "
+        >
+            Datos de cotización
+        </div>
+
+
+        <div
+            style="
+                display:flex;
+                gap:25px;
+                align-items:center;
+                margin-bottom:20px;
+            "
+        >
+
+            <div>
+
+                <label
+                    for="primaMinimaPesosWord"
+                    style="font-size:13px;"
+                >
+                    Prima mínima ($)
+                </label>
+
+                <input
+                    type="number"
+                    id="primaMinimaPesosWord"
+                    value="18000"
+                    step="0.01"
+                    style="
+                        width:120px;
+                        padding:6px;
+                        margin-left:5px;
+                    "
+                >
+
+            </div>
+
+
+            <div>
+
+                <label
+                    for="tcPesosWord"
+                    style="font-size:13px;"
+                >
+                    TC ($)
+                </label>
+
+                <input
+                    type="number"
+                    id="tcPesosWord"
+                    value="1510"
+                    step="0.01"
+                    style="
+                        width:100px;
+                        padding:6px;
+                        margin-left:5px;
+                    "
+                >
+
+            </div>
+
+        </div>
+
+
+        <div
+            style="
+                display:flex;
+                justify-content:flex-end;
+                gap:10px;
+            "
+        >
+
+            <button
+                type="button"
+                id="btnCancelarDatosCotizacion"
+                style="
+                    background:#777;
+                    color:white;
+                    border:none;
+                    border-radius:5px;
+                    padding:8px 14px;
+                    cursor:pointer;
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                type="button"
+                id="btnGenerarWordConCotizacion"
+                style="
+                    background:#8e24aa;
+                    color:white;
+                    border:none;
+                    border-radius:5px;
+                    padding:8px 14px;
+                    cursor:pointer;
+                    font-weight:bold;
+                "
+            >
+                Generar Word
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   CAMBIO DE PESTAÑAS
+========================================================= */
+
+document.querySelectorAll(".pestana").forEach(
+    function (pestana) {
+
+        pestana.addEventListener(
+            "click",
+            function () {
+
+                document.querySelectorAll(
+                    ".pestana"
+                ).forEach(
+                    function (p) {
+
+                        p.classList.remove(
+                            "activa"
+                        );
+
+                    }
+                );
+
+
+                document.querySelectorAll(
+                    ".contenido-pestana"
+                ).forEach(
+                    function (contenido) {
+
+                        contenido.classList.remove(
+                            "activo"
+                        );
+
+                    }
+                );
+
+
+                pestana.classList.add(
+                    "activa"
+                );
+
+
+                const id =
+                    pestana.dataset.pestana;
+
+
+                document.getElementById(id)
+                    .classList.add("activo");
+
+            }
+        );
+
+    }
+);
+
+
+/* =========================================================
+   CAMBIAR CARTA
+========================================================= */
+
+const cartaSeleccionada =
+    document.getElementById(
+        "cartaSeleccionada"
+    );
+
+
+
+cartaSeleccionada.addEventListener(
+    "change",
+    function () {
+
+      
+        actualizarProveedoresCarta();
+
+    }
+);
+/* =========================================================
+   ARMAR AUTOMÁTICAMENTE "CARTA A ENVIAR"
+========================================================= */
+
+function actualizarProveedoresCarta() {
+
+    const carta =
+        cartaSeleccionada.value;
+
+    const filasTodos =
+        Array.from(
+            tablaTodos.querySelectorAll("tr[data-empresa-id]")
+        );
+
+    const filasHistorial =
+        Array.from(
+            document.querySelectorAll(
+                "#tablaHistorial .fila-historial"
+            )
+        );
+
+    tablaSeleccionados.innerHTML = "";
+
+    filasTodos.forEach(
+        function (fila) {
+
+            const empresaId =
+                fila.dataset.empresaId;
+
+            const email =
+                fila.cells[2]
+                    .textContent
+                    .trim();
+
+            /* -----------------------------------------
+               DEBE TENER EMAIL
+            ----------------------------------------- */
+
+            if (
+                !email ||
+                email === "-"
+            ) {
+                return;
+            }
+
+            let corresponde = false;
+
+            /* -----------------------------------------
+               CARTA 1
+               Nunca recibió ninguna carta
+            ----------------------------------------- */
+
+            if (carta === "1") {
+
+                const recibioAlguna =
+                    filasHistorial.some(
+                        function (filaHistorial) {
+
+                            return (
+                                filaHistorial.dataset.empresa ===
+                                empresaId
+                            );
+
+                        }
+                    );
+
+                corresponde =
+                    !recibioAlguna;
+            }
+
+            /* -----------------------------------------
+               CARTA 2
+               Ya recibió Carta 1
+            ----------------------------------------- */
+
+            if (carta === "2") {
+
+                const recibioCarta1 =
+                    filasHistorial.some(
+                        function (filaHistorial) {
+
+                            return (
+                                filaHistorial.dataset.empresa ===
+                                    empresaId &&
+                                filaHistorial.dataset.carta ===
+                                    "1"
+                            );
+
+                        }
+                    );
+
+                corresponde =
+                    recibioCarta1;
+            }
+
+            if (!corresponde) {
+                return;
+            }
+
+            /* -----------------------------------------
+               CREAR FILA
+            ----------------------------------------- */
+
+            const nombre =
+                fila.cells[1]
+                    .textContent
+                    .trim();
+
+            const nuevaFila =
+                document.createElement("tr");
+
+            nuevaFila.dataset.empresaId =
+                empresaId;
+
+            nuevaFila.innerHTML = `
+                <td style="text-align:center;">
+                    <input
+                        type="checkbox"
+                        class="checkbox seleccionado-checkbox"
+                        value="${empresaId}"
+                    >
+                </td>
+
+                <td>
+                    ${nombre}
+                </td>
+
+                <td class="fecha-envio">
+                    -
+                </td>
+            `;
+
+            tablaSeleccionados.appendChild(
+                nuevaFila
+            );
+
+        }
+    );
+
+    actualizarTodosSeleccionados();
+    actualizarResumenCartasEnviar();
+}
+
+
+
+
+/* =========================================================
+   GENERAR WORD - CARTAS A ENVIAR
+========================================================= */
+
+const btnGenerarWord =
+    document.getElementById(
+        "btnGenerarWord"
+    );
+
+
+btnGenerarWord.addEventListener(
+    "click",
+    async function () {
+
+        const seleccionados = [];
+
+        document
+            .querySelectorAll(
+                "#tablaSeleccionados .seleccionado-checkbox"
+            )
+            .forEach(
+                function (checkbox) {
+
+                    if (checkbox.checked) {
+
+                        seleccionados.push(
+                            checkbox.value
+                        );
+
+                    }
+
+                }
+            );
+
+
+        // -------------------------------------------------
+        // CONTROLAR QUE HAYA EMPRESAS
+        // -------------------------------------------------
+
+        if (seleccionados.length === 0) {
+
+            alert(
+                "No hay empresas seleccionadas para generar el Word."
+            );
+
+            return;
+
+        }
+
+
+        // -------------------------------------------------
+        // TOMAR LOS FILTROS ACTUALES
+        // -------------------------------------------------
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        paramsWordPendientes = params;
+        // -------------------------------------------------
+        // LIMPIAR EMPRESAS ANTERIORES
+        // -------------------------------------------------
+
+        params.delete(
+            "empresa_ids"
+        );
+
+
+        // -------------------------------------------------
+        // AGREGAR SOLAMENTE LAS EMPRESAS
+        // DE LA TABLA CARTA A ENVIAR
+        // -------------------------------------------------
+
+        seleccionados.forEach(
+            function (id) {
+
+                params.append(
+                    "empresa_ids",
+                    id
+                );
+
+            }
+        );
+
+
+        // -------------------------------------------------
+        // CARTA SELECCIONADA
+        // -------------------------------------------------
+
+    
+        params.set(
+            "carta",
+            cartaSeleccionada.value
+        );
+
+
+        // -------------------------------------------------
+        // IMPRIMIR MOVIMIENTOS Y COTIZACIÓN
+        // -------------------------------------------------
+
+        const carta = cartaSeleccionada.value;
+
+        const checkboxMovimientos =
+            carta === "1"
+                ? document.getElementById(
+                    "imprimirMovimientosCarta1"
+                )
+                : document.getElementById(
+                    "imprimirMovimientosCarta2"
+                );
+
+        params.set(
+            "imprimir_movimientos",
+            checkboxMovimientos.checked
+                ? "1"
+                : "0"
+        );
+
+
+        /* =================================================
+        SI IMPRIME MOVIMIENTOS Y COTIZACIÓN
+        PEDIR DATOS DE COTIZACIÓN
+        ================================================= */
+
+        if (checkboxMovimientos.checked) {
+
+            const modal =
+                document.getElementById(
+                    "modalDatosCotizacionWord"
+                );
+
+            modal.style.display = "flex";
+
+            return;
+        }
+
+
+        /* =================================================
+        GENERAR WORD DIRECTAMENTE
+        ================================================= */
+
+        const urlWord =
+            "{% url 'exportar_word_mails' %}"
+            + "?"
+            + params.toString();
+
+        window.location.href =
+            urlWord;
+
+    }
+);
+
+
+/* =========================================================
+   MODAL DATOS DE COTIZACIÓN - GENERAR WORD
+========================================================= */
+
+let paramsWordPendientes = null;
+
+
+const btnGenerarWordConCotizacion =
+    document.getElementById(
+        "btnGenerarWordConCotizacion"
+    );
+
+const btnCancelarDatosCotizacion =
+    document.getElementById(
+        "btnCancelarDatosCotizacion"
+    );
+
+const modalDatosCotizacionWord =
+    document.getElementById(
+        "modalDatosCotizacionWord"
+    );
+
+
+btnCancelarDatosCotizacion.addEventListener(
+    "click",
+    function () {
+
+        modalDatosCotizacionWord.style.display =
+            "none";
+
+    }
+);
+
+
+btnGenerarWordConCotizacion.addEventListener(
+    "click",
+    function () {
+
+        const primaMinima =
+            document.getElementById(
+                "primaMinimaPesosWord"
+            ).value;
+
+        const tc =
+            document.getElementById(
+                "tcPesosWord"
+            ).value;
+
+
+        if (
+            !primaMinima ||
+            !tc
+        ) {
+
+            alert(
+                "Ingresá la Prima mínima y el TC."
+            );
+
+            return;
+
+        }
+
+
+        /*
+        IMPORTANTE:
+        Usamos los parámetros que ya tenían
+        las empresas seleccionadas.
+        */
+
+        const params =
+            paramsWordPendientes;
+
+        
+        params.set(
+            "prima_minima_pesos",
+            primaMinima
+        );
+
+
+        params.set(
+            "tc",
+            tc
+        );
+
+
+        params.set(
+            "imprimir_movimientos",
+            "1"
+        );
+
+
+        const urlWord =
+            "{% url 'exportar_word_mails' %}"
+            + "?"
+            + params.toString();
+
+
+        window.location.href =
+            urlWord;
+
+    }
+);
+
+
+
+
+
+
+/* =========================================================
+   BUSCADOR DE PROVEEDOR
+========================================================= */
+
+const empresaBusquedaProveedores =
+    document.getElementById(
+        "empresaBusquedaProveedores"
+    );
+
+const empresaFlechaProveedores =
+    document.getElementById(
+        "empresaFlechaProveedores"
+    );
+
+const empresaResultadosProveedores =
+    document.getElementById(
+        "empresaResultadosProveedores"
+    );
+
+
+let empresaProveedorSeleccionada = "todas";
+
+
+/* =========================================================
+   MOSTRAR / OCULTAR LISTA
+========================================================= */
+
+function mostrarEmpresasProveedores() {
+
+    empresaResultadosProveedores.style.display =
+        "block";
+
+}
+
+
+function ocultarEmpresasProveedores() {
+
+    empresaResultadosProveedores.style.display =
+        "none";
+
+}
+
+
+/* =========================================================
+   FILTRAR EMPRESAS
+========================================================= */
+
+function filtrarEmpresasProveedores() {
+
+    const texto =
+        empresaBusquedaProveedores.value
+            .trim()
+            .toLowerCase();
+
+
+    const opciones =
+        empresaResultadosProveedores.querySelectorAll(
+            ".empresa-opcion"
+        );
+
+
+    opciones.forEach(
+        function (opcion) {
+
+            const nombre =
+                opcion.dataset.nombre ||
+                opcion.textContent
+                    .trim()
+                    .toLowerCase();
+
+
+            if (
+                opcion.dataset.empresaId ===
+                "todas"
+            ) {
+
+                opcion.style.display =
+                    texto === ""
+                        ? ""
+                        : "none";
+
+                return;
+
+            }
+
+
+            opcion.style.display =
+                nombre
+                    .toLowerCase()
+                    .includes(texto)
+                        ? ""
+                        : "none";
+
+        }
+    );
+
+
+    mostrarEmpresasProveedores();
+
+}
+
+
+/* =========================================================
+   FILTRAR TABLA
+========================================================= */
+
+function filtrarTablaPorProveedor(
+    empresaId
+) {
+
+    const filas =
+        document.querySelectorAll(
+            "#tablaTodos tr[data-empresa-id]"
+        );
+
+
+    filas.forEach(
+        function (fila) {
+
+            if (
+                empresaId === "todas"
+            ) {
+
+                fila.style.display = "";
+
+                return;
+
+            }
+
+
+            fila.style.display =
+                fila.dataset.empresaId ===
+                empresaId
+                    ? ""
+                    : "none";
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ESCRIBIR
+========================================================= */
+
+empresaBusquedaProveedores.addEventListener(
+    "input",
+    function () {
+
+        filtrarEmpresasProveedores();
+
+    }
+);
+
+
+/* =========================================================
+   CLICK EN LA FLECHITA
+========================================================= */
+
+empresaFlechaProveedores.addEventListener(
+    "click",
+    function () {
+
+        if (
+            empresaResultadosProveedores.style.display ===
+            "block"
+        ) {
+
+            ocultarEmpresasProveedores();
+
+        } else {
+
+            empresaBusquedaProveedores.value = "";
+
+            filtrarEmpresasProveedores();
+
+            empresaBusquedaProveedores.focus();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   CLICK EN UNA EMPRESA
+========================================================= */
+
+empresaResultadosProveedores.addEventListener(
+    "click",
+    function (event) {
+
+        const opcion =
+            event.target.closest(
+                ".empresa-opcion"
+            );
+
+
+        if (!opcion) {
+            return;
+        }
+
+
+        const empresaId =
+            opcion.dataset.empresaId;
+
+
+        if (
+            empresaId === "todas"
+        ) {
+
+            empresaBusquedaProveedores.value = "";
+
+            empresaBusquedaProveedores.placeholder =
+                "Buscar empresa...";
+
+        } else {
+
+            empresaBusquedaProveedores.value =
+                opcion.dataset.nombre;
+
+        }
+
+
+        empresaProveedorSeleccionada =
+            empresaId;
+
+
+        filtrarTablaPorProveedor(
+            empresaId
+        );
+
+
+        ocultarEmpresasProveedores();
+
+    }
+);
+
+
+/* =========================================================
+   ABRIR AL ENTRAR AL CAMPO
+========================================================= */
+
+empresaBusquedaProveedores.addEventListener(
+    "focus",
+    function () {
+
+        filtrarEmpresasProveedores();
+
+    }
+);
+
+/* =========================================================
+   MOSTRAR TODAS / ÚLTIMA CARTA
+========================================================= */
+
+
+
+const radiosMostrarTodas =
+    document.querySelectorAll(
+        'input[name="ultimaCarta"]'
+    );
+
+let empresaHistorialSeleccionada = "todas";
+function actualizarHistorial() {
+
+    let mostrarTodas = false;
+
+
+    /* =====================================================
+       NO = MOSTRAR TODAS LAS CARTAS
+       SÍ = MOSTRAR SOLO LA ÚLTIMA
+    ===================================================== */
+
+    radiosMostrarTodas.forEach(
+        function (radio) {
+
+            if (
+                radio.checked &&
+                radio.value === "no"
+            ) {
+
+                mostrarTodas = true;
+
+            }
+
+        }
+    );
+
+
+    const filas =
+        Array.from(
+            document.querySelectorAll(
+                ".fila-historial"
+            )
+        );
+
+
+    /* =====================================================
+       PRIMERO FILTRAMOS POR EMPRESA
+    ===================================================== */
+
+    const filasEmpresa =
+        filas.filter(
+            function (fila) {
+
+                if (
+                    empresaHistorialSeleccionada ===
+                    "todas"
+                ) {
+
+                    return true;
+
+                }
+
+                return (
+                    fila.dataset.empresa ===
+                    empresaHistorialSeleccionada
+                );
+
+            }
+        );
+
+
+    /* =====================================================
+       NO → TODAS LAS CARTAS DE LA EMPRESA
+    ===================================================== */
+
+    if (mostrarTodas) {
+
+        filas.forEach(
+            function (fila) {
+
+                fila.style.display =
+                    filasEmpresa.includes(fila)
+                        ? ""
+                        : "none";
+
+            }
+        );
+
+        return;
+
+    }
+
+
+    /* =====================================================
+       SÍ → ÚLTIMA CARTA
+    ===================================================== */
+
+    const ultimaPorEmpresa = {};
+
+
+    filasEmpresa.forEach(
+        function (fila) {
+
+            const empresa =
+                fila.dataset.empresa;
+
+
+            const fechaTexto =
+                fila.cells[3]
+                    .textContent
+                    .trim();
+
+
+            let fecha = 0;
+
+
+            if (fechaTexto) {
+
+                const partes =
+                    fechaTexto.split("/");
+
+
+                if (
+                    partes.length === 3
+                ) {
+
+                    fecha =
+                        new Date(
+                            partes[2],
+                            partes[1] - 1,
+                            partes[0]
+                        ).getTime();
+
+                }
+
+            }
+
+
+            if (
+                !ultimaPorEmpresa[empresa] ||
+                fecha >=
+                    ultimaPorEmpresa[empresa].fecha
+            ) {
+
+                ultimaPorEmpresa[empresa] = {
+
+                    fila: fila,
+
+                    fecha: fecha
+
+                };
+
+            }
+
+        }
+    );
+
+
+    /* =====================================================
+       OCULTAMOS TODAS
+    ===================================================== */
+
+    filas.forEach(
+        function (fila) {
+
+            fila.style.display = "none";
+
+        }
+    );
+
+
+    /* =====================================================
+       MOSTRAMOS LAS ÚLTIMAS
+    ===================================================== */
+
+    Object.values(
+        ultimaPorEmpresa
+    ).forEach(
+        function (dato) {
+
+            dato.fila.style.display = "";
+
+        }
+    );
+
+}
+
+radiosMostrarTodas.forEach(
+    function (radio) {
+
+        radio.addEventListener(
+            "change",
+            actualizarHistorial
+        );
+
+    }
+);
+
+
+/* =========================================================
+   INICIALIZAR
+========================================================= */
+
+actualizarHistorial();
+
+/* =========================================================
+   ORDENAR TABLA CARTAS ENVIADAS
+========================================================= */
+
+const encabezadosOrden =
+    document.querySelectorAll(
+        ".th-ordenable"
+    );
+
+
+const ordenColumnas = {};
+
+
+encabezadosOrden.forEach(
+    function (encabezado) {
+
+        encabezado.addEventListener(
+            "click",
+            function () {
+
+                const columna =
+                    encabezado.dataset.columna;
+
+
+                if (
+                    ordenColumnas[columna] === "asc"
+                ) {
+
+                    ordenColumnas[columna] = "desc";
+
+                } else {
+
+                    ordenColumnas[columna] = "asc";
+
+                }
+
+
+                const orden =
+                    ordenColumnas[columna];
+
+
+                const tbody =
+                    document.getElementById(
+                        "tablaHistorial"
+                    );
+
+
+                const filas =
+                    Array.from(
+                        tbody.querySelectorAll(
+                            "tr.fila-historial"
+                        )
+                    );
+
+
+                filas.sort(
+                    function (filaA, filaB) {
+
+                        let valorA;
+                        let valorB;
+
+
+                        /* ---------------------------------
+                           EMPRESA
+                        --------------------------------- */
+
+                        if (
+                            columna === "empresa"
+                        ) {
+
+                            valorA =
+                                filaA.cells[1]
+                                    .textContent
+                                    .trim()
+                                    .toLowerCase();
+
+                            valorB =
+                                filaB.cells[1]
+                                    .textContent
+                                    .trim()
+                                    .toLowerCase();
+                        }
+
+
+                        /* ---------------------------------
+                           CARTA
+                        --------------------------------- */
+
+                        else if (
+                            columna === "carta"
+                        ) {
+
+                            valorA =
+                                parseInt(
+                                    filaA.dataset.carta,
+                                    10
+                                );
+
+                            valorB =
+                                parseInt(
+                                    filaB.dataset.carta,
+                                    10
+                                );
+
+                        }
+
+
+                        /* ---------------------------------
+                           FECHA DE ENVÍO
+                        --------------------------------- */
+
+                        else if (
+                            columna === "fecha_envio"
+                        ) {
+
+                            valorA =
+                                convertirFechaTexto(
+                                    filaA.cells[3]
+                                        .textContent
+                                        .trim()
+                                );
+
+                            valorB =
+                                convertirFechaTexto(
+                                    filaB.cells[3]
+                                        .textContent
+                                        .trim()
+                                );
+
+                        }
+
+
+                        /* ---------------------------------
+                           FECHA DE RESPUESTA
+                        --------------------------------- */
+
+                        else if (
+                            columna === "fecha_respuesta"
+                        ) {
+
+                            const inputA =
+                                filaA.querySelector(
+                                    ".campo-fecha"
+                                );
+
+                            const inputB =
+                                filaB.querySelector(
+                                    ".campo-fecha"
+                                );
+
+
+                            valorA =
+                                inputA
+                                    ? inputA.value
+                                    : "";
+
+                            valorB =
+                                inputB
+                                    ? inputB.value
+                                    : "";
+
+                        }
+
+
+                        if (valorA < valorB) {
+
+                            return orden === "asc"
+                                ? -1
+                                : 1;
+
+                        }
+
+
+                        if (valorA > valorB) {
+
+                            return orden === "asc"
+                                ? 1
+                                : -1;
+
+                        }
+
+
+                        return 0;
+
+                    }
+                );
+
+
+                filas.forEach(
+                    function (fila) {
+
+                        tbody.appendChild(
+                            fila
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+    }
+);
+
+
+/* =========================================================
+   CONVERTIR FECHA DD/MM/YYYY
+   A YYYY-MM-DD PARA ORDENAR
+========================================================= */
+
+function convertirFechaTexto(
+    texto
+) {
+
+    if (
+        !texto ||
+        texto === "-"
+    ) {
+
+        return "";
+
+    }
+
+
+    const partes =
+        texto.split("/");
+
+
+    if (
+        partes.length !== 3
+    ) {
+
+        return "";
+
+    }
+
+
+    return (
+        partes[2] +
+        "-" +
+        partes[1] +
+        "-" +
+        partes[0]
+    );
+
+}
+
+
+/* =========================================================
+   AGREGAR PROVEEDORES
+========================================================= */
+
+const btnAgregar =
+    document.getElementById("btnAgregar");
+
+const btnQuitar =
+    document.getElementById("btnQuitar");
+
+const btnQuitarTodos =
+    document.getElementById("btnQuitarTodos");
+
+const tablaTodos =
+    document.getElementById("tablaTodos");
+
+const tablaSeleccionados =
+    document.getElementById("tablaSeleccionados");
+
+
+/* =========================================================
+   CHECKBOX "TODOS"
+========================================================= */
+
+const todosProveedores =
+    document.getElementById("todosProveedores");
+
+const todosSeleccionados =
+    document.getElementById("todosSeleccionados");
+
+actualizarProveedoresCarta();
+
+function actualizarTodosProveedores() {
+
+    if (!todosProveedores) {
+        return;
+    }
+
+    const checkboxes =
+        Array.from(
+            tablaTodos.querySelectorAll(
+                ".proveedor-checkbox"
+            )
+        );
+
+    if (checkboxes.length === 0) {
+        todosProveedores.checked = false;
+        todosProveedores.indeterminate = false;
+        return;
+    }
+
+    const cantidadMarcados =
+        checkboxes.filter(
+            function (checkbox) {
+                return checkbox.checked;
+            }
+        ).length;
+
+    todosProveedores.checked =
+        cantidadMarcados === checkboxes.length;
+
+    todosProveedores.indeterminate =
+        cantidadMarcados > 0 &&
+        cantidadMarcados < checkboxes.length;
+}
+
+
+function actualizarTodosSeleccionados() {
+
+    if (!todosSeleccionados) {
+        return;
+    }
+
+    const checkboxes =
+        Array.from(
+            tablaSeleccionados.querySelectorAll(
+                ".seleccionado-checkbox"
+            )
+        );
+
+    if (checkboxes.length === 0) {
+        todosSeleccionados.checked = false;
+        todosSeleccionados.indeterminate = false;
+        return;
+    }
+
+    const cantidadMarcados =
+        checkboxes.filter(
+            function (checkbox) {
+                return checkbox.checked;
+            }
+        ).length;
+
+    todosSeleccionados.checked =
+        cantidadMarcados === checkboxes.length;
+
+    todosSeleccionados.indeterminate =
+        cantidadMarcados > 0 &&
+        cantidadMarcados < checkboxes.length;
+}
+
+
+/* Marcar / desmarcar TODOS los proveedores */
+if (todosProveedores) {
+
+    todosProveedores.addEventListener(
+        "change",
+        function () {
+
+            tablaTodos
+                .querySelectorAll(
+                    ".proveedor-checkbox"
+                )
+                .forEach(
+                    function (checkbox) {
+
+                        checkbox.checked =
+                            todosProveedores.checked;
+
+                    }
+                );
+
+            todosProveedores.indeterminate = false;
+
+        }
+    );
+
+}
+
+
+/* Marcar / desmarcar TODOS los proveedores de la carta */
+if (todosSeleccionados) {
+
+    todosSeleccionados.addEventListener(
+        "change",
+        function () {
+
+            tablaSeleccionados
+                .querySelectorAll(
+                    ".seleccionado-checkbox"
+                )
+                .forEach(
+                    function (checkbox) {
+
+                        checkbox.checked =
+                            todosSeleccionados.checked;
+
+                    }
+                );
+
+            todosSeleccionados.indeterminate = false;
+            actualizarResumenCartasEnviar();
+
+        }
+    );
+
+}
+
+
+/* Si se marca/desmarca individualmente,
+   actualizar el estado de TODOS */
+
+document.addEventListener(
+    "change",
+    function (event) {
+
+        if (
+            event.target.classList.contains(
+                "proveedor-checkbox"
+            )
+        ) {
+            actualizarTodosProveedores();
+        }
+
+        if (
+            event.target.classList.contains(
+                "seleccionado-checkbox"
+            )
+        ) {
+            actualizarTodosSeleccionados();
+            actualizarResumenCartasEnviar();
+        }
+
+    }
+);
+
+/* =========================================================
+   AGREGAR
+========================================================= */
+
+btnAgregar.addEventListener(
+    "click",
+    function () {
+
+        const filas =
+            tablaTodos.querySelectorAll("tr");
+
+        filas.forEach(
+            function (fila) {
+
+                const checkbox =
+                    fila.querySelector(
+                        ".proveedor-checkbox"
+                    );
+
+                if (
+                    !checkbox ||
+                    !checkbox.checked
+                ) {
+                    return;
+                }
+
+
+                /* -----------------------------------------
+                   DATOS DE LA EMPRESA
+                ----------------------------------------- */
+
+                const empresaId =
+                    fila.dataset.empresaId;
+
+                const nombre =
+                    fila.cells[1].textContent.trim();
+
+                const email =
+                    fila.cells[2].textContent.trim();
+
+
+                /* -----------------------------------------
+                   EVITAR DUPLICADOS
+                ----------------------------------------- */
+
+                const yaExiste =
+                    tablaSeleccionados.querySelector(
+                        `tr[data-empresa-id="${empresaId}"]`
+                    );
+
+                if (yaExiste) {
+                    return;
+                }
+
+
+                /* -----------------------------------------
+                   CREAR FILA EN LA DERECHA
+                ----------------------------------------- */
+
+                const nuevaFila =
+                    document.createElement("tr");
+
+                nuevaFila.dataset.empresaId =
+                    empresaId;
+
+
+                nuevaFila.innerHTML = `
+
+                    <td style="text-align:center;">
+
+                        <input
+                            type="checkbox"
+                            class="checkbox seleccionado-checkbox"
+                            value="${empresaId}"
+                        >
+
+                    </td>
+
+                    <td>
+                        ${nombre}
+                    </td>
+
+
+                    <td class="fecha-envio">
+                        -
+                    </td>
+
+                `;
+
+
+                tablaSeleccionados.appendChild(
+                    nuevaFila
+                );
+
+            }
+        );
+
+        actualizarTodosProveedores();
+        actualizarTodosSeleccionados();
+
+    }
+);
+/* =========================================================
+   APLICAR FECHA DE ENVÍO
+========================================================= */
+
+const btnAplicarFecha =
+    document.getElementById(
+        "btnAplicarFecha"
+    );
+
+const fechaEnvio =
+    document.getElementById(
+        "fechaEnvio"
+    );
+
+
+btnAplicarFecha.addEventListener(
+    "click",
+    function () {
+
+        if (!fechaEnvio.value) {
+
+            alert(
+                "Seleccioná una fecha de envío."
+            );
+
+            return;
+        }
+
+
+        const filas =
+            tablaSeleccionados.querySelectorAll(
+                "tr"
+            );
+
+
+        let cantidad = 0;
+
+
+        filas.forEach(
+            function (fila) {
+
+                const checkbox =
+                    fila.querySelector(
+                        ".seleccionado-checkbox"
+                    );
+
+
+                if (
+                    !checkbox ||
+                    !checkbox.checked
+                ) {
+                    return;
+                }
+
+
+                const celdaFecha =
+                    fila.querySelector(
+                        ".fecha-envio"
+                    );
+
+
+                /* Fecha para mostrar */
+                const partes =
+                    fechaEnvio.value.split("-");
+
+                const fechaFormateada =
+                    partes[2] +
+                    "/" +
+                    partes[1] +
+                    "/" +
+                    partes[0];
+
+
+
+                celdaFecha.textContent =
+                    fechaFormateada;
+    
+                /* Guardamos la fecha real
+                   en la fila */
+
+                fila.dataset.fechaEnvio =
+                    fechaEnvio.value;
+
+
+                cantidad++;
+
+            }
+        );
+
+
+        if (cantidad === 0) {
+
+            alert(
+                "Seleccioná al menos un proveedor."
+            );
+
+            return;
+        }
+
+    }
+);
+
+
+/* =========================================================
+   APLICAR CARTA ENVIADA
+========================================================= */
+
+const btnAplicarCartaEnviada =
+    document.getElementById(
+        "btnAplicarCartaEnviada"
+    );
+
+btnAplicarCartaEnviada.addEventListener(
+    "click",
+    function () {
+
+        const carta =
+            cartaSeleccionada.value;
+
+
+        const filas =
+            tablaSeleccionados.querySelectorAll("tr");
+
+
+        const envios = [];
+
+        const filasParaBorrar = [];
+
+
+        filas.forEach(
+            function (fila) {
+
+                const checkbox =
+                    fila.querySelector(
+                        ".seleccionado-checkbox"
+                    );
+
+
+                if (
+                    !checkbox ||
+                    !checkbox.checked
+                ) {
+                    return;
+                }
+
+                const fecha =
+                    fila.dataset.fechaEnvio;
+
+
+                if (!fecha) {
+                    return;
+                }               
+
+
+                envios.push({
+                    empresa_id:
+                        fila.dataset.empresaId,
+
+                    fecha_envio:
+                        fecha
+                });
+
+
+                filasParaBorrar.push(
+                    fila
+                );
+
+            }
+        );
+
+
+        /*
+           No hay ninguna fila válida
+        */
+
+        if (envios.length === 0) {
+
+            alert(
+                "No hay proveedores seleccionados con fecha de envío."
+            );
+
+            return;
+
+        }
+
+
+        /*
+           CSRF
+        */
+
+        const csrfInput =
+            document.querySelector(
+                "[name=csrfmiddlewaretoken]"
+            );
+
+
+        if (!csrfInput) {
+
+            alert(
+                "No se encontró el token CSRF."
+            );
+
+            return;
+
+        }
+
+
+        const csrfToken =
+            csrfInput.value;
+
+
+        /*
+           Guardar en Django
+        */
+
+        fetch(
+            "/api/aplicar-cartas-enviadas/",
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "X-CSRFToken":
+                        csrfToken
+
+                },
+
+                body: JSON.stringify({
+
+                    carta:
+                        carta,
+
+                    envios:
+                        envios
+
+                })
+
+            }
+        )
+
+        .then(
+            function (response) {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Error HTTP " +
+                        response.status
+                    );
+
+                }
+
+                return response.json();
+
+            }
+        )
+
+        .then(
+            function (data) {
+
+                if (!data.ok) {
+
+                    alert(
+                        data.error ||
+                        "No se pudieron guardar las cartas enviadas."
+                    );
+
+                    return;
+
+                }
+
+
+                /*
+                   BORRAMOS SOLAMENTE
+                   LAS FILAS QUE FUERON
+                   GUARDADAS COMO ENVIADAS
+                */
+
+                filasParaBorrar.forEach(
+                    function (fila) {
+
+                        fila.remove();
+
+                    }
+                );
+
+
+                /*
+                   Desmarcar el checkbox
+                   general
+                */
+
+                const todosSeleccionados =
+                    document.getElementById(
+                        "todosSeleccionados"
+                    );
+
+
+                if (todosSeleccionados) {
+
+                    todosSeleccionados.checked =
+                        false;
+
+                }
+
+
+                alert(
+                    "Cartas enviadas registradas correctamente."
+                );
+                window.location.reload();
+            }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    "Error al registrar las cartas enviadas."
+                );
+
+            }
+        );
+
+    }
+);
+
+/* =========================================================
+   QUITAR
+========================================================= */
+
+btnQuitar.addEventListener(
+    "click",
+    function () {
+
+        const filas =
+            tablaSeleccionados.querySelectorAll("tr");
+
+        filas.forEach(
+            function (fila) {
+
+                const checkbox =
+                    fila.querySelector(
+                        ".seleccionado-checkbox"
+                    );
+
+                if (
+                    !checkbox ||
+                    !checkbox.checked
+                ) {
+                    return;
+                }
+
+                /* -----------------------------------------
+                   SACAR DE LA DERECHA
+                ----------------------------------------- */
+
+                fila.remove();
+
+            }
+        );
+
+        actualizarTodosProveedores();
+        actualizarTodosSeleccionados();
+
+    }
+);
+
+/* =========================================================
+   EDITOR DE CARTAS
+========================================================= */
+/* =========================================================
+   EDITOR DE CARTAS
+========================================================= */
+
+let tipoEditorCarta1 = "empresa";
+let tipoEditorCarta2 = "empresa";
+
+/*
+   Guarda qué tipo de carta está actualmente cargado
+   en cada editor.
+*/
+let tipoCargadoCarta1 = null;
+let tipoCargadoCarta2 = null;
+
+
+/*
+   Memoria temporal de lo que la usuaria va escribiendo.
+
+   NO guarda todavía en la base de datos.
+   Solamente mantiene los textos mientras estamos
+   trabajando en esta pantalla.
+*/
+
+const estadosEditores = {
+
+    1: {
+        empresa: null,
+        mujer: null,
+        hombre: null
+    },
+
+    2: {
+        empresa: null,
+        mujer: null,
+        hombre: null
+    }
+
+};
+
+
+function cargarEditorCarta(carta, tipo) {
+
+    console.log(
+        "Cargando Carta:",
+        carta,
+        "Tipo:",
+        tipo
+    );
+
+
+    const editor = document.getElementById(
+        "editorCarta" + carta
+    );
+
+    const asunto = document.getElementById(
+        "asuntoCarta" + carta
+    );
+
+
+    /*
+       -----------------------------------------
+       1. GUARDAR LO QUE ESTÁBAMOS EDITANDO
+       -----------------------------------------
+    */
+
+    const tipoAnterior =
+        carta === 1
+            ? tipoEditorCarta1
+            : tipoEditorCarta2;
+
+    const tipoCargado =
+        carta === 1
+            ? tipoCargadoCarta1
+            : tipoCargadoCarta2;
+
+
+    if (tipoCargado !== null) {
+
+        estadosEditores[carta][tipoAnterior] = {
+
+            contenido: editor.innerHTML,
+
+            asunto: asunto.value
+
+        };
+
+    }
+
+
+    /*
+       -----------------------------------------
+       2. CAMBIAR EL TIPO ACTUAL
+       -----------------------------------------
+    */
+
+    if (carta === 1) {
+
+        tipoEditorCarta1 = tipo;
+
+    } else {
+
+        tipoEditorCarta2 = tipo;
+
+    }
+
+
+    /*
+       -----------------------------------------
+       3. BOTÓN ACTIVO
+       -----------------------------------------
+    */
+
+    const contenedor = document.getElementById(
+        carta === 1
+            ? "carta-1"
+            : "carta-2"
+    );
+
+
+    contenedor
+        .querySelectorAll(".tipo-carta-btn")
+        .forEach(function (boton) {
+
+            boton.classList.remove("activo");
+
+        });
+
+
+    const botones =
+        contenedor.querySelectorAll(
+            ".tipo-carta-btn"
+        );
+
+
+    if (tipo === "empresa") {
+
+        botones[0].classList.add("activo");
+
+    } else if (tipo === "mujer") {
+
+        botones[1].classList.add("activo");
+
+    } else if (tipo === "hombre") {
+
+        botones[2].classList.add("activo");
+
+    }
+
+
+    /*
+       -----------------------------------------
+       4. ¿YA TENEMOS ESTA CARTA EN MEMORIA?
+       -----------------------------------------
+    */
+
+    const estado =
+        estadosEditores[carta][tipo];
+
+
+    if (estado !== null) {
+
+        editor.innerHTML =
+            estado.contenido || "";
+
+        asunto.value =
+            estado.asunto || "";
+
+
+        if (carta === 1) {
+
+            tipoCargadoCarta1 = tipo;
+
+        } else {
+
+            tipoCargadoCarta2 = tipo;
+
+        }
+
+
+        console.log(
+            "Restaurando desde memoria:",
+            carta,
+            tipo
+        );
+
+        return;
+
+    }
+
+
+    /*
+       -----------------------------------------
+       5. DETERMINAR TIPO Y GÉNERO
+       -----------------------------------------
+    */
+
+    const tipoDestinatario =
+        tipo === "empresa"
+            ? "empresa"
+            : "persona";
+
+    const genero =
+        tipo === "mujer"
+            ? "mujer"
+            : tipo === "hombre"
+                ? "hombre"
+                : "";
+
+
+    /*
+       -----------------------------------------
+       6. PRIMERA VEZ QUE ENTRAMOS A ESTE TIPO
+       -----------------------------------------
+    */
+
+    fetch(
+        "/api/plantilla-carta/"
+        + carta
+        + "/"
+        + tipoDestinatario
+        + "/"
+        + "?genero="
+        + encodeURIComponent(genero)
+    )
+
+    .then(function (response) {
+
+        if (!response.ok) {
+
+            throw new Error(
+                "No se pudo cargar la plantilla."
+            );
+
+        }
+
+        return response.json();
+
+    })
+
+    .then(function (data) {
+
+        const contenido =
+            data.contenido_html || "";
+
+        const asuntoTexto =
+            data.asunto || "";
+
+
+        /*
+           Guardamos en memoria
+        */
+
+        estadosEditores[carta][tipo] = {
+
+            contenido: contenido,
+
+            asunto: asuntoTexto
+
+        };
+
+
+        /*
+           Lo mostramos
+        */
+
+        editor.innerHTML =
+            contenido;
+
+        asunto.value =
+            asuntoTexto;
+
+
+        /*
+           Marcamos qué tipo está cargado
+        */
+
+        if (carta === 1) {
+
+            tipoCargadoCarta1 = tipo;
+
+        } else {
+
+            tipoCargadoCarta2 = tipo;
+
+        }
+
+
+        console.log(
+            "Plantilla cargada desde servidor:",
+            carta,
+            tipo,
+            "Tipo destinatario:",
+            tipoDestinatario,
+            "Genero:",
+            genero
+        );
+
+    })
+
+    .catch(function (error) {
+
+        console.error(error);
+
+        alert(
+            "No se pudo cargar la plantilla."
+        );
+
+    });
+
+}
+
+
+function guardarEditorCarta(carta) {
+
+    const tipo =
+        carta === 1
+            ? tipoEditorCarta1
+            : tipoEditorCarta2;
+
+    const editor =
+        document.getElementById(
+            "editorCarta" + carta
+        );
+
+    const asunto =
+        document.getElementById(
+            "asuntoCarta" + carta
+        );
+
+
+    /*
+       -----------------------------------------
+       DETERMINAR TIPO Y GÉNERO
+       -----------------------------------------
+    */
+
+    const tipoDestinatario =
+        tipo === "empresa"
+            ? "empresa"
+            : "persona";
+
+    const genero =
+        tipo === "mujer"
+            ? "mujer"
+            : tipo === "hombre"
+                ? "hombre"
+                : null;
+
+
+    /*
+       -----------------------------------------
+       GUARDAR TAMBIÉN EN MEMORIA
+       -----------------------------------------
+    */
+
+    estadosEditores[carta][tipo] = {
+
+        contenido: editor.innerHTML,
+
+        asunto: asunto.value
+
+    };
+
+
+    /*
+       -----------------------------------------
+       OBTENER CSRF
+       -----------------------------------------
+    */
+
+    const csrfInput =
+        document.querySelector(
+            "[name=csrfmiddlewaretoken]"
+        );
+
+
+    if (!csrfInput) {
+
+        alert(
+            "No se encontró el token CSRF."
+        );
+
+        return;
+
+    }
+
+
+    const csrfToken =
+        csrfInput.value;
+
+
+    console.log(
+        "GUARDANDO:",
+        carta,
+        "Tipo:",
+        tipoDestinatario,
+        "Genero:",
+        genero
+    );
+
+
+    /*
+       -----------------------------------------
+       ENVIAR A DJANGO
+       -----------------------------------------
+    */
+
+    fetch(
+        "/api/guardar-plantilla-carta/",
+        {
+
+            method: "POST",
+
+            headers: {
+
+                "Content-Type":
+                    "application/json",
+
+                "X-CSRFToken":
+                    csrfToken
+
+            },
+
+            body: JSON.stringify({
+
+                carta: carta,
+
+                tipo_destinatario:
+                    tipoDestinatario,
+
+                genero:
+                    genero,
+
+                asunto:
+                    asunto.value,
+
+                contenido_html:
+                    editor.innerHTML
+
+            })
+
+        }
+    )
+
+    .then(function(response) {
+
+        console.log(
+            "Respuesta guardar:",
+            response.status
+        );
+
+
+        if (!response.ok) {
+
+            return response.text()
+                .then(function(texto) {
+
+                    console.error(
+                        "ERROR DEL SERVIDOR:",
+                        texto
+                    );
+
+                    throw new Error(
+                        "Error HTTP " +
+                        response.status
+                    );
+
+                });
+
+        }
+
+
+        return response.json();
+
+    })
+
+    .then(function(data) {
+
+        console.log(
+            "Datos recibidos:",
+            data
+        );
+
+
+        if (data.ok) {
+
+            alert(
+                "Plantilla guardada correctamente."
+            );
+
+        } else {
+
+            alert(
+                data.error ||
+                "No se pudo guardar la plantilla."
+            );
+
+        }
+
+    })
+
+    .catch(function(error) {
+
+        console.error(
+            "ERROR AL GUARDAR:",
+            error
+        );
+
+        alert(
+            "Error al guardar la plantilla.\n\n"
+            + (
+                error.message
+                    ? error.message
+                    : "Revisá la consola del navegador."
+            )
+        );
+
+    });
+
+}
+
+
+
+/* =========================================================
+   COMANDOS DEL EDITOR
+========================================================= */
+
+function editorEjecutar(carta, comando) {
+
+    const editor =
+        document.getElementById(
+            "editorCarta" + carta
+        );
+
+    editor.focus();
+
+    document.execCommand(
+        comando,
+        false,
+        null
+    );
+
+}
+
+
+/* =========================================================
+   INSERTAR VARIABLES
+========================================================= */
+
+function insertarVariableEditor(
+    carta,
+    variable
+) {
+
+    const editor =
+        document.getElementById(
+            "editorCarta" + carta
+        );
+
+    editor.focus();
+
+    document.execCommand(
+        "insertText",
+        false,
+        variable
+    );
+
+}
+
+/* =========================================================
+   BUSCADOR DE EMPRESA - CARTAS ENVIADAS
+========================================================= */
+
+const empresaBusquedaHistorial =
+    document.getElementById(
+        "empresaBusquedaHistorial"
+    );
+
+const empresaFlechaHistorial =
+    document.getElementById(
+        "empresaFlechaHistorial"
+    );
+
+const empresaResultadosHistorial =
+    document.getElementById(
+        "empresaResultadosHistorial"
+    );
+
+
+/* =========================================================
+   MOSTRAR / OCULTAR LISTA
+========================================================= */
+
+function mostrarEmpresasHistorial() {
+
+    empresaResultadosHistorial.style.display =
+        "block";
+
+}
+
+
+function ocultarEmpresasHistorial() {
+
+    empresaResultadosHistorial.style.display =
+        "none";
+
+}
+
+
+/* =========================================================
+   FILTRAR EMPRESAS
+========================================================= */
+
+function filtrarEmpresasHistorial() {
+
+    const texto =
+        empresaBusquedaHistorial.value
+            .trim()
+            .toLowerCase();
+
+
+    const opciones =
+        empresaResultadosHistorial.querySelectorAll(
+            ".empresa-opcion"
+        );
+
+
+    opciones.forEach(
+        function (opcion) {
+
+            const nombre =
+                opcion.dataset.nombre ||
+                opcion.textContent
+                    .trim()
+                    .toLowerCase();
+
+
+            if (
+                opcion.dataset.empresaId ===
+                "todas"
+            ) {
+
+                opcion.style.display =
+                    texto === ""
+                        ? ""
+                        : "none";
+
+                return;
+
+            }
+
+
+            if (
+                nombre
+                    .toLowerCase()
+                    .includes(texto)
+            ) {
+
+                opcion.style.display =
+                    "";
+
+            } else {
+
+                opcion.style.display =
+                    "none";
+
+            }
+
+        }
+    );
+
+
+    mostrarEmpresasHistorial();
+
+}
+
+
+/* =========================================================
+   FILTRAR TABLA
+========================================================= */
+
+function filtrarTablaPorEmpresaHistorial(
+    empresaId
+) {
+
+    const filas =
+        document.querySelectorAll(
+            "#tablaHistorial .fila-historial"
+        );
+
+
+    filas.forEach(
+        function (fila) {
+
+            if (
+                empresaId === "todas"
+            ) {
+
+                fila.style.display =
+                    "";
+
+                return;
+
+            }
+
+
+            fila.style.display =
+                fila.dataset.empresa ===
+                empresaId
+                    ? ""
+                    : "none";
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ESCRIBIR
+========================================================= */
+
+empresaBusquedaHistorial.addEventListener(
+    "input",
+    function () {
+
+        filtrarEmpresasHistorial();
+
+    }
+);
+
+
+/* =========================================================
+   CLICK EN LA FLECHITA
+========================================================= */
+
+empresaFlechaHistorial.addEventListener(
+    "click",
+    function () {
+
+        if (
+            empresaResultadosHistorial.style.display ===
+            "block"
+        ) {
+
+            ocultarEmpresasHistorial();
+
+        } else {
+
+            empresaBusquedaHistorial.value =
+                "";
+
+            filtrarEmpresasHistorial();
+
+            empresaBusquedaHistorial.focus();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   CLICK EN UNA EMPRESA
+========================================================= */
+
+empresaResultadosHistorial.addEventListener(
+    "click",
+    function (event) {
+
+        const opcion =
+            event.target.closest(
+                ".empresa-opcion"
+            );
+
+
+        if (!opcion) {
+            return;
+        }
+
+
+        const empresaId =
+            opcion.dataset.empresaId;
+
+
+        if (
+            empresaId === "todas"
+        ) {
+
+            empresaBusquedaHistorial.value =
+                "";
+
+            empresaBusquedaHistorial.placeholder =
+                "Buscar empresa...";
+
+        } else {
+
+            empresaBusquedaHistorial.value =
+                opcion.dataset.nombre;
+
+        }
+
+        empresaHistorialSeleccionada =
+            empresaId;
+
+        actualizarHistorial();
+
+        ocultarEmpresasHistorial();
+
+    }
+);
+
+
+/* =========================================================
+   ABRIR AL ENTRAR AL CAMPO
+========================================================= */
+
+empresaBusquedaHistorial.addEventListener(
+    "focus",
+    function () {
+
+        filtrarEmpresasHistorial();
+
+    }
+);
+
+
+/* =========================================================
+   CERRAR AL HACER CLICK AFUERA
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function (event) {
+
+        if (
+            !event.target.closest(
+                ".empresa-autocomplete"
+            )
+        ) {
+
+            ocultarEmpresasHistorial();
+
+        }
+
+    }
+);
+console.log("COMBO EMPRESA CARGADO");
+
+
+/* =========================================================
+   GRABAR SEGUIMIENTO DE CARTAS
+========================================================= */
+
+const btnGrabarHistorial =
+    document.getElementById(
+        "btnGrabarHistorial"
+    );
+
+btnGrabarHistorial.addEventListener(
+    "click",
+    function () {
+
+        const filas =
+            document.querySelectorAll(
+                "#tablaHistorial .fila-historial"
+            );
+
+        const seguimientos = [];
+
+        filas.forEach(
+            function (fila) {
+
+                const checkbox =
+                    fila.querySelector(
+                        ".historial-checkbox"
+                    );
+
+                if (
+                    !checkbox ||
+                    !checkbox.checked
+                ) {
+                    return;
+                }
+
+                const recibio =
+                    fila.querySelector(
+                        ".campo-recibio"
+                    );
+
+                const fechaRespuesta =
+                    fila.querySelector(
+                        ".campo-fecha"
+                    );
+
+                const acciones =
+                    fila.querySelector(
+                        ".campo-acciones"
+                    );
+
+                seguimientos.push({
+
+                    id:
+                        fila.dataset.id,
+
+                    recibio:
+                        recibio.value,
+
+                    fecha_respuesta:
+                        fechaRespuesta.value,
+
+                    acciones:
+                        acciones.value
+
+                });
+
+            }
+        );
+
+
+        if (seguimientos.length === 0) {
+
+            alert(
+                "Seleccioná al menos una carta."
+            );
+
+            return;
+
+        }
+
+
+        const csrfInput =
+            document.querySelector(
+                "[name=csrfmiddlewaretoken]"
+            );
+
+        if (!csrfInput) {
+
+            alert(
+                "No se encontró el token CSRF."
+            );
+
+            return;
+
+        }
+
+
+        fetch(
+            "/api/guardar-seguimiento-carta/",
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "X-CSRFToken":
+                        csrfInput.value
+
+                },
+
+                body: JSON.stringify({
+
+                    seguimientos:
+                        seguimientos
+
+                })
+
+            }
+        )
+
+        .then(
+            function (response) {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Error HTTP " +
+                        response.status
+                    );
+
+                }
+
+                return response.json();
+
+            }
+        )
+
+        .then(
+            function (data) {
+
+                if (!data.ok) {
+
+                    alert(
+                        data.error ||
+                        "No se pudieron guardar los cambios."
+                    );
+
+                    return;
+
+                }
+
+                alert(
+                    "Cambios guardados correctamente."
+                );
+
+            }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(error);
+
+                alert(
+                    "Error al guardar los cambios."
+                );
+
+            }
+        );
+
+    }
+);
+
+/* =========================================================
+   ELIMINAR SEGUIMIENTO DE CARTAS
+========================================================= */
+
+const btnEliminarHistorial =
+    document.getElementById(
+        "btnEliminarHistorial"
+    );
+
+btnEliminarHistorial.addEventListener(
+    "click",
+    function () {
+
+        const filasSeleccionadas =
+            Array.from(
+                document.querySelectorAll(
+                    "#tablaHistorial .fila-historial"
+                )
+            ).filter(
+                function (fila) {
+
+                    const checkbox =
+                        fila.querySelector(
+                            ".historial-checkbox"
+                        );
+
+                    return (
+                        checkbox &&
+                        checkbox.checked
+                    );
+
+                }
+            );
+
+
+        if (
+            filasSeleccionadas.length === 0
+        ) {
+
+            alert(
+                "Seleccioná al menos una carta."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !confirm(
+                "¿Eliminar las cartas seleccionadas?"
+            )
+        ) {
+
+            return;
+
+        }
+
+
+        const ids =
+            filasSeleccionadas.map(
+                function (fila) {
+                    return fila.dataset.id;
+                }
+            );
+
+
+        const csrfInput =
+            document.querySelector(
+                "[name=csrfmiddlewaretoken]"
+            );
+
+
+        fetch(
+            "/api/eliminar-seguimiento-carta/",
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "X-CSRFToken":
+                        csrfInput.value
+
+                },
+
+                body: JSON.stringify({
+                    ids: ids
+                })
+
+            }
+        )
+
+        .then(
+            function (response) {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Error HTTP " +
+                        response.status
+                    );
+
+                }
+
+                return response.json();
+
+            }
+        )
+
+        .then(
+            function (data) {
+
+                if (!data.ok) {
+
+                    alert(
+                        data.error ||
+                        "No se pudieron eliminar las cartas."
+                    );
+
+                    return;
+
+                }
+
+                filasSeleccionadas.forEach(
+                    function (fila) {
+                        fila.remove();
+                    }
+                );
+
+                actualizarHistorial();
+
+                alert(
+                    "Cartas eliminadas correctamente."
+                );
+
+            }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(error);
+
+                alert(
+                    "Error al eliminar las cartas."
+                );
+
+            }
+        );
+
+    }
+);
+
+/* =========================================================
+   SELECCIONAR TODAS - CARTAS ENVIADAS
+========================================================= */
+
+const seleccionarTodasHistorial =
+    document.getElementById(
+        "seleccionarTodasHistorial"
+    );
+
+seleccionarTodasHistorial.addEventListener(
+    "change",
+    function () {
+
+        const checkboxes =
+            document.querySelectorAll(
+                "#tablaHistorial .historial-checkbox"
+            );
+
+        checkboxes.forEach(
+            function (checkbox) {
+
+                checkbox.checked =
+                    seleccionarTodasHistorial.checked;
+
+            }
+        );
+
+    }
+);
+function actualizarResumenProveedores() {
+
+    const filas = document.querySelectorAll(
+        "#tablaTodos tr[data-empresa-id]"
+    );
+
+    let totalEmpresas = 0;
+    let totalConMail = 0;
+    let totalConTelefono = 0;
+
+    filas.forEach(function(fila) {
+
+        totalEmpresas++;
+
+        const email =
+            (fila.dataset.email || "").trim();
+
+        const telefono =
+            (fila.dataset.telefono || "").trim();
+
+        if (email && email !== "-") {
+            totalConMail++;
+        }
+
+        if (telefono && telefono !== "-") {
+            totalConTelefono++;
+        }
+
+    });
+
+    document.getElementById("totalEmpresas").textContent =
+        totalEmpresas;
+
+    document.getElementById("totalConMail").textContent =
+        totalConMail;
+
+    document.getElementById("totalConTelefono").textContent =
+        totalConTelefono;
+}
+
+
+actualizarResumenProveedores();
+
+/* =========================================================
+   RESUMEN CARTAS ENVIADAS
+========================================================= */
+
+function actualizarResumenCartas() {
+
+    const filas = document.querySelectorAll(
+        "#tablaHistorial .fila-historial"
+    );
+
+    let total = 0;
+    let cartas1 = 0;
+    let cartas2 = 0;
+
+    filas.forEach(function(fila) {
+
+        total++;
+
+        const carta = fila.dataset.carta;
+
+        if (carta === "1") {
+            cartas1++;
+        }
+
+        if (carta === "2") {
+            cartas2++;
+        }
+
+    });
+
+    document.getElementById(
+        "totalCartasEnviadas"
+    ).textContent = total;
+
+    document.getElementById(
+        "totalCartas1"
+    ).textContent = cartas1;
+
+    document.getElementById(
+        "totalCartas2"
+    ).textContent = cartas2;
+}
+
+
+actualizarResumenCartas();
+
+
+function actualizarResumenCartasEnviar() {
+
+    const filas =
+        tablaSeleccionados.querySelectorAll(
+            "tr[data-empresa-id]"
+        );
+
+    const cantidad =
+        filas.length;
+
+    const seleccionadas =
+        tablaSeleccionados.querySelectorAll(
+            ".seleccionado-checkbox:checked"
+        ).length;
+
+    document.getElementById(
+        "totalCartasAEnviar"
+    ).textContent = cantidad;
+
+    document.getElementById(
+        "totalCartasSeleccionadas"
+    ).textContent = seleccionadas;
+}
+
+
+
+
+
+
+
+</script>
+
+
+</body>
+
+</html>

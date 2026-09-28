@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.db.models import (
     Q,
     Case,
@@ -7,13 +7,17 @@ from django.db.models import (
     IntegerField,
     CharField,
 )
+import json
 from django.db.models.functions import Coalesce, Cast, Lower
 
 from .models import (
     Lote,
     Empresa,
+    SeguimientoCarta,
+    CartaPlantilla,
     RegistroLicitacion
 )
+
 import csv
 import re
 from openpyxl import Workbook
@@ -1375,10 +1379,16 @@ def guardar_emails(request, empresa_id):
         request.POST.get("archivo_inicial") or None
     )
 
+
     empresa.tipo_destinatario = (
         "empresa"
         if request.POST.get("tipo_destinatario")
         else "persona"
+    )
+
+    empresa.genero = (
+        request.POST.get("genero")
+        or None
     )
 
     # ========================================================
@@ -1396,6 +1406,7 @@ def guardar_emails(request, empresa_id):
             "comentarios",
             "archivo_inicial",
             "tipo_destinatario",
+            "genero",
             "nombre_pila",
         ]
     )
@@ -2030,14 +2041,25 @@ def exportar_word_mails(request):
     # GENERAR WORD
     # ========================================================
 
+    carta = request.GET.get("carta", "1")
 
-    
+    if carta not in ("1", "2"):
+        carta = "1"
+
+
+    imprimir_movimientos = (
+        request.GET.get("imprimir_movimientos", "0") == "1"
+    )
+
+
     buffer = generar_word_mails(
         empresas_con_registros,
         empresas_para_registro=empresas_para_registro,
         fecha_envio=date.today().strftime("%d/%m/%Y"),
         prima_minima_pesos=prima_minima_pesos,
         tc=tc,
+        carta=carta,
+        imprimir_movimientos=imprimir_movimientos,
     )
 
     respuesta = HttpResponse(
@@ -2054,4 +2076,403 @@ def exportar_word_mails(request):
     )
 
     return respuesta
-    
+  
+def seguimiento_cartas(request):
+
+    empresas = (
+        Empresa.objects
+        .all()
+        .order_by("nombre")
+    )
+
+    seguimientos = (
+        SeguimientoCarta.objects
+        .select_related("empresa")
+        .filter(estado="enviada")
+        .order_by(
+            "empresa__nombre",
+            "-fecha_envio",
+        )
+    )
+
+    return render(
+        request,
+        "InfEje/seguimiento_cartas.html",
+        {
+            "empresas": empresas,
+            "seguimientos": seguimientos,
+        }
+    )
+
+@require_POST
+def aplicar_cartas_enviadas(request):
+
+    try:
+
+        datos = json.loads(request.body)
+
+        carta = str(
+            datos.get("carta")
+        )
+
+        envios = datos.get(
+            "envios",
+            []
+        )
+
+
+        if carta not in ["1", "2"]:
+
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "Carta inválida."
+                },
+                status=400
+            )
+
+
+        if not envios:
+
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "No hay envíos para aplicar."
+                },
+                status=400
+            )
+
+
+        cantidad = 0
+
+
+        for envio in envios:
+
+            empresa_id =  envio.get("empresa_id")
+
+            fecha_envio =  envio.get("fecha_envio")
+
+            if not empresa_id or not fecha_envio:
+                continue
+
+
+            try:
+
+                fecha = datetime.strptime(
+                    fecha_envio,
+                    "%Y-%m-%d"
+                ).date()
+
+            except ValueError:
+
+                continue
+
+
+            empresa = Empresa.objects.filter(
+                id=empresa_id
+            ).first()
+
+
+            if not empresa:
+                continue
+
+            SeguimientoCarta.objects.create(
+                empresa=empresa,
+                carta=carta,
+                estado="enviada",
+                fecha_envio=fecha,
+            )
+
+            cantidad += 1
+
+
+        return JsonResponse(
+            {
+                "ok": True,
+                "cantidad": cantidad
+            }
+        )
+
+
+    except Exception as e:
+
+        print(
+            "ERROR APLICAR CARTAS ENVIADAS:",
+            e
+        )
+
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": str(e)
+            },
+            status=500
+        )
+
+@require_POST
+def guardar_seguimiento_carta(request):
+
+    try:
+
+        datos = json.loads(request.body)
+
+        seguimientos = datos.get(
+            "seguimientos",
+            []
+        )
+
+        for dato in seguimientos:
+
+            seguimiento = SeguimientoCarta.objects.filter(
+                id=dato.get("id")
+            ).first()
+
+            if not seguimiento:
+                continue
+
+            seguimiento.recibio = (
+                dato.get("recibio") or None
+            )
+
+            seguimiento.fecha_respuesta = (
+                datetime.strptime(
+                    dato["fecha_respuesta"],
+                    "%Y-%m-%d"
+                ).date()
+                if dato.get("fecha_respuesta")
+                else None
+            )
+
+            seguimiento.acciones = (
+                dato.get("acciones") or None
+            )
+
+            seguimiento.save(
+                update_fields=[
+                    "recibio",
+                    "fecha_respuesta",
+                    "acciones",
+                ]
+            )
+
+        return JsonResponse({
+            "ok": True
+        })
+
+    except Exception as e:
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": str(e)
+            },
+            status=500
+        )
+
+
+@require_POST
+def eliminar_seguimiento_carta(request):
+
+    try:
+
+        datos = json.loads(request.body)
+
+        ids = datos.get("ids", [])
+
+        if not ids:
+            return JsonResponse({
+                "ok": False,
+                "error": "No hay cartas seleccionadas."
+            }, status=400)
+
+        SeguimientoCarta.objects.filter(
+            id__in=ids
+        ).delete()
+
+        return JsonResponse({
+            "ok": True
+        })
+
+    except Exception as e:
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": str(e)
+            },
+            status=500
+        )
+
+        
+def editar_carta(request):
+
+    carta = request.GET.get(
+        "carta",
+        request.POST.get("carta", "1")
+    )
+
+    # ------------------------------------------------------------
+    # EMPRESAS
+    # ------------------------------------------------------------
+
+    empresas = (
+        Empresa.objects
+        .all()
+        .order_by("nombre")
+    )
+
+    # ------------------------------------------------------------
+    # EMPRESA SELECCIONADA PARA LA VISTA PREVIA
+    # ------------------------------------------------------------
+
+    empresa_id = request.GET.get(
+        "empresa_id",
+        request.POST.get("empresa_id")
+    )
+
+    empresa_seleccionada = None
+
+    if empresa_id:
+        try:
+            empresa_seleccionada = Empresa.objects.get(
+                id=empresa_id
+            )
+        except Empresa.DoesNotExist:
+            empresa_seleccionada = None
+
+    # ------------------------------------------------------------
+    # TIPO DE DESTINATARIO
+    # ------------------------------------------------------------
+
+    tipo_destinatario = request.GET.get(
+        "tipo_destinatario",
+        request.POST.get(
+            "tipo_destinatario",
+            "empresa"
+        )
+    )
+
+    if empresa_seleccionada:
+        tipo_destinatario = (
+            empresa_seleccionada.tipo_destinatario
+        )
+
+    # ------------------------------------------------------------
+    # PLANTILLA
+    # ------------------------------------------------------------
+
+    plantilla, creada = CartaPlantilla.objects.get_or_create(
+        carta=carta,
+        tipo_destinatario=tipo_destinatario
+    )
+
+    # ------------------------------------------------------------
+    # GUARDAR
+    # ------------------------------------------------------------
+
+    if request.method == "POST":
+
+        plantilla.asunto = (
+            request.POST.get("asunto") or None
+        )
+
+        plantilla.contenido_html = (
+            request.POST.get("contenido_html") or None
+        )
+
+        plantilla.save()
+
+        return redirect(
+            f"/editar-carta/?carta={carta}"
+            f"&empresa_id={empresa_id or ''}"
+        )
+
+    # ------------------------------------------------------------
+    # MOSTRAR
+    # ------------------------------------------------------------
+
+    return render(
+        request,
+        "InfEje/editar_carta.html",
+        {
+            "plantilla": plantilla,
+            "empresas": empresas,
+            "empresa_seleccionada": empresa_seleccionada,
+        }
+    )
+
+def obtener_plantilla_carta(
+    request,
+    carta,
+    tipo_destinatario
+):
+
+    genero = request.GET.get("genero") or None
+
+    print("====================================")
+    print("CARGANDO PLANTILLA")
+    print("Carta:", carta)
+    print("Tipo:", tipo_destinatario)
+    print("Genero:", genero)
+    print("====================================")
+
+    plantilla, creada = CartaPlantilla.objects.get_or_create(
+        carta=str(carta),
+        tipo_destinatario=tipo_destinatario,
+        genero=genero
+    )
+
+    return JsonResponse({
+        "asunto": plantilla.asunto or "",
+        "contenido_html": plantilla.contenido_html or "",
+    })
+
+
+@require_POST
+def guardar_plantilla_carta(request):
+
+    try:
+
+        datos = json.loads(request.body)
+
+        carta = str(datos.get("carta"))
+        tipo_destinatario = datos.get("tipo_destinatario")
+        genero = datos.get("genero") or None
+
+        asunto = datos.get("asunto") or ""
+        contenido_html = datos.get("contenido_html") or ""
+
+        print("====================================")
+        print("GUARDANDO PLANTILLA")
+        print("Carta:", carta)
+        print("Tipo:", tipo_destinatario)
+        print("Genero:", genero)
+        print("Asunto:", asunto)
+        print("Contenido:", contenido_html[:100])
+        print("====================================")
+
+        plantilla, creada = CartaPlantilla.objects.get_or_create(
+            carta=carta,
+            tipo_destinatario=tipo_destinatario,
+            genero=genero
+        )
+
+        plantilla.asunto = asunto
+        plantilla.contenido_html = contenido_html
+        plantilla.save()
+
+        return JsonResponse({
+            "ok": True,
+            "creada": creada
+        })
+
+    except Exception as e:
+
+        print("ERROR GUARDAR PLANTILLA:", e)
+
+        return JsonResponse({
+            "ok": False,
+            "error": str(e)
+        }, status=500)
+

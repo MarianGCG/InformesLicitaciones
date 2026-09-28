@@ -111,7 +111,7 @@
 
         th:nth-child(1),
         td:nth-child(1) {
-            width: 105px;
+            width: 95px;
         }
         th:nth-child(3),
         td:nth-child(3),
@@ -136,12 +136,12 @@
         td:nth-child(6),
         th:nth-child(7),
         td:nth-child(7) {
-            width: 175px;
+            width: 165px;
         }
-
+/* ====Empresa==== */
         th:nth-child(9),
         td:nth-child(9) {
-            width: 35px;
+            width: 10px;
         }
 
         th:nth-child(10),
@@ -151,17 +151,21 @@
 
         th:nth-child(11),
         td:nth-child(11) {
-            width: 350px;
+            width: 50px;
         }
     
         th:nth-child(12),
         td:nth-child(12) {
             width: 95px;
         }
+        th:nth-child(13),
+        td:nth-child(13) {
+            width: 90px;
+        }
 
         .cuit {
             white-space: nowrap;
-            font-weight: 700;
+            font-weight: 650;
         }
 
 
@@ -326,6 +330,8 @@
                     </th>
                     <th>Empr</th>
                     <th>Nombre pila</th>
+
+                    <th>Género</th>            
                     <th>Comentarios</th>
 
                     <th></th>
@@ -434,6 +440,23 @@
                                     value="{{ empresa.nombre_pila|default:'' }}"
                                 >
                             </td>
+
+
+                            <td>
+                                <select name="genero">
+                                    <option value="">-</option>
+                                    <option value="mujer"
+                                        {% if empresa.genero == "mujer" %}selected{% endif %}>
+                                        Mujer
+                                    </option>
+                                    <option value="hombre"
+                                        {% if empresa.genero == "hombre" %}selected{% endif %}>
+                                        Hombre
+                                    </option>
+                                </select>
+                            </td>
+
+
                             <td>
                                 <textarea
                                     name="comentarios"

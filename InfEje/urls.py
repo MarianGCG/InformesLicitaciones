@@ -82,4 +82,49 @@ urlpatterns = [
         views.exportar_word_mails,
         name="exportar_word_mails",
     ),
+
+    path(
+        "seguimiento-cartas/",
+        views.seguimiento_cartas,
+        name="seguimiento_cartas",
+    ),
+    path(
+        "editar-carta/",
+        views.editar_carta,
+        name="editar_carta",
+    ),
+
+    path(
+        "api/plantilla-carta/<str:carta>/<str:tipo_destinatario>/",
+        views.obtener_plantilla_carta,
+        name="obtener_plantilla_carta",
+    ),
+
+
+    path(
+        "api/guardar-plantilla-carta/",
+        views.guardar_plantilla_carta,
+        name="guardar_plantilla_carta",
+    ),
+
+
+    path(
+        "api/aplicar-cartas-enviadas/",
+        views.aplicar_cartas_enviadas,
+    ),
+
+    path(
+        "api/guardar-seguimiento-carta/",
+        views.guardar_seguimiento_carta,
+        name="guardar_seguimiento_carta",
+    ),
+
+
+    path(
+        "api/eliminar-seguimiento-carta/",
+        views.eliminar_seguimiento_carta,
+        name="eliminar_seguimiento_carta",
+    ),
+
+
 ]

@@ -70,6 +70,16 @@ class Empresa(models.Model):
         null=True
     )
     
+    genero = models.CharField(
+        max_length=10,
+        choices=[
+            ("mujer", "Mujer"),
+            ("hombre", "Hombre"),
+        ],
+        blank=True,
+        null=True,
+    )
+
     def __str__(self):
         return self.nombre
 
@@ -291,4 +301,146 @@ class RegistroLicitacion(models.Model):
         return (
             f"{self.numero_proceso or 'Sin proceso'} - "
             f"{self.oferente or self.proveedor or 'Sin empresa'}"
+        )
+
+# ============================================================
+# SEGUIMIENTO DE CARTAS
+# ============================================================
+
+class SeguimientoCarta(models.Model):
+
+    CARTA_CHOICES = [
+        ("1", "Carta 1"),
+        ("2", "Carta 2"),
+        ("3", "Carta 3"),
+    ]
+
+    ESTADO_CHOICES = [
+        ("borrador", "Borrador"),
+        ("enviada", "Enviada"),
+    ]
+
+    RECIBIO_CHOICES = [
+        ("si", "Sí"),
+        ("no", "No"),
+    ]
+
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name="seguimiento_cartas"
+    )
+
+    carta = models.CharField(
+        max_length=1,
+        choices=CARTA_CHOICES
+    )
+
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default="borrador"
+    )
+
+    fecha_envio = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    recibio = models.CharField(
+        max_length=2,
+        choices=RECIBIO_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    fecha_respuesta = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    acciones = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+
+        return (
+            f"{self.get_carta_display()} - "
+            f"{self.empresa.nombre}"
+        )
+# ============================================================
+# PLANTILLAS DE CARTAS
+# ============================================================
+
+class CartaPlantilla(models.Model):
+
+    CARTA_CHOICES = [
+        ("1", "Carta 1"),
+        ("2", "Carta 2"),
+        ("3", "Carta 3"),
+    ]
+
+    TIPO_DESTINATARIO_CHOICES = [
+        ("persona", "Persona"),
+        ("empresa", "Empresa"),
+    ]
+
+    carta = models.CharField(
+        max_length=1,
+        choices=CARTA_CHOICES
+    )
+
+    tipo_destinatario = models.CharField(
+        max_length=20,
+        choices=TIPO_DESTINATARIO_CHOICES,
+        default="persona"
+    )
+
+    genero = models.CharField(
+        max_length=10,
+        choices=[
+            ("mujer", "Mujer"),
+            ("hombre", "Hombre"),
+        ],
+        blank=True,
+        null=True
+    )
+
+    asunto = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True
+    )
+
+    contenido_html = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    fecha_modificacion = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "carta",
+                    "tipo_destinatario",
+                    "genero",
+                ],
+                name="unique_carta_tipo_genero"
+            )
+        ]
+
+
+    def __str__(self):
+
+        return (
+            f"{self.get_carta_display()} - "
+            f"{self.get_tipo_destinatario_display()}"
         )

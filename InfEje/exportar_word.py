@@ -8,6 +8,8 @@ from docx.enum.section import WD_SECTION
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from decimal import Decimal, ROUND_HALF_UP
+from html.parser import HTMLParser
+import re
 
 def obtener_fuente(tamano, negrita=False):
     """
@@ -1069,16 +1071,145 @@ def calcular_cotizacion(registro, porcentaje_sa, tipo_destinatario="persona", pr
     }
 
 
-def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fecha_envio=None, prima_minima_pesos=None,  tc=None,):
-    """
-    Genera un único Word.
+class _HTMLToDocxParser(HTMLParser):
+    """Convierte el HTML sencillo del editor de cartas a Word."""
 
-    empresas_con_registros:
-        [
-            (empresa, [registro1, registro2, ...]),
-            ...
-        ]
+    BLOQUE = {"p", "div", "br", "li", "h1", "h2", "h3", "h4"}
+
+    def __init__(self, documento, texto_variables=None):
+        super().__init__(convert_charrefs=True)
+        self.documento = documento
+        self.parrafo = None
+        self.negrita = False
+        self.cursiva = False
+        self.subrayado = False
+        self.alineacion = WD_ALIGN_PARAGRAPH.LEFT
+        self.lista = []
+        self.texto_variables = texto_variables or {}
+        self.parrafo_tiene_contenido = False
+
+    def _nuevo_parrafo(self):
+        self.parrafo = self.documento.add_paragraph()
+        self.parrafo.alignment = self.alineacion
+        self.parrafo.paragraph_format.space_after = Pt(6)
+        self.parrafo_tiene_contenido = False
+
+    def _eliminar_parrafo_vacio(self):
+        if self.parrafo is None or self.parrafo_tiene_contenido:
+            return
+
+        elemento = self.parrafo._element
+        elemento.getparent().remove(elemento)
+        self.parrafo = None
+        self.parrafo_tiene_contenido = False
+
+    def _asegurar_parrafo(self):
+        if self.parrafo is None:
+            self._nuevo_parrafo()
+
+    def _aplicar_variables(self, texto):
+        for clave, valor in self.texto_variables.items():
+            texto = texto.replace("{{ " + clave + " }}", valor)
+            texto = texto.replace("{{" + clave + "}}", valor)
+        return texto
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+
+        if tag in {"strong", "b"}:
+            self.negrita = True
+            return
+        if tag in {"em", "i"}:
+            self.cursiva = True
+            return
+        if tag == "u":
+            self.subrayado = True
+            return
+        if tag in {"ul", "ol"}:
+            self.lista.append(tag)
+            return
+        if tag == "a":
+            return
+        if tag in {"h1", "h2", "h3", "h4"}:
+            self._nuevo_parrafo()
+            return
+        if tag in {"p", "div", "li"}:
+            self._nuevo_parrafo()
+            if tag == "li":
+                prefijo = "• " if self.lista and self.lista[-1] == "ul" else "1. "
+                self.parrafo.add_run(prefijo)
+            return
+        if tag == "br":
+            self._asegurar_parrafo()
+            self.parrafo.add_run().add_break()
+            self.parrafo_tiene_contenido = True
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag in {"strong", "b"}:
+            self.negrita = False
+        elif tag in {"em", "i"}:
+            self.cursiva = False
+        elif tag == "u":
+            self.subrayado = False
+        elif tag in {"ul", "ol"}:
+            if self.lista:
+                self.lista.pop()
+        elif tag in {"p", "div", "li", "h1", "h2", "h3", "h4"}:
+            self._eliminar_parrafo_vacio()
+
+    def handle_data(self, data):
+        if not data:
+            return
+
+        data = self._aplicar_variables(data)
+
+        # El editor puede guardar saltos de línea/espacios como nodos
+        # de texto. No deben generar párrafos vacíos en Word.
+        if not data.strip():
+            return
+
+        self._asegurar_parrafo()
+        run = self.parrafo.add_run(data)
+        run.bold = self.negrita
+        run.italic = self.cursiva
+        run.underline = self.subrayado
+        run.font.size = Pt(11)
+        self.parrafo_tiene_contenido = True
+
+
+def agregar_html_como_word(documento, contenido_html, variables):
+    """Inserta el contenido HTML guardado en CartaPlantilla en Word."""
+    if not contenido_html:
+        return
+
+    parser = _HTMLToDocxParser(
+        documento,
+        texto_variables=variables,
+    )
+    parser.feed(contenido_html)
+    parser.close()
+
+
+
+def generar_word_mails(
+    empresas_con_registros,
+    empresas_para_registro=None,
+    fecha_envio=None,
+    prima_minima_pesos=None,
+    tc=None,
+    carta="1",
+    imprimir_movimientos=True,
+):
+
+
     """
+    Genera un único Word usando la plantilla CartaPlantilla
+    correspondiente a cada empresa y al número de carta elegido.
+    """
+
+    # Import local para evitar problemas de importación circular.
+    from .models import CartaPlantilla
 
     documento = Document()
 
@@ -1098,8 +1229,6 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fech
         registros
     ) in enumerate(empresas_con_registros):
 
-
-        
         registros_ordenados = sorted(
             registros,
             key=lambda r: (
@@ -1109,13 +1238,51 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fech
             reverse=True
         )
 
+        registros_movimientos = [
+            registro
+            for registro in registros_ordenados
+            if not registro.numero_oc
+        ]
+
         hay_mas_registros = (
             len(registros_ordenados) > 6
         )
 
         registros = registros_ordenados[:6]
 
+        registros_movimientos = registros_movimientos[:6]
 
+
+        # ----------------------------------------------------
+        # ORGANISMOS DE LOS 6 REGISTROS DE MAYOR IMPORTE
+        # ----------------------------------------------------
+
+        compradores = []
+
+        for registro in registros:
+
+            comprador = (
+                getattr(registro, "comprador", None)
+                or ""
+            ).strip()
+
+            if comprador and comprador not in compradores:
+                compradores.append(comprador)
+
+        if len(compradores) == 0:
+            organismos = ""
+
+        elif len(compradores) == 1:
+            organismos = compradores[0]
+
+        elif len(compradores) == 2:
+            organismos = f"{compradores[0]} y {compradores[1]}."
+
+        else:
+            organismos = f"{compradores[0]} y {compradores[1]}, entre otros."
+
+
+            
         # ----------------------------------------------------
         # NUEVA PÁGINA
         # ----------------------------------------------------
@@ -1124,8 +1291,34 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fech
             documento.add_page_break()
 
         # ----------------------------------------------------
-        # DESTINATARIO
+        # PLANTILLA DE CARTA
         # ----------------------------------------------------
+
+        tipo = (
+            empresa.tipo_destinatario
+            or "empresa"
+        ).lower()
+
+        if tipo == "empresa":
+            genero = None
+        else:
+            genero = (
+                empresa.genero
+                or None
+            )
+
+        plantilla = CartaPlantilla.objects.filter(
+            carta=str(carta),
+            tipo_destinatario=tipo,
+            genero=genero,
+        ).first()
+
+        asunto = ""
+        contenido_html = ""
+
+        if plantilla:
+            asunto = plantilla.asunto or ""
+            contenido_html = plantilla.contenido_html or ""
 
         nombre_pila = (
             empresa.nombre_pila
@@ -1133,70 +1326,14 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fech
             or ""
         ).strip()
 
-        tipo = (
-            empresa.tipo_destinatario
-            or "empresa"
-        ).lower()
-
-        if tipo == "persona":
-
-            destinatario = (
-                f"Hola {nombre_pila}, "
-                f"¿Cómo estás?"
-            )
 
 
-            texto_mail = (
-                f"Hola {nombre_pila}, ¿Cómo estás?\n\n"
-                "Retomando el mail que te enviamos hace unos días, "
-                "quisimos acercarte, y a modo de ejemplo,  "
-                "una simulación de cotización de "
-                "las Cauciones de Mantenimiento de Oferta\n"
-                "correspondientes a algunos procesos "
-                "que identificamos a partir de información "
-                "pública.\n\n"
-                "En este caso, te mostramos cuánto hubiera "
-                "sido nuestra cotización para una de esas MO.\n\n"
-                "Sujeto, naturalmente, a las condiciones de "
-                "emisión y evaluación de la compañía.\n\n"
-                "La idea es que tengas una referencia concreta "
-                "para próximas licitaciones.\n\n"
-                "Por otro lado, si me enviás la póliza que "
-                "contrataste oportunamente, podemos compararla "
-                "y evaluar la posibilidad de mejorar el costo "
-                "hasta un 30%.\n\n"
-                "Saludos,\n"
-                "Andrés"
-            )
-        else:
-
-            destinatario = (
-                f"Estimados {nombre_pila},"
-            )
-
-
-            texto_mail = (
-                f"Estimados {nombre_pila}.\n\n"
-                "Retomando el mail que te enviamos hace unos días, "
-                "quisimos acercarte, y a modo de ejemplo,  "
-                "una simulación de cotización de "
-                "las Cauciones de Mantenimiento de Oferta\n"
-                "correspondientes a algunos procesos "
-                "que identificamos a partir de información "
-                "pública.\n\n"
-                "En este caso, les mostramos cuánto hubiera "
-                "sido nuestra cotización para una de esas MO.\n"
-                "Sujeto, naturalmente, a las condiciones de "
-                "emisión y evaluación de la compañía.\n\n\n"
-                "La idea es que tengan una referencia concreta "
-                "para próximas licitaciones.\n"
-                "Por otro lado, si nos envían la póliza que "
-                "contrataron oportunamente, podemos compararla "
-                "y evaluar la posibilidad de mejorar el costo "
-                "hasta un 30%.\n\n"
-                "Saludos,\n"
-                "Andrés"
-            )
+        variables = {
+            "nombre": str(empresa.nombre or ""),
+            "nombre_pila": nombre_pila,
+            "cuit": str(empresa.cuit or ""),
+            "organismos": organismos,
+        }
 
         mails_destinatario = [
             mail
@@ -1210,302 +1347,196 @@ def generar_word_mails(empresas_con_registros, empresas_para_registro=None, fech
 
         mails_destinatario = ", ".join(mails_destinatario)
 
-
         # ----------------------------------------------------
         # DESTINATARIO
         # ----------------------------------------------------
 
-        agregar_linea(
-            documento,
-            "Destinatario",
-            mails_destinatario
-        )
+        p = documento.add_paragraph()
+        run = p.add_run("Destinatario:")
+        run.bold = True
+
+        documento.add_paragraph(mails_destinatario)
 
         # ----------------------------------------------------
         # ASUNTO
         # ----------------------------------------------------
 
-        agregar_linea(
-            documento,
-            "Asunto",
-            "Simulación de cotización de Cauciones de MO - " + empresa.nombre
+        # El asunto también puede contener variables de la plantilla,
+        # por ejemplo: {{ nombre }} o {{ nombre_pila }}.
+        # Usamos las mismas variables que en el cuerpo de la carta.
+
+        asunto = re.sub(
+            r"{{\s*(\w+)\s*}}",
+            lambda match: variables.get(match.group(1), match.group(0)),
+            asunto,
         )
 
-        # ----------------------------------------------------
-        # TEXTO
-        # ----------------------------------------------------
-
-        parrafo = documento.add_paragraph()
-
-        run = parrafo.add_run(
-            ""
-        )
-
+        p = documento.add_paragraph()
+        run = p.add_run("Asunto:")
         run.bold = True
 
+        documento.add_paragraph(asunto)
+
         # ----------------------------------------------------
-        # CUERPO DEL MAIL
+        # TEXTO DE LA CARTA
         # ----------------------------------------------------
 
-
-        for linea in texto_mail.split("\n"):
-
-            if not linea.strip():
-                continue
-
-            parrafo = documento.add_paragraph()
-            parrafo.paragraph_format.space_after = Pt(6)
-
-            # ----------------------------------------------------
-            # LÍNEAS COMPLETAS EN NEGRITA
-            # ----------------------------------------------------
-            # ----------------------------------------------------
-            # LÍNEAS COMPLETAS EN NEGRITA
-            # ----------------------------------------------------
-
-            if (
-                linea.startswith(
-                    "La idea es que tengan una referencia concreta"
-                )
-                or linea.startswith(
-                    "Por otro lado, si nos envían la póliza"
-                )
-            ):
-
-                run = parrafo.add_run(linea)
-                run.bold = True
-                run.font.size = Pt(11)
-
-
-            # ----------------------------------------------------
-            # FRASE DE COTIZACIÓN EN NEGRITA
-            # ----------------------------------------------------
-
-            elif linea.startswith(
-                "Retomando el mail que te enviamos hace unos días"
-            ):
-
-                texto_normal = (
-                    "Retomando el mail que te enviamos hace unos días, "
-                    "quisimos acercarte, y a modo de ejemplo,  "
-                )
-
-                texto_negrita = (
-                    "una simulación de cotización de "
-                    "las Cauciones de Mantenimiento de Oferta"
-                )
-
-                run = parrafo.add_run(texto_normal)
-                run.font.size = Pt(11)
-
-                run = parrafo.add_run(texto_negrita)
-                run.bold = True
-                run.font.size = Pt(11)
-
-
-            # ----------------------------------------------------
-            # "A PARTIR DE INFORMACIÓN PÚBLICA"
-            # ----------------------------------------------------
-
-            elif linea.startswith(
-                "correspondientes a algunos procesos"
-            ):
-
-                texto_normal = (
-                    "correspondientes a algunos procesos "
-                    "que identificamos "
-                )
-
-                texto_negrita = (
-                    "a partir de información pública."
-                )
-
-                run = parrafo.add_run(texto_normal)
-                run.font.size = Pt(11)
-
-                run = parrafo.add_run(texto_negrita)
-                run.bold = True
-                run.font.size = Pt(11)
-
-
-            # ----------------------------------------------------
-            # RESTO DEL TEXTO
-            # ----------------------------------------------------
-
-            else:
-
-                run = parrafo.add_run(linea)
-                run.font.size = Pt(11)
-
-
-            # ----------------------------------------------------
-            # ESPACIADO EXISTENTE
-            # ----------------------------------------------------
-
-            if (
-                linea.startswith("Estimados ")
-                or linea.startswith("Hola ")
-                or linea.startswith("correspondientes ")
-                or linea.startswith("Sujeto")
-                or linea.startswith("Por otro lado")
-            ):
-                parrafo.paragraph_format.space_after = Pt(12)
+        agregar_html_como_word(
+            documento,
+            contenido_html,
+            variables,
+        )
 
         # ----------------------------------------------------
         # RESULTADOS
         # ----------------------------------------------------
  
+        if imprimir_movimientos:
+
+            agregar_tabla_resultados(
+                documento,
+                registros_movimientos,
+                empresa,
+                hay_mas_registros
+            )
 
 
-        agregar_tabla_resultados(
-            documento,
-            registros,
-            empresa,
-            hay_mas_registros
-        )
-
-
-        # ----------------------------------------------------
-        # COTIZACIÓN MANTENIMIENTO DE OFERTA
-        # ----------------------------------------------------
-
-        # ----------------------------------------------------
-        # COTIZACIÓN
-        # ----------------------------------------------------
 
 
         # ----------------------------------------------------
         # COTIZAR SOLAMENTE LA OFERTA MÁS ALTA
         # ----------------------------------------------------
 
-        registro_cotizacion = (
-            registros[0]
-            if registros
-            else None
-        )
+        if imprimir_movimientos:
 
-        if registro_cotizacion:
-
-            # ------------------------------------------------
-            # Mantenimiento de Oferta 5%
-            # ------------------------------------------------
-
-            cotizacion = calcular_cotizacion(
-                registro_cotizacion,
-                5,
-                tipo,
-                prima_minima_pesos=prima_minima_pesos,
-                tc=tc,
+            registro_cotizacion = (
+                registros[0]
+                if registros
+                else None
             )
 
-            if cotizacion:
-
-                # Título
-                parrafo = documento.add_paragraph()
-
-                run = parrafo.add_run("Cotización")
-                run.bold = True
-                run.font.size = Pt(12)
-
-                # Proceso + Renglón + Oferta
-                parrafo = documento.add_paragraph()
-
-                run = parrafo.add_run("Proceso: ")
-                run.bold = True
-                run.font.size = Pt(11)
-
-                run = parrafo.add_run(
-                    f'{cotizacion["proceso"]}  /  '
-                )
-                run.font.size = Pt(11)
-
-                run = parrafo.add_run("Renglón: ")
-                run.bold = True
-                run.font.size = Pt(11)
-
-                run = parrafo.add_run(
-                    f'{cotizacion["renglon"]}  /  '
-                )
-                run.font.size = Pt(11)
-
-                run = parrafo.add_run("Oferta: ")
-                run.bold = True
-                run.font.size = Pt(11)
-
-                run = parrafo.add_run(
-                    f'{cotizacion["moneda"]} '
-                    f"{cotizacion['oferta']:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
-                )
-                run.font.size = Pt(11)
-
-                for run in parrafo.runs:
-                    run.bold = True
-                    run.underline = True
+            if registro_cotizacion:
 
                 # ------------------------------------------------
-                # Mantenimiento de Oferta
+                # Mantenimiento de Oferta 5%
                 # ------------------------------------------------
 
-                agregar_linea(
-                    documento,
-                    "— Mantenimiento de Oferta 5%",
-                    "-"
-                ).runs[0].font.size = Pt(11)
-
-                agregar_linea(
-                    documento,
-                    "Suma Asegurada (5%)",
-                    f'{cotizacion["moneda"]} '
-                    f'{cotizacion["suma_asegurada"]:,.2f}'
-                ).runs[0].font.size = Pt(11)
-
-                agregar_linea(
-                    documento,
-                    "Premio simple",
-                    f'{cotizacion["moneda"]} '
-                    f'{cotizacion["premio_final"]:,.2f}'
-                ).runs[0].font.size = Pt(11)
-
-                documento.add_paragraph()
-
-                # ------------------------------------------------
-                # Adjudicación 10%
-                # ------------------------------------------------
-
-                cotizacion_adjudicacion = calcular_cotizacion(
+                cotizacion = calcular_cotizacion(
                     registro_cotizacion,
-                    10,
+                    5,
                     tipo,
                     prima_minima_pesos=prima_minima_pesos,
                     tc=tc,
                 )
 
-                if cotizacion_adjudicacion:
+                if cotizacion:
+
+                    # Título
+                    parrafo = documento.add_paragraph()
+
+                    run = parrafo.add_run("Cotización")
+                    run.bold = True
+                    run.font.size = Pt(12)
+
+                    # Proceso + Renglón + Oferta
+                    parrafo = documento.add_paragraph()
+
+                    run = parrafo.add_run("Proceso: ")
+                    run.bold = True
+                    run.font.size = Pt(11)
+
+                    run = parrafo.add_run(
+                        f'{cotizacion["proceso"]}  /  '
+                    )
+                    run.font.size = Pt(11)
+
+                    run = parrafo.add_run("Renglón: ")
+                    run.bold = True
+                    run.font.size = Pt(11)
+
+                    run = parrafo.add_run(
+                        f'{cotizacion["renglon"]}  /  '
+                    )
+                    run.font.size = Pt(11)
+
+                    run = parrafo.add_run("Oferta: ")
+                    run.bold = True
+                    run.font.size = Pt(11)
+
+                    run = parrafo.add_run(
+                        f'{cotizacion["moneda"]} '
+                        f"{cotizacion['oferta']:,.2f}"
+                        .replace(",", "X")
+                        .replace(".", ",")
+                        .replace("X", ".")
+                    )
+                    run.font.size = Pt(11)
+
+                    for run in parrafo.runs:
+                        run.bold = True
+                        run.underline = True
+
+                    # ------------------------------------------------
+                    # Mantenimiento de Oferta
+                    # ------------------------------------------------
 
                     agregar_linea(
                         documento,
-                        "— Adjudicación 10%",
+                        "— Mantenimiento de Oferta 5%",
                         "-"
                     ).runs[0].font.size = Pt(11)
 
                     agregar_linea(
                         documento,
-                        "Suma Asegurada (10%)",
-                        f'{cotizacion_adjudicacion["moneda"]} '
-                        f'{cotizacion_adjudicacion["suma_asegurada"]:,.2f}'
+                        "Suma Asegurada (5%)",
+                        f'{cotizacion["moneda"]} '
+                        f'{cotizacion["suma_asegurada"]:,.2f}'
                     ).runs[0].font.size = Pt(11)
 
                     agregar_linea(
                         documento,
                         "Premio simple",
-                        f'{cotizacion_adjudicacion["moneda"]} '
-                        f'{cotizacion_adjudicacion["premio_final"]:,.2f}'
+                        f'{cotizacion["moneda"]} '
+                        f'{cotizacion["premio_final"]:,.2f}'
                     ).runs[0].font.size = Pt(11)
 
-                documento.add_paragraph()
+                    documento.add_paragraph()
+
+                    # ------------------------------------------------
+                    # Adjudicación 10%
+                    # ------------------------------------------------
+
+                    cotizacion_adjudicacion = calcular_cotizacion(
+                        registro_cotizacion,
+                        10,
+                        tipo,
+                        prima_minima_pesos=prima_minima_pesos,
+                        tc=tc,
+                    )
+
+                    if cotizacion_adjudicacion:
+
+                        agregar_linea(
+                            documento,
+                            "— Adjudicación 10%",
+                            "-"
+                        ).runs[0].font.size = Pt(11)
+
+                        agregar_linea(
+                            documento,
+                            "Suma Asegurada (10%)",
+                            f'{cotizacion_adjudicacion["moneda"]} '
+                            f'{cotizacion_adjudicacion["suma_asegurada"]:,.2f}'
+                        ).runs[0].font.size = Pt(11)
+
+                        agregar_linea(
+                            documento,
+                            "Premio simple",
+                            f'{cotizacion_adjudicacion["moneda"]} '
+                            f'{cotizacion_adjudicacion["premio_final"]:,.2f}'
+                        ).runs[0].font.size = Pt(11)
+
+                    documento.add_paragraph()
 
     # ========================================================
     # PLANILLA DE ENVÍO DE MAIL A EMPRESAS PROVEEDORAS
