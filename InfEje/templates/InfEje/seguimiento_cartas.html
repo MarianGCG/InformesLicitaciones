@@ -149,7 +149,7 @@
                 1.5fr;
 
             gap: 10px;
-            align-items: start;
+            align-items: stretch;
         }
 
         .panel-lista {
@@ -279,7 +279,7 @@
             display: flex;
             align-items: center;
             gap: 18px;
-            margin-bottom: 42px;
+            margin-bottom: 8px;
             padding: 10px 14px;
             background: #eef3f8;
             border: 0px solid #d5dbe3;
@@ -318,35 +318,56 @@
         .tabla-historial td:nth-child(1) {
             width: 1%;
         }
-25
         .tabla-historial th:nth-child(2),
         .tabla-historial td:nth-child(2) {
-            width: 39%;
+            width: 34%;
         }
 
         .tabla-historial th:nth-child(3),
         .tabla-historial td:nth-child(3) {
-            width: 8%;
+            width: 15%;
         }
 
         .tabla-historial th:nth-child(4),
         .tabla-historial td:nth-child(4) {
-            width: 12%;
+            width: 10%;
         }
 
         .tabla-historial th:nth-child(5),
         .tabla-historial td:nth-child(5) {
-            width: 10%;
+            width: 8%;
         }
 
         .tabla-historial th:nth-child(6),
         .tabla-historial td:nth-child(6) {
-            width: 12%;
-        }
-        .tabla-historial th:nth-child(7),
-        .tabla-historial td:nth-child(7) {
             width: 10%;
         }
+
+        .tabla-historial th:nth-child(7),
+        .tabla-historial td:nth-child(7) {
+            width: 22%;
+        }
+        
+
+        /* ==========================================
+        ENCABEZADOS FIJOS DENTRO DE CADA TABLA
+        ========================================== */
+
+        .tabla-contenedor {
+            position: relative;
+        }
+
+        .tabla-contenedor thead {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .tabla-contenedor thead th {
+            background: #e9eef5;
+        }
+
+
         .campo-recibio {
             width: 75px;
             padding: 5px;
@@ -682,7 +703,7 @@
 
         /* Todos los proveedores */
         .listas-cartas > .panel-lista:nth-child(1) .tabla-contenedor {
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         /* Carta a enviar */
@@ -692,7 +713,7 @@
 
         /* Cartas enviadas */
         .listas-cartas > .panel-lista:nth-child(3) > .panel-lista {
-            margin-top: 4px;
+            margin-top: 0px;
             padding-top: 0px;
 
 
@@ -703,6 +724,10 @@
             background: #eef3f8;
         }
         .listas-cartas > .panel-lista:nth-child(1) .tabla-contenedor {
+            background: white;
+            border-top: 8px solid white;
+        }
+        .listas-cartas > .panel-lista:nth-child(2) .tabla-contenedor {
             background: white;
             border-top: 8px solid white;
         }
@@ -748,7 +773,36 @@
         .resumen-cartas-enviar span {
             white-space: nowrap;
         }
+        .cantidad {
+            display: inline-block;
+            width: 24px;
+            text-align: right;
+        }
+        .resumen-cartas .numero-total {
+            display: inline-block;
+            width: 25px;
+            text-align: right;
+        }
 
+        .resumen-cartas .numero {
+            display: inline-block;
+            width: 25px;
+            text-align: right;
+        }
+        .listas-cartas > #cartas-enviadas {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .listas-cartas > #cartas-enviadas > .panel-lista {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .listas-cartas > #cartas-enviadas > .panel-lista .tabla-contenedor {
+            flex: 1;
+        }
     </style>
 
 </head>
@@ -976,11 +1030,11 @@
                                         >
 
                                     </td>
-                                        <td>
+                                        <td style="font-size: 18;">
                                             {{ empresa.nombre }}
                                         </td>
 
-                                        <td>
+                                        <td style="font-size: 18;">
                                             {{ empresa.email|default:"-" }}
                                         </td>
 
@@ -1031,7 +1085,7 @@
                 
 
                     <label for="cartaSeleccionada">
-                        Carta a enviar: 
+                        Próximo Evento:
                     </label>
 
                     <select id="cartaSeleccionada" style="margin-left:20px;font-weight:bold;font-size: 20px;">
@@ -1042,6 +1096,30 @@
 
                         <option value="2">
                             Carta 2
+                        </option>
+
+                        <option value="leyo_carta1">
+                            Leyó Carta 1
+                        </option>
+
+                        <option value="respuesta1_fin">
+                            Respondió Carta 1 - Fin
+                        </option>
+
+                        <option value="respuesta1_click">
+                            Respondió Carta 1 - Click
+                        </option>
+
+                        <option value="leyo_carta2">
+                            Leyó Carta 2
+                        </option>
+
+                        <option value="respuesta2_fin">
+                            Respondió Carta 2 - Fin
+                        </option>
+
+                        <option value="respuesta2_click">
+                            Respondió Carta 2 - Click
                         </option>
 
                     </select>
@@ -1131,17 +1209,27 @@
                         margin-left:53px;
                     "
                 >
+                    <div
+                        style="
+                            display:flex;
+                            align-items:center;
+                            gap:10px;
+                            margin-bottom:0px;
+                        "
+                    >
+
+                    </div>
 
                     <label
-                        for="fechaEnvio"
+                        for="fechaEvento"
                         style="font-weight:bold;"
                     >
-                        Fecha de envío:
+                        Fecha de evento:
                     </label>
 
                     <input
                         type="date"
-                        id="fechaEnvio"
+                        id="fechaEvento"
                     >
 
                     <button
@@ -1161,9 +1249,9 @@
                         id="btnAplicarCartaEnviada"
                         class="boton boton-agregar"
                         
-                        style="margin-left: 43px;font-size: 14px; width: 170px;"
+                        style="margin-left: 43px;font-size: 14px; width: 158px;"
                     >
-                        Aplicar Carta enviada
+                        Aplicar EVENTO
                                                 
                     </button>
                     
@@ -1255,6 +1343,7 @@
                 <div class="opciones-historial">
 
                     <!-- BUSCADOR DE PROVEEDOR -->
+
 
                     <div class="empresa-autocomplete">
 
@@ -1358,8 +1447,8 @@
                             display:flex;
                             justify-content:flex-start;
                             gap:10px;
-                            margin-bottom:10px;
-                            margin-left:12px;
+                            margin-bottom:1px;
+                            margin-left:2px;
                         "
                     >
 
@@ -1386,25 +1475,41 @@
 
                 </div>
 
+                    <div class="resumen-cartas">
 
-                <div class="resumen-cartas">
+                        <div>
+                            Totales:
+                            <strong class="numero-total" id="totalCartasEnviadas"></strong>
 
-                    <span>
-                        Total Cartas Enviadas:
-                        <strong id="totalCartasEnviadas">0</strong>
-                    </span>
+                            <br>
+                            Carta 1:
+                            <strong class="numero-total" id="totalCartas1"></strong>
+                            &nbsp;&nbsp;
+                            Leyó:
+                            <strong class="numero" id="totalLeyoCarta1"></strong>
+                            &nbsp;&nbsp;
+                            Fin:
+                            <strong class="numero" id="totalFinCarta1"></strong>
+                            &nbsp;&nbsp;
+                            ClickUp:
+                            <strong class="numero" id="totalClickCarta1"></strong>
+                            <br>
+                            Carta 2:
+                            <strong class="numero-total" id="totalCartas2"></strong>
+                            &nbsp;&nbsp;
+                            Leyó:
+                            <strong class="numero" id="totalLeyoCarta2"></strong>
+                            &nbsp;&nbsp;
+                            Fin:
+                            <strong class="numero" id="totalFinCarta2"></strong>
+                            &nbsp;&nbsp;
+                            ClickUp:
+                            <strong class="numero" id="totalClickCarta2"></strong>
+                        </div>
 
-                    <span>
-                        Cartas 1:
-                        <strong id="totalCartas1">0</strong>
-                    </span>
+                    </div>
 
-                    <span>
-                        Cartas 2:
-                        <strong id="totalCartas2">0</strong>
-                    </span>
 
-                </div>
 
 
                 <!-- =================================================
@@ -1460,24 +1565,21 @@
                                     </th>
 
                                     <th>
-                                        Recibió
+                                        F/Abrio
                                     </th>
 
                                     <th
                                         class="th-ordenable"
                                         data-columna="fecha_respuesta"
                                     >
-                                        F/respuesta
+                                        F/Resp
                                         <span class="flechas-orden">▲▼</span>
                                     </th>
 
-                                    <th>
-                                        Acciones
-                                    </th>
+
 
                                 </tr>
                             </thead>
-
 
 
 
@@ -1489,8 +1591,10 @@
                                         class="fila-historial"
                                         data-id="{{ seguimiento.id }}"
                                         data-empresa="{{ seguimiento.empresa.id }}"
-                                        data-carta="{{ seguimiento.carta }}"
+                                        data-evento="{{ seguimiento.evento }}"
                                     >
+
+                                        <!-- CHECK -->
                                         <td style="text-align:center;">
                                             <input
                                                 type="checkbox"
@@ -1499,73 +1603,63 @@
                                             >
                                         </td>
 
-                                        <td>{{ seguimiento.empresa.nombre }}</td>
-                                        <td>{{ seguimiento.get_carta_display }}</td>
-                                        <td>
+
+                                        <!-- EMPRESA -->
+                                        <td style="font-size: 18;">
+                                            {{ seguimiento.empresa.nombre }}
+                                        </td>
+
+
+                                        <!-- EVENTO -->
+                                        <td style="font-size: 18;">
+                                            {{ seguimiento.get_evento_display }}
+                                        </td>
+
+
+                                        <!-- FECHA ENVÍO -->
+                                        <td style="font-size: 18;">
                                             {% if seguimiento.fecha_envio %}
                                                 {{ seguimiento.fecha_envio|date:"d/m/Y" }}
                                             {% else %}
                                                 -
                                             {% endif %}
                                         </td>
-                                        <td>
-                                            <select class="campo-recibio">
 
-                                                <option value=""
-                                                    {% if not seguimiento.recibio %}
-                                                        selected
-                                                    {% endif %}
-                                                >
-                                                    -
-                                                </option>
 
-                                                <option value="si"
-                                                    {% if seguimiento.recibio == "si" %}
-                                                        selected
-                                                    {% endif %}
-                                                >
-                                                    Sí
-                                                </option>
+                                        <!-- FECHA APERTURA/RECIBIÓ -->
 
-                                                <option value="no"
-                                                    {% if seguimiento.recibio == "no" %}
-                                                        selected
-                                                    {% endif %}
-                                                >
-                                                    No
-                                                </option>
+                                        <td style="font-size: 18;">
 
-                                            </select>
+                                            {% if seguimiento.fecha_apertura %}
+                                                {{ seguimiento.fecha_apertura|date:"d/m/Y" }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
 
                                         </td>
 
-                                        <td>
+                                        <!-- FECHA RESPUESTA -->
+                                        <td style="font-size: 18;">
 
-                                            <input
-                                                type="date"
-                                                class="campo-fecha"
-                                                value="{% if seguimiento.fecha_respuesta %}{{ seguimiento.fecha_respuesta|date:'Y-m-d' }}{% endif %}"
-                                            >
+                                            {% if seguimiento.fecha_respuesta %}
+                                                {{ seguimiento.fecha_respuesta|date:"d/m/Y" }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+
                                         </td>
 
-                                        <td>
 
-                                            <input
-                                                type="text"
-                                                class="campo-acciones"
-                                                placeholder="Observación..."
-                                                value="{{ seguimiento.acciones|default:'' }}"
-                                            >
-                                        </td>
 
                                     </tr>
+
 
                                 {% empty %}
 
                                     <tr>
 
                                         <td
-                                            colspan="7"
+                                            colspan="6"
                                             style="
                                                 text-align:center;
                                                 padding:25px;
@@ -2194,6 +2288,7 @@ cartaSeleccionada.addEventListener(
    ARMAR AUTOMÁTICAMENTE "CARTA A ENVIAR"
 ========================================================= */
 
+
 function actualizarProveedoresCarta() {
 
     const carta =
@@ -2237,6 +2332,42 @@ function actualizarProveedoresCarta() {
 
             let corresponde = false;
 
+
+            /* =================================================
+               BUSCAR EL ÚLTIMO EVENTO DE ESTA EMPRESA
+            ================================================= */
+
+            const historialEmpresa =
+                filasHistorial.filter(
+                    function (filaHistorial) {
+
+                        return (
+                            filaHistorial.dataset.empresa ===
+                            empresaId
+                        );
+
+                    }
+                );
+
+
+            let ultimoEvento = null;
+
+            if (
+                historialEmpresa.length > 0
+            ) {
+
+                /*
+                   El historial viene ordenado por -id,
+                   por lo tanto la primera fila es
+                   el último evento registrado.
+                */
+
+                ultimoEvento =
+                    historialEmpresa[0].dataset.evento;
+
+            }
+
+
             /* -----------------------------------------
                CARTA 1
                Nunca recibió ninguna carta
@@ -2244,50 +2375,128 @@ function actualizarProveedoresCarta() {
 
             if (carta === "1") {
 
-                const recibioAlguna =
-                    filasHistorial.some(
-                        function (filaHistorial) {
-
-                            return (
-                                filaHistorial.dataset.empresa ===
-                                empresaId
-                            );
-
-                        }
-                    );
-
                 corresponde =
-                    !recibioAlguna;
+                    ultimoEvento === null;
+
             }
+
 
             /* -----------------------------------------
                CARTA 2
-               Ya recibió Carta 1
+               Último evento permitido:
+               - Carta 1
+               - Leyó Carta 1
+               - Respondió Carta 1 - Click
             ----------------------------------------- */
 
             if (carta === "2") {
 
-                const recibioCarta1 =
-                    filasHistorial.some(
-                        function (filaHistorial) {
+                corresponde =
+                    ultimoEvento === "carta1" ||
+                    ultimoEvento === "leyo_carta1" ||
+                    ultimoEvento === "respuesta1_click";
 
-                            return (
-                                filaHistorial.dataset.empresa ===
-                                    empresaId &&
-                                filaHistorial.dataset.carta ===
-                                    "1"
-                            );
+            }
 
-                        }
-                    );
+
+            /* -----------------------------------------
+               LEYÓ CARTA 1
+               Último evento: Carta 1
+            ----------------------------------------- */
+
+            if (carta === "leyo_carta1") {
 
                 corresponde =
-                    recibioCarta1;
+                    ultimoEvento === "carta1";
+
             }
+
+
+            /* -----------------------------------------
+               RESPONDIÓ CARTA 1 - FIN
+               Último evento:
+               - Carta 1
+               - Leyó Carta 1
+            ----------------------------------------- */
+
+            if (carta === "respuesta1_fin") {
+
+                corresponde =
+                    ultimoEvento === "carta1" ||
+                    ultimoEvento === "leyo_carta1";
+
+            }
+
+
+            /* -----------------------------------------
+               RESPONDIÓ CARTA 1 - CLICK
+               Último evento:
+               - Carta 1
+               - Leyó Carta 1
+            ----------------------------------------- */
+
+            if (carta === "respuesta1_click") {
+
+                corresponde =
+                    ultimoEvento === "carta1" ||
+                    ultimoEvento === "leyo_carta1";
+
+            }
+
+
+            /* -----------------------------------------
+               LEYÓ CARTA 2
+               Último evento: Carta 2
+            ----------------------------------------- */
+
+            if (carta === "leyo_carta2") {
+
+                corresponde =
+                    ultimoEvento === "carta2";
+
+            }
+
+
+            /* -----------------------------------------
+               RESPONDIÓ CARTA 2 - FIN
+               Último evento:
+               - Carta 2
+               - Leyó Carta 2
+            ----------------------------------------- */
+
+            if (carta === "respuesta2_fin") {
+
+                corresponde =
+                    ultimoEvento === "carta2" ||
+                    ultimoEvento === "leyo_carta2";
+
+            }
+
+
+            /* -----------------------------------------
+               RESPONDIÓ CARTA 2 - CLICK
+               Último evento:
+               - Carta 2
+               - Leyó Carta 2
+            ----------------------------------------- */
+
+            if (carta === "respuesta2_click") {
+
+                corresponde =
+                    ultimoEvento === "carta2" ||
+                    ultimoEvento === "leyo_carta2";
+
+            }
+
+
+            /* -----------------------------------------
+               SI NO CORRESPONDE
+            ----------------------------------------- */
 
             if (!corresponde) {
                 return;
             }
+
 
             /* -----------------------------------------
                CREAR FILA
@@ -2313,11 +2522,11 @@ function actualizarProveedoresCarta() {
                     >
                 </td>
 
-                <td>
+                <td style="font-size: 18;">
                     ${nombre}
                 </td>
 
-                <td class="fecha-envio">
+                <td class="fecha-envio" style="font-size: 18;">
                     -
                 </td>
             `;
@@ -2332,9 +2541,6 @@ function actualizarProveedoresCarta() {
     actualizarTodosSeleccionados();
     actualizarResumenCartasEnviar();
 }
-
-
-
 
 /* =========================================================
    GENERAR WORD - CARTAS A ENVIAR
@@ -2478,13 +2684,22 @@ btnGenerarWord.addEventListener(
         GENERAR WORD DIRECTAMENTE
         ================================================= */
 
+
         const urlWord =
             "{% url 'exportar_word_mails' %}"
             + "?"
             + params.toString();
 
+
+        // OCULTAR EL CARTEL
+        modalDatosCotizacionWord.style.display =
+            "none";
+
+
+        // GENERAR WORD
         window.location.href =
             urlWord;
+
 
     }
 );
@@ -3145,25 +3360,34 @@ encabezadosOrden.forEach(
                            CARTA
                         --------------------------------- */
 
+
+
                         else if (
                             columna === "carta"
                         ) {
 
+                            const ordenEventos = {
+                                "carta1": 1,
+                                "leyo_carta1": 2,
+                                "respuesta1_fin": 3,
+                                "respuesta1_click": 4,
+                                "carta2": 5,
+                                "leyo_carta2": 6,
+                                "respuesta2_fin": 7,
+                                "respuesta2_click": 8
+                            };
+
                             valorA =
-                                parseInt(
-                                    filaA.dataset.carta,
-                                    10
-                                );
+                                ordenEventos[
+                                    filaA.dataset.evento
+                                ] || 99;
 
                             valorB =
-                                parseInt(
-                                    filaB.dataset.carta,
-                                    10
-                                );
+                                ordenEventos[
+                                    filaB.dataset.evento
+                                ] || 99;
 
                         }
-
-
                         /* ---------------------------------
                            FECHA DE ENVÍO
                         --------------------------------- */
@@ -3569,12 +3793,11 @@ btnAgregar.addEventListener(
 
                     </td>
 
-                    <td>
+                    <td style="font-size: 18;">
                         ${nombre}
                     </td>
 
-
-                    <td class="fecha-envio">
+                    <td class="fecha-envio" style="font-size: 18;">
                         -
                     </td>
 
@@ -3594,7 +3817,10 @@ btnAgregar.addEventListener(
     }
 );
 /* =========================================================
-   APLICAR FECHA DE ENVÍO
+   APLICAR FECHA DE EVENTO
+========================================================= */
+/* =========================================================
+   APLICAR FECHA DEL EVENTO
 ========================================================= */
 
 const btnAplicarFecha =
@@ -3602,20 +3828,22 @@ const btnAplicarFecha =
         "btnAplicarFecha"
     );
 
-const fechaEnvio =
+const fechaEvento =
     document.getElementById(
-        "fechaEnvio"
+        "fechaEvento"
     );
+
+
 
 
 btnAplicarFecha.addEventListener(
     "click",
     function () {
 
-        if (!fechaEnvio.value) {
+        if (!fechaEvento.value) {
 
             alert(
-                "Seleccioná una fecha de envío."
+                "Seleccioná una fecha."
             );
 
             return;
@@ -3626,7 +3854,6 @@ btnAplicarFecha.addEventListener(
             tablaSeleccionados.querySelectorAll(
                 "tr"
             );
-
 
         let cantidad = 0;
 
@@ -3639,7 +3866,6 @@ btnAplicarFecha.addEventListener(
                         ".seleccionado-checkbox"
                     );
 
-
                 if (
                     !checkbox ||
                     !checkbox.checked
@@ -3648,15 +3874,8 @@ btnAplicarFecha.addEventListener(
                 }
 
 
-                const celdaFecha =
-                    fila.querySelector(
-                        ".fecha-envio"
-                    );
-
-
-                /* Fecha para mostrar */
                 const partes =
-                    fechaEnvio.value.split("-");
+                    fechaEvento.value.split("-");
 
                 const fechaFormateada =
                     partes[2] +
@@ -3666,15 +3885,39 @@ btnAplicarFecha.addEventListener(
                     partes[0];
 
 
+                const celdaFecha =
+                    fila.querySelector(
+                        ".fecha-envio"
+                    );
 
                 celdaFecha.textContent =
                     fechaFormateada;
-    
-                /* Guardamos la fecha real
-                   en la fila */
 
-                fila.dataset.fechaEnvio =
-                    fechaEnvio.value;
+
+                /*
+                   Guardamos en la fila
+                   el evento y la fecha
+                */
+
+
+                let eventoActual =
+                    cartaSeleccionada.value;
+
+                if (eventoActual === "1") {
+                    eventoActual = "carta1";
+                }
+
+                if (eventoActual === "2") {
+                    eventoActual = "carta2";
+                }
+
+                fila.dataset.evento =
+                    eventoActual;
+
+
+
+                fila.dataset.fechaEvento =
+                    fechaEvento.value;
 
 
                 cantidad++;
@@ -3694,7 +3937,6 @@ btnAplicarFecha.addEventListener(
 
     }
 );
-
 
 /* =========================================================
    APLICAR CARTA ENVIADA
@@ -3738,23 +3980,21 @@ btnAplicarCartaEnviada.addEventListener(
                     return;
                 }
 
-                const fecha =
-                    fila.dataset.fechaEnvio;
 
+                const fecha = fila.dataset.fechaEvento;
+                const evento = fila.dataset.evento;
 
                 if (!fecha) {
                     return;
                 }               
 
 
+
                 envios.push({
-                    empresa_id:
-                        fila.dataset.empresaId,
-
-                    fecha_envio:
-                        fecha
+                    empresa_id: fila.dataset.empresaId,
+                    evento: evento,
+                    fecha: fecha
                 });
-
 
                 filasParaBorrar.push(
                     fila
@@ -5229,46 +5469,135 @@ actualizarResumenProveedores();
 /* =========================================================
    RESUMEN CARTAS ENVIADAS
 ========================================================= */
+/* =========================================================
+   RESUMEN CARTAS ENVIADAS
+========================================================= */
 
 function actualizarResumenCartas() {
 
-    const filas = document.querySelectorAll(
-        "#tablaHistorial .fila-historial"
-    );
+    const filas =
+        document.querySelectorAll(
+            "#tablaHistorial .fila-historial"
+        );
 
     let total = 0;
+
     let cartas1 = 0;
+    let leyo1 = 0;
+    let fin1 = 0;
+    let click1 = 0;
+
     let cartas2 = 0;
+    let leyo2 = 0;
+    let fin2 = 0;
+    let click2 = 0;
 
-    filas.forEach(function(fila) {
 
-        total++;
+    filas.forEach(
+        function (fila) {
 
-        const carta = fila.dataset.carta;
+            total++;
 
-        if (carta === "1") {
-            cartas1++;
+            const evento =
+                fila.dataset.evento;
+
+
+            /* -----------------------------
+               CARTA 1
+            ----------------------------- */
+
+            if (evento === "carta1") {
+                cartas1++;
+            }
+
+            if (evento === "leyo_carta1") {
+                leyo1++;
+            }
+
+            if (evento === "respuesta1_fin") {
+                fin1++;
+            }
+
+            if (evento === "respuesta1_click") {
+                click1++;
+            }
+
+
+            /* -----------------------------
+               CARTA 2
+            ----------------------------- */
+
+            if (evento === "carta2") {
+                cartas2++;
+            }
+
+            if (evento === "leyo_carta2") {
+                leyo2++;
+            }
+
+            if (evento === "respuesta2_fin") {
+                fin2++;
+            }
+
+            if (evento === "respuesta2_click") {
+                click2++;
+            }
+
         }
+    );
 
-        if (carta === "2") {
-            cartas2++;
-        }
 
-    });
+    /* -----------------------------
+       TOTAL
+    ----------------------------- */
 
     document.getElementById(
         "totalCartasEnviadas"
     ).textContent = total;
+
+
+    /* -----------------------------
+       CARTA 1
+    ----------------------------- */
 
     document.getElementById(
         "totalCartas1"
     ).textContent = cartas1;
 
     document.getElementById(
+        "totalLeyoCarta1"
+    ).textContent = leyo1;
+
+    document.getElementById(
+        "totalFinCarta1"
+    ).textContent = fin1;
+
+    document.getElementById(
+        "totalClickCarta1"
+    ).textContent = click1;
+
+
+    /* -----------------------------
+       CARTA 2
+    ----------------------------- */
+
+    document.getElementById(
         "totalCartas2"
     ).textContent = cartas2;
-}
 
+    document.getElementById(
+        "totalLeyoCarta2"
+    ).textContent = leyo2;
+
+    document.getElementById(
+        "totalFinCarta2"
+    ).textContent = fin2;
+
+    document.getElementById(
+        "totalClickCarta2"
+    ).textContent = click2;
+
+}
 
 actualizarResumenCartas();
 

@@ -307,22 +307,25 @@ class RegistroLicitacion(models.Model):
 # SEGUIMIENTO DE CARTAS
 # ============================================================
 
-class SeguimientoCarta(models.Model):
+# ============================================================
+# SEGUIMIENTO DE CARTAS
+# ============================================================
+# ============================================================
+# SEGUIMIENTO DE CARTAS
+# ============================================================
 
-    CARTA_CHOICES = [
-        ("1", "Carta 1"),
-        ("2", "Carta 2"),
-        ("3", "Carta 3"),
-    ]
+class SeguimientoCartasFlow(models.Model):
 
-    ESTADO_CHOICES = [
-        ("borrador", "Borrador"),
-        ("enviada", "Enviada"),
-    ]
+    EVENTO_CHOICES = [
+        ("carta1", "Carta 1"),
+        ("leyo_carta1", "Leyó Carta 1"),
+        ("respuesta1_fin", "Respondió Carta 1 - Fin"),
+        ("respuesta1_click", "Respondió Carta 1 - Click"),
 
-    RECIBIO_CHOICES = [
-        ("si", "Sí"),
-        ("no", "No"),
+        ("carta2", "Carta 2"),
+        ("leyo_carta2", "Leyó Carta 2"),
+        ("respuesta2_fin", "Respondió Carta 2 - Fin"),
+        ("respuesta2_click", "Respondió Carta 2 - Click"),
     ]
 
     empresa = models.ForeignKey(
@@ -331,15 +334,9 @@ class SeguimientoCarta(models.Model):
         related_name="seguimiento_cartas"
     )
 
-    carta = models.CharField(
-        max_length=1,
-        choices=CARTA_CHOICES
-    )
-
-    estado = models.CharField(
-        max_length=20,
-        choices=ESTADO_CHOICES,
-        default="borrador"
+    evento = models.CharField(
+        max_length=30,
+        choices=EVENTO_CHOICES
     )
 
     fecha_envio = models.DateField(
@@ -347,9 +344,7 @@ class SeguimientoCarta(models.Model):
         null=True
     )
 
-    recibio = models.CharField(
-        max_length=2,
-        choices=RECIBIO_CHOICES,
+    fecha_apertura = models.DateTimeField(
         blank=True,
         null=True
     )
@@ -365,11 +360,12 @@ class SeguimientoCarta(models.Model):
     )
 
     def __str__(self):
-
         return (
-            f"{self.get_carta_display()} - "
+            f"{self.get_evento_display()} - "
             f"{self.empresa.nombre}"
         )
+
+
 # ============================================================
 # PLANTILLAS DE CARTAS
 # ============================================================

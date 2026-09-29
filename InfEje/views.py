@@ -13,7 +13,7 @@ from django.db.models.functions import Coalesce, Cast, Lower
 from .models import (
     Lote,
     Empresa,
-    SeguimientoCarta,
+    SeguimientoCartasFlow,
     CartaPlantilla,
     RegistroLicitacion
 )
@@ -1818,16 +1818,50 @@ def exportar_word_mails(request):
         )
     )
 
+
     if empresa_ids:
+
+        # Solamente empresas que todavía tienen
+        # al menos un registro después de aplicar
+        # los filtros de Word.
+        empresas_con_registros_ids = set()
+
+        for registro in registros:
+
+            if registro.empresa_oferente_id:
+                empresas_con_registros_ids.add(
+                    registro.empresa_oferente_id
+                )
+
+            elif registro.empresa_proveedor_id:
+                empresas_con_registros_ids.add(
+                    registro.empresa_proveedor_id
+                )
+
         empresas_para_registro = (
             Empresa.objects
             .filter(
                 id__in=empresa_ids
             )
+            .filter(
+                id__in=empresas_con_registros_ids
+            )
             .order_by("nombre")
         )
+
     else:
         empresas_para_registro = None
+
+
+
+
+
+
+
+
+
+
+
 
     # ========================================================
     # FILTRO ADICIONAL: EMPRESAS SELECCIONADAS PARA WORD
@@ -2085,13 +2119,15 @@ def seguimiento_cartas(request):
         .order_by("nombre")
     )
 
+    # Se muestran TODOS los eventos del flujo.
+    # La pantalla se encargará de determinar cuál es el último
+    # evento de cada empresa para decidir en qué etapa está.
     seguimientos = (
-        SeguimientoCarta.objects
+        SeguimientoCartasFlow.objects
         .select_related("empresa")
-        .filter(estado="enviada")
         .order_by(
             "empresa__nombre",
-            "-fecha_envio",
+            "-id",
         )
     )
 
@@ -2111,80 +2147,116 @@ def aplicar_cartas_enviadas(request):
 
         datos = json.loads(request.body)
 
-        carta = str(
-            datos.get("carta")
-        )
-
-        envios = datos.get(
-            "envios",
-            []
-        )
-
-
-        if carta not in ["1", "2"]:
-
-            return JsonResponse(
-                {
-                    "ok": False,
-                    "error": "Carta inválida."
-                },
-                status=400
-            )
-
+        envios = datos.get("envios", [])
 
         if not envios:
-
             return JsonResponse(
                 {
                     "ok": False,
-                    "error": "No hay envíos para aplicar."
+                    "error": "No hay eventos para aplicar."
                 },
                 status=400
             )
 
+        eventos_validos = {
+            "carta1",
+            "leyo_carta1",
+            "respuesta1_fin",
+            "respuesta1_click",
+            "carta2",
+            "leyo_carta2",
+            "respuesta2_fin",
+            "respuesta2_click",
+        }
 
         cantidad = 0
 
-
         for envio in envios:
 
-            empresa_id =  envio.get("empresa_id")
+            empresa_id = envio.get("empresa_id")
+            evento = envio.get("evento")
+            fecha_texto = envio.get("fecha")
 
-            fecha_envio =  envio.get("fecha_envio")
-
-            if not empresa_id or not fecha_envio:
+            if (
+                not empresa_id
+                or evento not in eventos_validos
+                or not fecha_texto
+            ):
                 continue
 
-
             try:
-
                 fecha = datetime.strptime(
-                    fecha_envio,
+                    fecha_texto,
                     "%Y-%m-%d"
                 ).date()
 
-            except ValueError:
-
+            except (ValueError, TypeError):
                 continue
-
 
             empresa = Empresa.objects.filter(
                 id=empresa_id
             ).first()
 
-
             if not empresa:
                 continue
 
-            SeguimientoCarta.objects.create(
+            # ----------------------------------------------------
+            # Cada evento guarda la fecha en su campo correspondiente
+            # ----------------------------------------------------
+
+            fecha_envio = None
+            fecha_apertura = None
+            fecha_respuesta = None
+
+            if evento in (
+                "carta1",
+                "carta2",
+            ):
+
+                fecha_envio = fecha
+
+            elif evento in (
+                "leyo_carta1",
+                "leyo_carta2",
+            ):
+
+                fecha_apertura = datetime.combine(
+                    fecha,
+                    datetime.min.time()
+                )
+
+            elif evento in (
+                "respuesta1_fin",
+                "respuesta1_click",
+                "respuesta2_fin",
+                "respuesta2_click",
+            ):
+
+                fecha_respuesta = fecha
+
+
+            # ----------------------------------------------------
+            # CREAR NUEVO EVENTO
+            # ----------------------------------------------------
+
+            SeguimientoCartasFlow.objects.create(
                 empresa=empresa,
-                carta=carta,
-                estado="enviada",
-                fecha_envio=fecha,
+                evento=evento,
+                fecha_envio=fecha_envio,
+                fecha_apertura=fecha_apertura,
+                fecha_respuesta=fecha_respuesta,
             )
 
             cantidad += 1
 
+        if cantidad == 0:
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "No se pudo registrar ningún evento."
+                },
+                status=400
+            )
 
         return JsonResponse(
             {
@@ -2193,14 +2265,12 @@ def aplicar_cartas_enviadas(request):
             }
         )
 
-
     except Exception as e:
 
         print(
-            "ERROR APLICAR CARTAS ENVIADAS:",
+            "ERROR APLICAR EVENTO CARTA:",
             e
         )
-
 
         return JsonResponse(
             {
@@ -2210,8 +2280,18 @@ def aplicar_cartas_enviadas(request):
             status=500
         )
 
+
+
+
+
 @require_POST
 def guardar_seguimiento_carta(request):
+    """
+    Crea nuevos eventos en el historial del flujo.
+
+    Cada cambio de etapa agrega un nuevo registro.
+    Nunca se modifica el evento anterior.
+    """
 
     try:
 
@@ -2222,45 +2302,148 @@ def guardar_seguimiento_carta(request):
             []
         )
 
+        if not seguimientos:
+
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "No hay eventos para guardar."
+                },
+                status=400
+            )
+
+        eventos_validos = {
+            "carta1",
+            "leyo_carta1",
+            "respuesta1_fin",
+            "respuesta1_click",
+            "carta2",
+            "leyo_carta2",
+            "respuesta2_fin",
+            "respuesta2_click",
+        }
+
+        cantidad = 0
+
         for dato in seguimientos:
 
-            seguimiento = SeguimientoCarta.objects.filter(
-                id=dato.get("id")
-            ).first()
+            empresa_id = dato.get(
+                "empresa_id"
+            )
 
-            if not seguimiento:
+            evento = dato.get(
+                "evento"
+            )
+
+            if (
+                not empresa_id
+                or evento not in eventos_validos
+            ):
                 continue
 
-            seguimiento.recibio = (
-                dato.get("recibio") or None
+            empresa = Empresa.objects.filter(
+                id=empresa_id
+            ).first()
+
+            if not empresa:
+                continue
+
+            # ----------------------------------------------------
+            # Inicializar fechas
+            # ----------------------------------------------------
+
+            fecha_envio = None
+            fecha_apertura = None
+            fecha_respuesta = None
+
+            fecha_texto = dato.get(
+                "fecha"
             )
 
-            seguimiento.fecha_respuesta = (
-                datetime.strptime(
-                    dato["fecha_respuesta"],
-                    "%Y-%m-%d"
-                ).date()
-                if dato.get("fecha_respuesta")
-                else None
+            # ----------------------------------------------------
+            # Convertir fecha
+            # ----------------------------------------------------
+
+            fecha = None
+
+            if fecha_texto:
+
+                try:
+
+                    fecha = datetime.strptime(
+                        fecha_texto,
+                        "%Y-%m-%d"
+                    ).date()
+
+                except (
+                    ValueError,
+                    TypeError
+                ):
+
+                    fecha = None
+
+            # ----------------------------------------------------
+            # Guardar la fecha según el evento
+            # ----------------------------------------------------
+
+            if fecha:
+
+                if evento in (
+                    "carta1",
+                    "carta2",
+                ):
+
+                    fecha_envio = fecha
+
+                elif evento in (
+                    "leyo_carta1",
+                    "leyo_carta2",
+                ):
+
+                    fecha_apertura = datetime.combine(
+                        fecha,
+                        datetime.min.time()
+                    )
+
+                elif evento in (
+                    "respuesta1_fin",
+                    "respuesta1_click",
+                    "respuesta2_fin",
+                    "respuesta2_click",
+                ):
+
+                    fecha_respuesta = fecha
+
+            # ----------------------------------------------------
+            # Crear nuevo evento
+            # ----------------------------------------------------
+
+            SeguimientoCartasFlow.objects.create(
+                empresa=empresa,
+                evento=evento,
+                fecha_envio=fecha_envio,
+                fecha_apertura=fecha_apertura,
+                fecha_respuesta=fecha_respuesta,
+                acciones=dato.get(
+                    "acciones"
+                ) or None,
             )
 
-            seguimiento.acciones = (
-                dato.get("acciones") or None
-            )
+            cantidad += 1
 
-            seguimiento.save(
-                update_fields=[
-                    "recibio",
-                    "fecha_respuesta",
-                    "acciones",
-                ]
-            )
-
-        return JsonResponse({
-            "ok": True
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "cantidad": cantidad
+            }
+        )
 
     except Exception as e:
+
+        print(
+            "ERROR GUARDAR SEGUIMIENTO:",
+            e
+        )
 
         return JsonResponse(
             {
@@ -2277,7 +2460,6 @@ def eliminar_seguimiento_carta(request):
     try:
 
         datos = json.loads(request.body)
-
         ids = datos.get("ids", [])
 
         if not ids:
@@ -2286,7 +2468,7 @@ def eliminar_seguimiento_carta(request):
                 "error": "No hay cartas seleccionadas."
             }, status=400)
 
-        SeguimientoCarta.objects.filter(
+        SeguimientoCartasFlow.objects.filter(
             id__in=ids
         ).delete()
 
