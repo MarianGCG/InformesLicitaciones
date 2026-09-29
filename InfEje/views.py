@@ -2176,6 +2176,7 @@ def aplicar_cartas_enviadas(request):
             empresa_id = envio.get("empresa_id")
             evento = envio.get("evento")
             fecha_texto = envio.get("fecha")
+            fecha_envio_anterior_texto = envio.get("fecha_envio_anterior")
 
             if (
                 not empresa_id
@@ -2204,9 +2205,20 @@ def aplicar_cartas_enviadas(request):
             # Cada evento guarda la fecha en su campo correspondiente
             # ----------------------------------------------------
 
+
+            # ----------------------------------------------------
+            # FECHAS DEL EVENTO
+            # ----------------------------------------------------
+
             fecha_envio = None
             fecha_apertura = None
             fecha_respuesta = None
+
+
+            # ----------------------------------------------------
+            # CARTA 1 / CARTA 2
+            # La fecha actual es la fecha de envío
+            # ----------------------------------------------------
 
             if evento in (
                 "carta1",
@@ -2214,6 +2226,15 @@ def aplicar_cartas_enviadas(request):
             ):
 
                 fecha_envio = fecha
+
+
+            # ----------------------------------------------------
+            # LEYÓ CARTA
+            #
+            # La fecha del evento va en fecha_apertura.
+            # Pero además conservamos la fecha original
+            # en que se envió la carta.
+            # ----------------------------------------------------
 
             elif evento in (
                 "leyo_carta1",
@@ -2225,6 +2246,37 @@ def aplicar_cartas_enviadas(request):
                     datetime.min.time()
                 )
 
+
+                fecha_envio_anterior_texto = envio.get(
+                    "fecha_envio_anterior"
+                )
+
+
+                if fecha_envio_anterior_texto:
+
+                    try:
+
+                        fecha_envio = datetime.strptime(
+                            fecha_envio_anterior_texto,
+                            "%Y-%m-%d"
+                        ).date()
+
+                    except (
+                        ValueError,
+                        TypeError
+                    ):
+
+                        fecha_envio = None
+
+
+            # ----------------------------------------------------
+            # RESPUESTA
+            #
+            # La fecha del evento va en fecha_respuesta.
+            # Pero además conservamos la fecha original
+            # en que se envió la carta.
+            # ----------------------------------------------------
+
             elif evento in (
                 "respuesta1_fin",
                 "respuesta1_click",
@@ -2235,6 +2287,26 @@ def aplicar_cartas_enviadas(request):
                 fecha_respuesta = fecha
 
 
+                fecha_envio_anterior_texto = envio.get(
+                    "fecha_envio_anterior"
+                )
+
+
+                if fecha_envio_anterior_texto:
+
+                    try:
+
+                        fecha_envio = datetime.strptime(
+                            fecha_envio_anterior_texto,
+                            "%Y-%m-%d"
+                        ).date()
+
+                    except (
+                        ValueError,
+                        TypeError
+                    ):
+
+                        fecha_envio = None
             # ----------------------------------------------------
             # CREAR NUEVO EVENTO
             # ----------------------------------------------------

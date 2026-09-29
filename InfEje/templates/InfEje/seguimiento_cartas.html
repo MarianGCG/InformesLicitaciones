@@ -1452,13 +1452,6 @@
                         "
                     >
 
-                        <button
-                            type="button"
-                            id="btnGrabarHistorial"
-                            class="boton boton-agregar"
-                        >
-                            💾 Grabar
-                        </button>
 
                         <button
                             type="button"
@@ -1587,13 +1580,14 @@
 
                                 {% for seguimiento in seguimientos %}
 
+
                                     <tr
                                         class="fila-historial"
                                         data-id="{{ seguimiento.id }}"
                                         data-empresa="{{ seguimiento.empresa.id }}"
                                         data-evento="{{ seguimiento.evento }}"
+                                        data-fecha-envio="{% if seguimiento.fecha_envio %}{{ seguimiento.fecha_envio|date:'Y-m-d' }}{% endif %}"
                                     >
-
                                         <!-- CHECK -->
                                         <td style="text-align:center;">
                                             <input
@@ -2288,7 +2282,6 @@ cartaSeleccionada.addEventListener(
    ARMAR AUTOMÁTICAMENTE "CARTA A ENVIAR"
 ========================================================= */
 
-
 function actualizarProveedoresCarta() {
 
     const carta =
@@ -2497,7 +2490,72 @@ function actualizarProveedoresCarta() {
                 return;
             }
 
+            /* =================================================
+               BUSCAR FECHA DEL ÚLTIMO ENVÍO
+               
+               Si estamos trabajando con:
+               - Leyó Carta 1
+               - Respondió Carta 1
+               
+               buscamos la última Carta 1.
 
+               Si estamos trabajando con:
+               - Leyó Carta 2
+               - Respondió Carta 2
+               
+               buscamos la última Carta 2.
+            ================================================= */
+
+            let eventoEnvioAnterior = null;
+
+            if (
+                carta === "leyo_carta1" ||
+                carta === "respuesta1_fin" ||
+                carta === "respuesta1_click"
+            ) {
+
+                eventoEnvioAnterior = "carta1";
+
+            }
+
+            if (
+                carta === "leyo_carta2" ||
+                carta === "respuesta2_fin" ||
+                carta === "respuesta2_click"
+            ) {
+
+                eventoEnvioAnterior = "carta2";
+
+            }
+
+
+            let fechaEnvioAnterior = null;
+
+
+            if (eventoEnvioAnterior) {
+
+                const filaEnvioAnterior =
+                    historialEmpresa.find(
+                        function (filaHistorial) {
+
+                            return (
+                                filaHistorial.dataset.evento ===
+                                    eventoEnvioAnterior &&
+                                filaHistorial.dataset.fechaEnvio
+                            );
+
+                        }
+                    );
+
+
+                if (filaEnvioAnterior) {
+
+                    fechaEnvioAnterior =
+                        filaEnvioAnterior.dataset.fechaEnvio;
+
+                }
+
+            }
             /* -----------------------------------------
                CREAR FILA
             ----------------------------------------- */
@@ -2512,6 +2570,9 @@ function actualizarProveedoresCarta() {
 
             nuevaFila.dataset.empresaId =
                 empresaId;
+
+            nuevaFila.dataset.fechaEnvioAnterior =
+                    fechaEnvioAnterior || "";
 
             nuevaFila.innerHTML = `
                 <td style="text-align:center;">
@@ -3780,6 +3841,9 @@ btnAgregar.addEventListener(
                 nuevaFila.dataset.empresaId =
                     empresaId;
 
+                nuevaFila.dataset.fechaEnvioAnterior =
+                    fechaEnvioAnterior || "";
+
 
                 nuevaFila.innerHTML = `
 
@@ -3981,20 +4045,37 @@ btnAplicarCartaEnviada.addEventListener(
                 }
 
 
-                const fecha = fila.dataset.fechaEvento;
-                const evento = fila.dataset.evento;
+                const fecha =
+                    fila.dataset.fechaEvento;
+
+                const evento =
+                    fila.dataset.evento;
+
+                const fechaEnvioAnterior =
+                    fila.dataset.fechaEnvioAnterior;
+
 
                 if (!fecha) {
                     return;
-                }               
-
+                }
 
 
                 envios.push({
-                    empresa_id: fila.dataset.empresaId,
-                    evento: evento,
-                    fecha: fecha
+
+                    empresa_id:
+                        fila.dataset.empresaId,
+
+                    evento:
+                        evento,
+
+                    fecha:
+                        fecha,
+
+                    fecha_envio_anterior:
+                        fechaEnvioAnterior || null
+
                 });
+
 
                 filasParaBorrar.push(
                     fila
@@ -5060,182 +5141,6 @@ document.addEventListener(
 );
 console.log("COMBO EMPRESA CARGADO");
 
-
-/* =========================================================
-   GRABAR SEGUIMIENTO DE CARTAS
-========================================================= */
-
-const btnGrabarHistorial =
-    document.getElementById(
-        "btnGrabarHistorial"
-    );
-
-btnGrabarHistorial.addEventListener(
-    "click",
-    function () {
-
-        const filas =
-            document.querySelectorAll(
-                "#tablaHistorial .fila-historial"
-            );
-
-        const seguimientos = [];
-
-        filas.forEach(
-            function (fila) {
-
-                const checkbox =
-                    fila.querySelector(
-                        ".historial-checkbox"
-                    );
-
-                if (
-                    !checkbox ||
-                    !checkbox.checked
-                ) {
-                    return;
-                }
-
-                const recibio =
-                    fila.querySelector(
-                        ".campo-recibio"
-                    );
-
-                const fechaRespuesta =
-                    fila.querySelector(
-                        ".campo-fecha"
-                    );
-
-                const acciones =
-                    fila.querySelector(
-                        ".campo-acciones"
-                    );
-
-                seguimientos.push({
-
-                    id:
-                        fila.dataset.id,
-
-                    recibio:
-                        recibio.value,
-
-                    fecha_respuesta:
-                        fechaRespuesta.value,
-
-                    acciones:
-                        acciones.value
-
-                });
-
-            }
-        );
-
-
-        if (seguimientos.length === 0) {
-
-            alert(
-                "Seleccioná al menos una carta."
-            );
-
-            return;
-
-        }
-
-
-        const csrfInput =
-            document.querySelector(
-                "[name=csrfmiddlewaretoken]"
-            );
-
-        if (!csrfInput) {
-
-            alert(
-                "No se encontró el token CSRF."
-            );
-
-            return;
-
-        }
-
-
-        fetch(
-            "/api/guardar-seguimiento-carta/",
-            {
-
-                method: "POST",
-
-                headers: {
-
-                    "Content-Type":
-                        "application/json",
-
-                    "X-CSRFToken":
-                        csrfInput.value
-
-                },
-
-                body: JSON.stringify({
-
-                    seguimientos:
-                        seguimientos
-
-                })
-
-            }
-        )
-
-        .then(
-            function (response) {
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        "Error HTTP " +
-                        response.status
-                    );
-
-                }
-
-                return response.json();
-
-            }
-        )
-
-        .then(
-            function (data) {
-
-                if (!data.ok) {
-
-                    alert(
-                        data.error ||
-                        "No se pudieron guardar los cambios."
-                    );
-
-                    return;
-
-                }
-
-                alert(
-                    "Cambios guardados correctamente."
-                );
-
-            }
-        )
-
-        .catch(
-            function (error) {
-
-                console.error(error);
-
-                alert(
-                    "Error al guardar los cambios."
-                );
-
-            }
-        );
-
-    }
-);
 
 /* =========================================================
    ELIMINAR SEGUIMIENTO DE CARTAS
