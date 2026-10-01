@@ -2384,19 +2384,72 @@ function actualizarProveedoresCarta() {
             }
 
 
+
             /* -----------------------------------------
-               CARTA 2
-               Último evento permitido:
-               - Carta 1
-               - Leyó Carta 1
-               - Respondió Carta 1 - Click
+            CARTA 2
+
+            Debe:
+            - Haber recibido Carta 1
+            - NO haber recibido Carta 2
+            - NO haber respondido Carta 1 - Click
+            - NO haber respondido Carta 1 - Fin
             ----------------------------------------- */
 
             if (carta === "2") {
 
+                const tieneCarta1 =
+                    historialEmpresa.some(
+                        function (filaHistorial) {
+
+                            return (
+                                filaHistorial.dataset.evento ===
+                                "carta1"
+                            );
+
+                        }
+                    );
+
+                const tieneCarta2 =
+                    historialEmpresa.some(
+                        function (filaHistorial) {
+
+                            return (
+                                filaHistorial.dataset.evento ===
+                                "carta2"
+                            );
+
+                        }
+                    );
+
+                const respondioCarta1Click =
+                    historialEmpresa.some(
+                        function (filaHistorial) {
+
+                            return (
+                                filaHistorial.dataset.evento ===
+                                "respuesta1_click"
+                            );
+
+                        }
+                    );
+
+                const respondioCarta1Fin =
+                    historialEmpresa.some(
+                        function (filaHistorial) {
+
+                            return (
+                                filaHistorial.dataset.evento ===
+                                "respuesta1_fin"
+                            );
+
+                        }
+                    );
+
                 corresponde =
-                    ultimoEvento === "carta1" ||
-                    ultimoEvento === "leyo_carta1" ;
+                    tieneCarta1 &&
+                    !tieneCarta2 &&
+                    !respondioCarta1Click &&
+                    !respondioCarta1Fin;
 
             }
 
