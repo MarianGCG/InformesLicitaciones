@@ -2256,8 +2256,7 @@ def exportar_excel_seguimiento_cartas(request):
     # =========================================================
 
 
-    def escribir_pestana(ws, grupos, titulo):
-
+    def escribir_pestana(ws, grupos, titulo, resumen=False):
         # Título en A1
         celda_titulo = ws["A1"]
         celda_titulo.value = titulo
@@ -2275,7 +2274,60 @@ def exportar_excel_seguimiento_cartas(request):
                 column=columna
             ).border = borde_titulo
 
-        fila = 3
+        # Resumen solamente para la pestaña Demás
+        if resumen:
+
+            total_proveedores = len(grupos)
+
+            total_carta1 = sum(
+                1
+                for registros in grupos
+                for registro in registros
+                if registro.evento == "carta1"
+            )
+
+            total_carta2 = sum(
+                1
+                for registros in grupos
+                for registro in registros
+                if registro.evento == "carta2"
+            )
+
+            ws["A2"] = "Proveedores"
+            ws["B2"] = total_proveedores
+
+            ws["A3"] = "Carta 1"
+            ws["B3"] = total_carta1
+
+            ws["A4"] = "Carta 2"
+            ws["B4"] = total_carta2
+
+            # Negrita y alineación a la izquierda
+            for fila_resumen in range(2, 5):
+                ws.cell(
+                    row=fila_resumen,
+                    column=1
+                ).font = Font(bold=True)
+
+                ws.cell(
+                    row=fila_resumen,
+                    column=2
+                ).font = Font(bold=True)
+
+                ws.cell(
+                    row=fila_resumen,
+                    column=1
+                ).alignment = Alignment(horizontal="left")
+
+                ws.cell(
+                    row=fila_resumen,
+                    column=2
+                ).alignment = Alignment(horizontal="left")
+
+            fila = 6
+
+        else:
+            fila = 3
 
         encabezados = [
             "Empresa",
@@ -2291,13 +2343,25 @@ def exportar_excel_seguimiento_cartas(request):
             "Provincia",
         ]
 
+
+
+
+        borde_encabezado = Border(
+            top=Side(style="medium"),
+            bottom=Side(style="medium")
+        )
+
         for columna, encabezado in enumerate(encabezados, start=1):
+
             celda = ws.cell(
                 row=fila,
                 column=columna,
                 value=encabezado
             )
+
             celda.font = fuente_titulo
+            celda.border = borde_encabezado
+
 
         fila += 1
 
@@ -2477,11 +2541,16 @@ def exportar_excel_seguimiento_cartas(request):
         f"LICITACIONES - PROVEEDORES - FIN al {fecha_informe}"
     )
 
+
     escribir_pestana(
         ws_demas,
         grupo_demas,
-        f"LICITACIONES - PROVEEDORES - al {fecha_informe}"
+        f"LICITACIONES - PROVEEDORES - al {fecha_informe}",
+        resumen=True
     )
+
+
+
     # =========================================================
     # RESPUESTA
     # =========================================================
