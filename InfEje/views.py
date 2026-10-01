@@ -2127,7 +2127,8 @@ def seguimiento_cartas(request):
         .select_related("empresa")
         .order_by(
             "empresa__nombre",
-            "-id",
+            "fecha_envio",
+            "id",
         )
     )
 
@@ -2139,6 +2140,375 @@ def seguimiento_cartas(request):
             "seguimientos": seguimientos,
         }
     )
+
+def exportar_excel_seguimiento_cartas(request):
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from django.http import HttpResponse
+
+    # =========================================================
+    # TODOS LOS EVENTOS
+    # =========================================================
+
+    seguimientos = (
+        SeguimientoCartasFlow.objects
+        .select_related("empresa")
+        .order_by(
+            "empresa__nombre",
+            "id",
+        )
+    )
+
+    # =========================================================
+    # AGRUPAR POR PROVEEDOR
+    # =========================================================
+
+    proveedores = {}
+
+    for seguimiento in seguimientos:
+
+        empresa_id = seguimiento.empresa_id
+
+        if empresa_id not in proveedores:
+            proveedores[empresa_id] = []
+
+        proveedores[empresa_id].append(
+            seguimiento
+        )
+
+    # =========================================================
+    # CLASIFICAR PROVEEDORES
+    # =========================================================
+
+    grupo_clicks = []
+    grupo_fin = []
+    grupo_demas = []
+
+    for empresa_id, registros in proveedores.items():
+
+        eventos = {registro.evento for registro in registros}
+
+        tiene_click = (
+            "respuesta1_click" in eventos
+            or "respuesta2_click" in eventos
+        )
+
+        tiene_fin = (
+            "respuesta1_fin" in eventos
+            or "respuesta2_fin" in eventos
+        )
+
+        # Ordenar los movimientos del proveedor
+        # por Fecha de Envío
+        registros = sorted(
+            registros,
+            key=lambda r: (
+                r.fecha_envio is None,
+                r.fecha_envio,
+                r.id,
+            )
+        )
+
+        if tiene_click:
+            grupo_clicks.append(registros)
+
+        elif tiene_fin:
+            grupo_fin.append(registros)
+
+        else:
+            grupo_demas.append(registros)
+
+
+    # =========================================================
+    # CREAR EXCEL
+    # =========================================================
+
+    wb = Workbook()
+
+    ws_clicks = wb.active
+    ws_clicks.title = "Clicks"
+
+    ws_fin = wb.create_sheet(
+        "Fin"
+    )
+
+    ws_demas = wb.create_sheet(
+        "Demás"
+    )
+
+    # =========================================================
+    # ESTILOS
+    # =========================================================
+
+    fuente_titulo = Font(
+        bold=True
+    )
+
+    borde_separador = Border(
+        bottom=Side(
+            style="thin"
+        )
+    )
+
+    # =========================================================
+    # FUNCIÓN PARA ESCRIBIR CADA PESTAÑA
+    # =========================================================
+
+
+    def escribir_pestana(ws, grupos, titulo):
+
+        # Título en A1
+        celda_titulo = ws["A1"]
+        celda_titulo.value = titulo
+        celda_titulo.font = Font(bold=True)
+
+        # Borde superior e inferior desde A hasta K
+        borde_titulo = Border(
+            top=Side(style="medium"),
+            bottom=Side(style="medium")
+        )
+
+        for columna in range(1, 12):
+            ws.cell(
+                row=1,
+                column=columna
+            ).border = borde_titulo
+
+        fila = 3
+
+        encabezados = [
+            "Empresa",
+            "Evento",
+            "Fecha envío",
+            "Fecha apertura",
+            "Fecha respuesta",
+            "Acciones",
+            "Teléfono",
+            "Mail 1",
+            "Mail 2",
+            "Mail 3",
+            "Provincia",
+        ]
+
+        for columna, encabezado in enumerate(encabezados, start=1):
+            celda = ws.cell(
+                row=fila,
+                column=columna,
+                value=encabezado
+            )
+            celda.font = fuente_titulo
+
+        fila += 1
+
+        # -----------------------------------------
+        # PROVEEDORES
+        # -----------------------------------------
+
+        for registros in grupos:
+
+            for registro in registros:
+
+                ws.cell(
+                    row=fila,
+                    column=1,
+                    value=registro.empresa.nombre
+                )
+
+                ws.cell(
+                    row=fila,
+                    column=2,
+                    value=registro.get_evento_display()
+                )
+
+
+                # -----------------------------------------
+                # FECHAS
+                # -----------------------------------------
+
+                fecha_envio = registro.fecha_envio
+
+                fecha_apertura = registro.fecha_apertura
+
+                fecha_respuesta = registro.fecha_respuesta
+
+
+                # Excel no admite datetimes con timezone
+                if fecha_apertura is not None:
+
+                    fecha_apertura = fecha_apertura.replace(
+                        tzinfo=None
+                    )
+
+
+                # -----------------------------------------
+                # ESCRIBIR FECHAS
+                # -----------------------------------------
+
+                celda_fecha_envio = ws.cell(
+                    row=fila,
+                    column=3,
+                    value=fecha_envio
+                )
+
+                celda_fecha_apertura = ws.cell(
+                    row=fila,
+                    column=4,
+                    value=fecha_apertura
+                )
+
+                celda_fecha_respuesta = ws.cell(
+                    row=fila,
+                    column=5,
+                    value=fecha_respuesta
+                )
+
+
+                # -----------------------------------------
+                # FORMATO DD/MM/YYYY
+                # -----------------------------------------
+
+                if fecha_envio is not None:
+
+                    celda_fecha_envio.number_format = "dd/mm/yyyy"
+
+
+                if fecha_apertura is not None:
+
+                    celda_fecha_apertura.number_format = "dd/mm/yyyy"
+
+
+                if fecha_respuesta is not None:
+
+                    celda_fecha_respuesta.number_format = "dd/mm/yyyy"
+
+                ws.cell(
+                    row=fila,
+                    column=6,
+                    value=registro.acciones
+                )
+
+                ws.cell(
+                    row=fila,
+                    column=7,
+                    value=registro.empresa.telefono
+                )
+
+                ws.cell(
+                    row=fila,
+                    column=8,
+                    value=registro.empresa.email
+                )
+
+                ws.cell(
+                    row=fila,
+                    column=9,
+                    value=registro.empresa.email_2
+                )
+
+                ws.cell(
+                    row=fila,
+                    column=10,
+                    value=registro.empresa.email_3
+                )
+
+                ws.cell(
+                    row=fila,
+                    column=11,
+                    value=registro.empresa.provincia
+                )
+                fila += 1
+
+            # -------------------------------------
+            # LÍNEA ENTRE PROVEEDORES
+            # -------------------------------------
+
+            for columna in range(
+                1,
+                12
+            ):
+
+                ws.cell(
+                    row=fila,
+                    column=columna
+                ).border = borde_separador
+
+            fila += 1
+
+        # -----------------------------------------
+        # ANCHO DE COLUMNAS
+        # -----------------------------------------
+
+        anchos = {
+            "A": 35,
+            "B": 30,
+            "C": 15,
+            "D": 18,
+            "E": 18,
+            "F": 40,
+            "G": 18,
+            "H": 30,
+            "I": 30,
+            "J": 30,
+            "K": 20,
+        }
+        for columna, ancho in anchos.items():
+
+            ws.column_dimensions[
+                columna
+            ].width = ancho
+
+    # =========================================================
+    # ESCRIBIR LAS 3 PESTAÑAS
+    # =========================================================
+
+
+    fecha_informe = date.today().strftime("%d/%m/%Y")
+
+    escribir_pestana(
+        ws_clicks,
+        grupo_clicks,
+        f"LICITACIONES - PROVEEDORES - CLICK al {fecha_informe}"
+    )
+
+    escribir_pestana(
+        ws_fin,
+        grupo_fin,
+        f"LICITACIONES - PROVEEDORES - FIN al {fecha_informe}"
+    )
+
+    escribir_pestana(
+        ws_demas,
+        grupo_demas,
+        f"LICITACIONES - PROVEEDORES - al {fecha_informe}"
+    )
+    # =========================================================
+    # RESPUESTA
+    # =========================================================
+
+    respuesta = HttpResponse(
+        content_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        )
+    )
+
+
+
+    respuesta[
+        "Content-Disposition"
+    ] = (
+        'attachment; '
+        f'filename="Licitaciones-Informe {date.today().strftime("%Y-%m-%d")}.xlsx"'
+    )
+
+
+    wb.save(
+        respuesta
+    )
+
+    return respuesta
+
 
 @require_POST
 def aplicar_cartas_enviadas(request):

@@ -88,6 +88,13 @@ urlpatterns = [
         views.seguimiento_cartas,
         name="seguimiento_cartas",
     ),
+
+    path(
+        "exportar-excel-seguimiento-cartas/",
+        views.exportar_excel_seguimiento_cartas,
+        name="exportar_excel_seguimiento_cartas"
+    ),
+
     path(
         "editar-carta/",
         views.editar_carta,
