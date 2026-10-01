@@ -1167,7 +1167,7 @@
                         Quitar
                     </button>
 
-                    <label style="margin-left: 72px;">
+                    <label style="margin-left: 65px;">
                           Generar:
                     </label>
 
@@ -1195,7 +1195,21 @@
                     </button>
 
 
-
+                    <button
+                        type="button"
+                        id="btnCSVdoppler"
+                        class="boton-destino"
+                        style="
+                            background:#6f42c1;
+                            color:white;
+                            margin-left:4px;
+                            width:100px;
+                            border:none;
+                            cursor:pointer;
+                        "
+                    >
+                        CSV<br>DOPPLER
+                    </button>
                 </div>
 
                 <div
@@ -2370,6 +2384,23 @@ function actualizarProveedoresCarta() {
 
             }
 
+            // Revisar todo el historial del proveedor
+            const tieneCarta1 = historialEmpresa.some(
+                filaHistorial => filaHistorial.dataset.evento === "carta1"
+            );
+
+            const tieneCarta2 = historialEmpresa.some(
+                filaHistorial => filaHistorial.dataset.evento === "carta2"
+            );
+
+            const tieneRespuesta = historialEmpresa.some(
+                filaHistorial => [
+                    "respuesta1_fin",
+                    "respuesta1_click",
+                    "respuesta2_fin",
+                    "respuesta2_click"
+                ].includes(filaHistorial.dataset.evento)
+            );
 
             /* -----------------------------------------
                CARTA 1
@@ -2397,29 +2428,6 @@ function actualizarProveedoresCarta() {
 
             if (carta === "2") {
 
-                const tieneCarta1 =
-                    historialEmpresa.some(
-                        function (filaHistorial) {
-
-                            return (
-                                filaHistorial.dataset.evento ===
-                                "carta1"
-                            );
-
-                        }
-                    );
-
-                const tieneCarta2 =
-                    historialEmpresa.some(
-                        function (filaHistorial) {
-
-                            return (
-                                filaHistorial.dataset.evento ===
-                                "carta2"
-                            );
-
-                        }
-                    );
 
                 const respondioCarta1Click =
                     historialEmpresa.some(
@@ -2454,95 +2462,36 @@ function actualizarProveedoresCarta() {
             }
 
 
-            /* -----------------------------------------
-               LEYÓ CARTA 1
-               Último evento: Carta 1
-            ----------------------------------------- */
-
+            // LEYÓ CARTA 1
             if (carta === "leyo_carta1") {
-
-                corresponde =
-                    ultimoEvento === "carta1";
-
+                corresponde = tieneCarta1 && !tieneRespuesta;
             }
 
-
-            /* -----------------------------------------
-               RESPONDIÓ CARTA 1 - FIN
-               Último evento:
-               - Carta 1
-               - Leyó Carta 1
-            ----------------------------------------- */
-
+            // RESPONDIÓ CARTA 1 - FIN
             if (carta === "respuesta1_fin") {
-
-                corresponde =
-                    ultimoEvento === "carta1" ||
-                    ultimoEvento === "leyo_carta1";
-
+                corresponde = tieneCarta1 && !tieneRespuesta;
             }
 
-
-            /* -----------------------------------------
-               RESPONDIÓ CARTA 1 - CLICK
-               Último evento:
-               - Carta 1
-               - Leyó Carta 1
-            ----------------------------------------- */
-
+            // RESPONDIÓ CARTA 1 - CLICK
             if (carta === "respuesta1_click") {
-
-                corresponde =
-                    ultimoEvento === "carta1" ||
-                    ultimoEvento === "leyo_carta1";
-
+                corresponde = tieneCarta1 && !tieneRespuesta;
             }
 
-
-            /* -----------------------------------------
-               LEYÓ CARTA 2
-               Último evento: Carta 2
-            ----------------------------------------- */
-
+                        
+            // LEYÓ CARTA 2
             if (carta === "leyo_carta2") {
-
-                corresponde =
-                    ultimoEvento === "carta2";
-
+                corresponde = tieneCarta2 && !tieneRespuesta;
             }
 
-
-            /* -----------------------------------------
-               RESPONDIÓ CARTA 2 - FIN
-               Último evento:
-               - Carta 2
-               - Leyó Carta 2
-            ----------------------------------------- */
-
+            // RESPONDIÓ CARTA 2 - FIN
             if (carta === "respuesta2_fin") {
-
-                corresponde =
-                    ultimoEvento === "carta2" ||
-                    ultimoEvento === "leyo_carta2";
-
+                corresponde = tieneCarta2 && !tieneRespuesta;
             }
 
-
-            /* -----------------------------------------
-               RESPONDIÓ CARTA 2 - CLICK
-               Último evento:
-               - Carta 2
-               - Leyó Carta 2
-            ----------------------------------------- */
-
+            // RESPONDIÓ CARTA 2 - CLICK
             if (carta === "respuesta2_click") {
-
-                corresponde =
-                    ultimoEvento === "carta2" ||
-                    ultimoEvento === "leyo_carta2";
-
+                corresponde = tieneCarta2 && !tieneRespuesta;
             }
-
 
             /* -----------------------------------------
                SI NO CORRESPONDE
@@ -5601,7 +5550,42 @@ function actualizarResumenCartasEnviar() {
 
 </script>
 
+<script>
+document.getElementById("btnCSVdoppler").addEventListener(
+    "click",
+    async function (event) {
 
+        event.preventDefault();
+
+        try {
+            const respuesta = await fetch(
+                "{% url 'exportar_csv_doppler' %}"
+            );
+
+            if (!respuesta.ok) {
+                throw new Error("No se pudo generar el CSV.");
+            }
+
+            const blob = await respuesta.blob();
+            const urlBlob = window.URL.createObjectURL(blob);
+
+            const enlace = document.createElement("a");
+            enlace.href = urlBlob;
+            enlace.download = "doppler_licitaciones.csv";
+
+            document.body.appendChild(enlace);
+            enlace.click();
+            enlace.remove();
+
+            window.URL.revokeObjectURL(urlBlob);
+
+        } catch (error) {
+            console.error(error);
+            alert("Ocurrió un error al generar el CSV.");
+        }
+    }
+);
+</script>
 </body>
 
 </html>
