@@ -1997,13 +1997,13 @@ def exportar_word_mails(request):
             if cuit != cuit_actual
         ]
 
+
         registro.competidores = " ; ".join(
             sorted(
-                nombres,
+                (nombre for nombre in nombres if nombre),
                 key=str.lower
             )
         )
-
     # ========================================================
     # AGRUPAR POR EMPRESA
     # ========================================================
