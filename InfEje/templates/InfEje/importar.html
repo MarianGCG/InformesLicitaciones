@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <html lang="es">
-
+{% load static %}
 <head>
 
     <meta charset="UTF-8">
@@ -211,6 +211,15 @@
                     VOLVER
                 </a>
 
+                <button
+                    type="button"
+                    class="boton"
+                    id="btnAyuda"
+                    style="background:#198754;"
+                >
+                    AYUDA
+                </button>
+
             </div>
 
         </form>
@@ -219,6 +228,78 @@
 
 </div>
 
-</body>
+<!-- PANTALLA DE AYUDA -->
+<div
+    id="modalAyuda"
+    style="
+        display:none;
+        position:fixed;
+        inset:0;
+        z-index:10000;
+        background:rgba(0,0,0,.65);
+        overflow:auto;
+        padding:25px;
+    "
+>
+    <div
+        style="
+            position:relative;
+            max-width:1800px;
+            margin:0 auto;
+            background:white;
+            padding:15px;
+            border-radius:10px;
+        "
+    >
+        <button
+            type="button"
+            id="btnCerrarAyuda"
+            class="boton"
+            style="
+                background:#dc3545;
+                float:right;
+                margin-bottom:10px;
+            "
+        >
+            CERRAR ✕
+        </button>
 
+        <div style="clear:both;"></div>
+
+        <img
+            src="{% static 'Licitaciones-Help1.jpg' %}"
+            alt="Ayuda para importar licitaciones desde Excel"
+            style="
+                display:block;
+                width:100%;
+                height:auto;
+                max-height:85vh;
+                object-fit:contain;
+            "
+        >
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById("modalAyuda");
+    const btnAyuda = document.getElementById("btnAyuda");
+    const btnCerrar = document.getElementById("btnCerrarAyuda");
+
+    btnAyuda.addEventListener("click", function () {
+        modal.style.display = "block";
+    });
+
+    btnCerrar.addEventListener("click", function () {
+        modal.style.display = "none";
+    });
+
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
+    });
+});
+</script>
+</body>
 </html>

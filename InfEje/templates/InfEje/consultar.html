@@ -1,3 +1,4 @@
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="es">
 
@@ -1572,8 +1573,8 @@
                 <!-- BOTONES -->
                 <div class="zona-botones">
 
+                    <!-- FILA 1 -->
                     <div class="botones-filtros botones-filtros-superior">
-
                         <button
                             type="submit"
                             class="boton"
@@ -1589,19 +1590,10 @@
                         >
                             EMPRESAS
                         </a>
-
-                        <a
-                            href="{% url 'importar' %}"
-                            class="boton-pdf"
-                            style="background:#fd7e14;"
-                        >
-                            Importar EXCEL
-                        </a>
-
                     </div>
 
+                    <!-- FILA 2 -->
                     <div class="botones-filtros botones-filtros-inferior">
-
                         <a
                             href="#"
                             id="btnExportarPDF"
@@ -1617,49 +1609,29 @@
                         >
                             Exportar PDF por EMPRESA
                         </button>
+                    </div>
 
+                    <!-- FILA 3 -->
+                    <div class="botones-filtros botones-filtros-inferior">
                         <a
-                            href="#"
-                            id="btnCSVdoppler"
+                            href="{% url 'importar' %}"
                             class="boton-pdf"
-                            style="background:#6f42c1;"
+                            style="background:#fd7e14;"
                         >
-                            CSV DOPPLER
+                            Importar EXCEL
                         </a>
 
-
-                    </div>
-                    <div class="botones-filtros botones-filtros-inferior">
-
-                        
-                           
-                           
-                            
-                           
-                        
-                        
-                        
-
                         <a
-                            href="{% url 'seguimiento_cartas' %}"                             
+                            href="{% url 'seguimiento_cartas' %}"
                             class="boton-pdf"
-                            style="background:#fd7e14; width:580px;"                            
+                            style="background:#fd7e14;"
                         >
                             Seguimiento de Cartas
                         </a>
-
-                        <button
-                            type="button"
-                            id=""
-                            class="boton-pdf"
-                            style="background:#374151; width:580px; visibility:hidden;"
-                        >
-                        </button>
-
                     </div>
 
-
                 </div>
+
                 
             </div>
 
@@ -2176,7 +2148,8 @@
                                 <td>{{total.cuit }}</td>
                                 <td class="numero">{{ total.procesos_distintos }}</td>
                                 <td class="numero">{{ total.procesos_renglones }}</td>
-                                <td class="numero">{{ total.total_ofertas|floatformat:2 }}</td>
+                                <td class="numero"><span class="formato-importe">{{ total.total_ofertas|floatformat:2 }}</span></td>
+                                
                             </tr>
                         {% empty %}
                             <tr>
@@ -2191,9 +2164,10 @@
                         {% if totales_empresas %}
                             <tr class="total-final">
                                 <td>TOTAL</td>
+                                <td></td>
                                 <td class="numero">{{ total_procesos_distintos }}</td>
                                 <td class="numero">{{ total_procesos_renglones }}</td>
-                                <td class="numero">{{ total_ofertas|floatformat:2 }}</td>
+                                <td class="numero"><span class="formato-importe">{{ total_ofertas|floatformat:2 }}</span></td>
                             </tr>
                         {% endif %}
                     </tbody>
@@ -4500,107 +4474,407 @@ document.getElementById("btnCSVdoppler").addEventListener(
     );
 
 </script>
+
 <script>
 /* =========================================================
-   ORDENAR RESULTADOS POR OFERTA
-   Clic en "Oferta":
-   1er clic  → mayor a menor
-   2do clic  → menor a mayor
-   ========================================================= */
+   ORDENAR TABLA RESULTADOS
+   - Texto: A a Z / Z a A
+   - Oferta: mayor a menor / menor a mayor
+   - Fechas: más reciente / más antigua
+   - Vacíos y guiones al final
+========================================================= */
 
 document.addEventListener("DOMContentLoaded", function () {
 
     const tabla = document.querySelector(
-        ".tabla-contenedor table"
+        ".tabla-contenedor table:not(.totales-tabla)"
     );
 
     if (!tabla) return;
 
-    const thOferta =
-        document.getElementById("thOferta");
+    const tbody = tabla.querySelector("tbody");
+    if (!tbody) return;
 
-    if (!thOferta) return;
+    const encabezados = Array.from(
+        tabla.querySelectorAll("thead th")
+    );
 
-    if (!thOferta) return;
+    const ordenColumnas = {};
 
-    let ordenOfertaDescendente = true;
-    const flechaOferta =
-        document.getElementById("flechaOferta");
+    function textoEncabezado(th) {
+        const copia = th.cloneNode(true);
 
-
-    thOferta.style.cursor = "pointer";
-    thOferta.title = "Ordenar por Oferta";
-
-    thOferta.addEventListener("click", function () {
-
-        const tbody = tabla.querySelector("tbody");
-
-        if (!tbody) return;
-
-        const filas = Array.from(
-            tbody.querySelectorAll("tr.fila-resultado")
+        copia.querySelectorAll("button, span").forEach(
+            elemento => elemento.remove()
         );
 
-        filas.sort(function (filaA, filaB) {
+        return copia.textContent.trim().toLowerCase();
+    }
 
-            const celdaA = filaA.cells[
-                thOferta.cellIndex
-            ];
+    function obtenerTexto(celda) {
+        return celda
+            ? celda.textContent.trim()
+            : "";
+    }
 
-            const celdaB = filaB.cells[
-                thOferta.cellIndex
-            ];
+    function esVacio(texto) {
+        return !texto || texto === "-";
+    }
 
-            if (!celdaA || !celdaB) return 0;
+    function convertirNumero(texto) {
+        const limpio = texto
+            .replace(/\s/g, "")
+            .replace(/[^\d,.-]/g, "")
+            .replace(/\./g, "")
+            .replace(",", ".");
 
-            const textoA = celdaA.textContent.trim();
-            const textoB = celdaB.textContent.trim();
+        if (!limpio || limpio === "-") return NaN;
 
-            // Los "-" quedan al final
-            if (textoA === "-" && textoB === "-") return 0;
-            if (textoA === "-") return 1;
-            if (textoB === "-") return -1;
+        return Number(limpio);
+    }
 
-            // Convierte formato argentino:
-            // 2.397.942,50 → 2397942.50
-            const valorA = parseFloat(
-                textoA
-                    .replace(/\./g, "")
-                    .replace(",", ".")
-                    .replace(/[^\d.-]/g, "")
+    function convertirFecha(texto) {
+        const partes = texto.split("/");
+
+        if (partes.length !== 3) return NaN;
+
+        const dia = Number(partes[0]);
+        const mes = Number(partes[1]);
+        const anio = Number(partes[2]);
+
+        if (!dia || !mes || !anio) return NaN;
+
+        return new Date(anio, mes - 1, dia).getTime();
+    }
+
+    function comparar(a, b, tipo, descendente) {
+
+        if (esVacio(a) && esVacio(b)) return 0;
+        if (esVacio(a)) return 1;
+        if (esVacio(b)) return -1;
+
+        let resultado = 0;
+
+        if (tipo === "numero") {
+
+            const numeroA = convertirNumero(a);
+            const numeroB = convertirNumero(b);
+
+            if (Number.isNaN(numeroA) &&
+                Number.isNaN(numeroB)) return 0;
+
+            if (Number.isNaN(numeroA)) return 1;
+            if (Number.isNaN(numeroB)) return -1;
+
+            resultado = numeroA - numeroB;
+
+        } else if (tipo === "fecha") {
+
+            const fechaA = convertirFecha(a);
+            const fechaB = convertirFecha(b);
+
+            if (Number.isNaN(fechaA) &&
+                Number.isNaN(fechaB)) return 0;
+
+            if (Number.isNaN(fechaA)) return 1;
+            if (Number.isNaN(fechaB)) return -1;
+
+            resultado = fechaA - fechaB;
+
+        } else {
+
+            resultado = a.localeCompare(
+                b,
+                "es",
+                {
+                    numeric: true,
+                    sensitivity: "base"
+                }
             );
-
-            const valorB = parseFloat(
-                textoB
-                    .replace(/\./g, "")
-                    .replace(",", ".")
-                    .replace(/[^\d.-]/g, "")
-            );
-
-            if (isNaN(valorA) && isNaN(valorB)) return 0;
-            if (isNaN(valorA)) return 1;
-            if (isNaN(valorB)) return -1;
-
-            return ordenOfertaDescendente
-                ? valorB - valorA
-                : valorA - valorB;
-        });
-
-        filas.forEach(function (fila) {
-            tbody.appendChild(fila);
-        });
-
-        ordenOfertaDescendente =
-            !ordenOfertaDescendente;
-
-        if (flechaOferta) {
-            flechaOferta.textContent =
-                ordenOfertaDescendente ? "▼" : "▲";
         }
 
+        return descendente ? -resultado : resultado;
+    }
 
+    encabezados.forEach(function (th) {
+
+        const titulo = textoEncabezado(th);
+
+        // No ordenar encabezados auxiliares ocultos.
+        if (
+            titulo === "teléfono" ||
+            titulo === "email 1" ||
+            titulo === "empresas que también licitaron"
+        ) {
+            return;
+        }
+
+        if (!titulo) return;
+
+        th.style.cursor = "pointer";
+        th.title = "Ordenar por " + titulo;
+
+        let flecha = th.querySelector(".flecha-orden");
+
+        if (!flecha) {
+            flecha = document.createElement("span");
+            flecha.className = "flecha-orden";
+            flecha.textContent = " ↕";
+            flecha.style.fontSize = "11px";
+            flecha.style.marginLeft = "4px";
+            th.appendChild(flecha);
+        }
+
+        // Mantener el indicador original de Oferta.
+        if (th.id === "thOferta") {
+            flecha.id = "flechaOferta";
+            flecha.textContent = " ▼";
+        }
+
+        th.addEventListener("click", function (evento) {
+
+            // Los botones + deben seguir funcionando normalmente.
+            if (evento.target.closest("button")) return;
+
+            const columna = th.cellIndex;
+
+            // Primer clic: Oferta descendente; las demás ascendente.
+            if (!(titulo in ordenColumnas)) {
+                ordenColumnas[titulo] =
+                    titulo === "oferta" ? "desc" : "asc";
+            } else {
+                ordenColumnas[titulo] =
+                    ordenColumnas[titulo] === "asc"
+                        ? "desc"
+                        : "asc";
+            }
+
+            const descendente =
+                ordenColumnas[titulo] === "desc";
+
+            let tipo = "texto";
+
+            if (
+                titulo === "oferta" ||
+                titulo === "r" ||
+                titulo.includes("renglón")
+            ) {
+                tipo = "numero";
+            } else if (
+                titulo === "apertura" ||
+                titulo === "inicio" ||
+                titulo === "fin"
+            ) {
+                tipo = "fecha";
+            }
+
+            const filas = Array.from(
+                tbody.querySelectorAll("tr.fila-resultado")
+            );
+
+            filas.sort(function (filaA, filaB) {
+
+                const textoA = obtenerTexto(
+                    filaA.cells[columna]
+                );
+
+                const textoB = obtenerTexto(
+                    filaB.cells[columna]
+                );
+
+                return comparar(
+                    textoA,
+                    textoB,
+                    tipo,
+                    descendente
+                );
+            });
+
+            filas.forEach(function (fila) {
+                tbody.appendChild(fila);
+            });
+
+            // Actualizar flechas de todos los encabezados.
+            encabezados.forEach(function (otroTh) {
+
+                const otraFlecha =
+                    otroTh.querySelector(".flecha-orden");
+
+                if (!otraFlecha) return;
+
+                const otroTitulo = textoEncabezado(otroTh);
+
+                if (otroTitulo === titulo) {
+                    otraFlecha.textContent =
+                        descendente ? " ▼" : " ▲";
+                } else {
+                    otraFlecha.textContent = " ↕";
+                }
+            });
+
+        });
     });
 
+});
+</script>
+
+
+<script>
+/* =========================================================
+   ORDENAR TOTALES POR EMPRESA
+   La fila TOTAL queda siempre al final.
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const tabla = document.querySelector(".totales-tabla");
+
+    if (!tabla) return;
+
+    const tbody = tabla.querySelector("tbody");
+    const encabezados = tabla.querySelectorAll("thead th");
+
+    if (!tbody) return;
+
+    const ordenColumnas = {};
+    // Colocar TOTAL arriba al cargar la pantalla.
+    const filaTotalInicial = tbody.querySelector("tr.total-final");
+
+    if (filaTotalInicial) {
+        tbody.insertBefore(filaTotalInicial, tbody.firstChild);
+    }
+
+    function obtenerTexto(celda) {
+        return celda ? celda.textContent.trim() : "";
+    }
+
+    function esVacio(texto) {
+        return !texto || texto === "-";
+    }
+
+    function convertirNumero(texto) {
+        const limpio = texto
+            .replace(/\s/g, "")
+            .replace(/[^\d,.-]/g, "")
+            .replace(/\./g, "")
+            .replace(",", ".");
+
+        if (!limpio || limpio === "-") return NaN;
+
+        return Number(limpio);
+    }
+
+    encabezados.forEach(function (th, indice) {
+
+        const tituloOriginal = th.textContent.trim();
+        const titulo = tituloOriginal.toLowerCase();
+
+        th.style.cursor = "pointer";
+        th.title = "Ordenar por " + tituloOriginal;
+
+        const flecha = document.createElement("span");
+        flecha.className = "flecha-orden-totales";
+        flecha.textContent = " ↕";
+        flecha.style.fontSize = "11px";
+        flecha.style.marginLeft = "4px";
+        th.appendChild(flecha);
+
+        th.addEventListener("click", function () {
+
+            if (!(indice in ordenColumnas)) {
+                ordenColumnas[indice] = "asc";
+            } else {
+                ordenColumnas[indice] =
+                    ordenColumnas[indice] === "asc"
+                        ? "desc"
+                        : "asc";
+            }
+
+            const descendente =
+                ordenColumnas[indice] === "desc";
+
+
+            const filas = Array.from(
+                tbody.querySelectorAll("tr")
+            ).filter(function (fila) {
+                return !fila.classList.contains("total-final") &&
+                    !fila.querySelector(".sin-resultados");
+            });
+
+            const filaTotal = tbody.querySelector("tr.total-final");
+
+            filas.sort(function (filaA, filaB) {
+
+                const a = obtenerTexto(filaA.cells[indice]);
+                const b = obtenerTexto(filaB.cells[indice]);
+
+                if (esVacio(a) && esVacio(b)) return 0;
+                if (esVacio(a)) return 1;
+                if (esVacio(b)) return -1;
+
+                let resultado;
+
+                if (indice >= 2) {
+                    const numeroA = convertirNumero(a);
+                    const numeroB = convertirNumero(b);
+
+                    if (Number.isNaN(numeroA)) return 1;
+                    if (Number.isNaN(numeroB)) return -1;
+
+                    resultado = numeroA - numeroB;
+                } else {
+                    resultado = a.localeCompare(
+                        b,
+                        "es",
+                        { numeric: true, sensitivity: "base" }
+                    );
+                }
+
+                return descendente ? -resultado : resultado;
+            });
+
+            // La fila TOTAL siempre queda arriba.
+            if (filaTotal) {
+                tbody.insertBefore(filaTotal, tbody.firstChild);
+            }
+
+            filas.forEach(function (fila) {
+                tbody.appendChild(fila);
+            });
+            // Actualizar la flecha del encabezado activo.
+            encabezados.forEach(function (otroTh, otroIndice) {
+                const otraFlecha = otroTh.querySelector(
+                    ".flecha-orden-totales"
+                );
+
+                if (!otraFlecha) return;
+
+                otraFlecha.textContent =
+                    otroIndice === indice
+                        ? (descendente ? " ▼" : " ▲")
+                        : " ↕";
+            });
+
+        });
+    });
+
+});
+</script>
+
+<script>
+document.querySelectorAll(
+    "#vista-totales .formato-importe"
+).forEach(function(elemento) {
+    const numero = Number(
+        elemento.textContent.trim().replace(",", ".")
+    );
+
+    if (Number.isFinite(numero)) {
+        elemento.textContent = numero.toLocaleString("es-AR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
 });
 </script>
 
