@@ -2262,17 +2262,19 @@ def exportar_excel_seguimiento_cartas(request):
         celda_titulo.value = titulo
         celda_titulo.font = Font(bold=True)
 
-        # Borde superior e inferior desde A hasta K
+
+        # Borde superior e inferior desde A hasta F
         borde_titulo = Border(
             top=Side(style="medium"),
             bottom=Side(style="medium")
         )
 
-        for columna in range(1, 12):
+        for columna in range(1, 6):
             ws.cell(
                 row=1,
                 column=columna
             ).border = borde_titulo
+
 
         # Resumen solamente para la pestaña Demás
         if resumen:
@@ -2329,21 +2331,15 @@ def exportar_excel_seguimiento_cartas(request):
         else:
             fila = 3
 
+
+
         encabezados = [
             "Empresa",
             "Evento",
             "Fecha envío",
-            "Fecha apertura",
             "Fecha respuesta",
-            "Acciones",
-            "Teléfono",
-            "Mail 1",
-            "Mail 2",
-            "Mail 3",
-            "Provincia",
+            "Teléfono/Mails/Provincia",
         ]
-
-
 
 
         borde_encabezado = Border(
@@ -2389,21 +2385,8 @@ def exportar_excel_seguimiento_cartas(request):
                 # -----------------------------------------
                 # FECHAS
                 # -----------------------------------------
-
                 fecha_envio = registro.fecha_envio
-
-                fecha_apertura = registro.fecha_apertura
-
                 fecha_respuesta = registro.fecha_respuesta
-
-
-                # Excel no admite datetimes con timezone
-                if fecha_apertura is not None:
-
-                    fecha_apertura = fecha_apertura.replace(
-                        tzinfo=None
-                    )
-
 
                 # -----------------------------------------
                 # ESCRIBIR FECHAS
@@ -2415,83 +2398,71 @@ def exportar_excel_seguimiento_cartas(request):
                     value=fecha_envio
                 )
 
-                celda_fecha_apertura = ws.cell(
-                    row=fila,
-                    column=4,
-                    value=fecha_apertura
-                )
-
                 celda_fecha_respuesta = ws.cell(
                     row=fila,
-                    column=5,
+                    column=4,
                     value=fecha_respuesta
                 )
-
 
                 # -----------------------------------------
                 # FORMATO DD/MM/YYYY
                 # -----------------------------------------
 
                 if fecha_envio is not None:
-
                     celda_fecha_envio.number_format = "dd/mm/yyyy"
 
-
-                if fecha_apertura is not None:
-
-                    celda_fecha_apertura.number_format = "dd/mm/yyyy"
-
-
                 if fecha_respuesta is not None:
-
                     celda_fecha_respuesta.number_format = "dd/mm/yyyy"
 
-                ws.cell(
-                    row=fila,
-                    column=6,
-                    value=registro.acciones
-                )
-
-                ws.cell(
-                    row=fila,
-                    column=7,
-                    value=registro.empresa.telefono
-                )
-
-                ws.cell(
-                    row=fila,
-                    column=8,
-                    value=registro.empresa.email
-                )
-
-                ws.cell(
-                    row=fila,
-                    column=9,
-                    value=registro.empresa.email_2
-                )
-
-                ws.cell(
-                    row=fila,
-                    column=10,
-                    value=registro.empresa.email_3
-                )
-
-                ws.cell(
-                    row=fila,
-                    column=11,
-                    value=registro.empresa.provincia
-                )
+                # -----------------------------------------
+                # TELÉFONO / MAILS / PROVINCIA
+                # -----------------------------------------
+                # Los contactos se escriben después de todas las cartas
+                # de cada proveedor.
                 fila += 1
+
+
+                # -----------------------------------------
+                # CONTACTOS: UNA SOLA FILA POR PROVEEDOR
+                # -----------------------------------------
+
+                empresa = registros[0].empresa
+
+                contactos = [
+                    empresa.telefono,
+                    empresa.email,
+                    empresa.email_2,
+                    empresa.email_3,
+                    empresa.provincia,
+                ]
+
+                contactos = [
+                    str(dato).strip()
+                    for dato in contactos
+                    if dato and str(dato).strip()
+                ]
+
+                celda_contactos = ws.cell(
+                    row=fila,
+                    column=5,
+                    value="\n".join(contactos)
+                )
+
+                celda_contactos.alignment = Alignment(
+                    vertical="top",
+                    wrap_text=True
+                )
+
+                fila += 1
+
+
 
             # -------------------------------------
             # LÍNEA ENTRE PROVEEDORES
             # -------------------------------------
 
-            for columna in range(
-                1,
-                12
-            ):
 
+            for columna in range(1, 6):
                 ws.cell(
                     row=fila,
                     column=columna
@@ -2503,19 +2474,15 @@ def exportar_excel_seguimiento_cartas(request):
         # ANCHO DE COLUMNAS
         # -----------------------------------------
 
+
         anchos = {
             "A": 35,
-            "B": 30,
+            "B": 18,
             "C": 15,
             "D": 18,
-            "E": 18,
-            "F": 40,
-            "G": 18,
-            "H": 30,
-            "I": 30,
-            "J": 30,
-            "K": 20,
+            "E": 45,
         }
+
         for columna, ancho in anchos.items():
 
             ws.column_dimensions[
