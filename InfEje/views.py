@@ -2367,6 +2367,10 @@ def exportar_excel_seguimiento_cartas(request):
 
         for registros in grupos:
 
+            # -----------------------------------------
+            # IMPRIMIR TODAS LAS CARTAS DEL PROVEEDOR
+            # -----------------------------------------
+
             for registro in registros:
 
                 ws.cell(
@@ -2381,16 +2385,8 @@ def exportar_excel_seguimiento_cartas(request):
                     value=registro.get_evento_display()
                 )
 
-
-                # -----------------------------------------
-                # FECHAS
-                # -----------------------------------------
                 fecha_envio = registro.fecha_envio
                 fecha_respuesta = registro.fecha_respuesta
-
-                # -----------------------------------------
-                # ESCRIBIR FECHAS
-                # -----------------------------------------
 
                 celda_fecha_envio = ws.cell(
                     row=fila,
@@ -2404,63 +2400,50 @@ def exportar_excel_seguimiento_cartas(request):
                     value=fecha_respuesta
                 )
 
-                # -----------------------------------------
-                # FORMATO DD/MM/YYYY
-                # -----------------------------------------
-
                 if fecha_envio is not None:
                     celda_fecha_envio.number_format = "dd/mm/yyyy"
 
                 if fecha_respuesta is not None:
                     celda_fecha_respuesta.number_format = "dd/mm/yyyy"
 
-                # -----------------------------------------
-                # TELÉFONO / MAILS / PROVINCIA
-                # -----------------------------------------
-                # Los contactos se escriben después de todas las cartas
-                # de cada proveedor.
                 fila += 1
 
+            # -----------------------------------------
+            # CONTACTOS: UNA SOLA FILA DESPUÉS DE TODAS LAS CARTAS
+            # -----------------------------------------
 
-                # -----------------------------------------
-                # CONTACTOS: UNA SOLA FILA POR PROVEEDOR
-                # -----------------------------------------
+            empresa = registros[0].empresa
 
-                empresa = registros[0].empresa
+            contactos = [
+                empresa.telefono,
+                empresa.email,
+                empresa.email_2,
+                empresa.email_3,
+                empresa.provincia,
+            ]
 
-                contactos = [
-                    empresa.telefono,
-                    empresa.email,
-                    empresa.email_2,
-                    empresa.email_3,
-                    empresa.provincia,
-                ]
+            contactos = [
+                str(dato).strip()
+                for dato in contactos
+                if dato and str(dato).strip()
+            ]
 
-                contactos = [
-                    str(dato).strip()
-                    for dato in contactos
-                    if dato and str(dato).strip()
-                ]
+            celda_contactos = ws.cell(
+                row=fila,
+                column=5,
+                value="\n".join(contactos)
+            )
 
-                celda_contactos = ws.cell(
-                    row=fila,
-                    column=5,
-                    value="\n".join(contactos)
-                )
+            celda_contactos.alignment = Alignment(
+                vertical="top",
+                wrap_text=True
+            )
 
-                celda_contactos.alignment = Alignment(
-                    vertical="top",
-                    wrap_text=True
-                )
+            fila += 1
 
-                fila += 1
-
-
-
-            # -------------------------------------
+            # -----------------------------------------
             # LÍNEA ENTRE PROVEEDORES
-            # -------------------------------------
-
+            # -----------------------------------------
 
             for columna in range(1, 6):
                 ws.cell(
