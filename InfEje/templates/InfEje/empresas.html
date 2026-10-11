@@ -154,13 +154,20 @@
             width: 50px;
         }
     
+
         th:nth-child(12),
         td:nth-child(12) {
             width: 95px;
         }
+
         th:nth-child(13),
         td:nth-child(13) {
-            width: 90px;
+            width: 130px;
+        }
+
+        th:nth-child(14),
+        td:nth-child(14) {
+            width: 65px;
         }
 
         .cuit {
@@ -333,7 +340,7 @@
 
                     <th>Género</th>            
                     <th>Comentarios</th>
-
+                    <th>Datos de WEB</th>
                     <th></th>
                 </tr>
 
@@ -463,14 +470,33 @@
                                     placeholder="Comentarios..."
                                 >{{ empresa.comentarios|default:'' }}</textarea>
                             </td>
+
+                            <td>
+                                <select name="datos_web" style="width: 100%; font-size: 12px;">
+                                    <option value="">-</option>
+                                    <option value="1" {% if empresa.datos_web == 1 %}selected{% endif %}>
+                                        Teléfono de WEB
+                                    </option>
+                                    <option value="2" {% if empresa.datos_web == 2 %}selected{% endif %}>
+                                        Mail de WEB
+                                    </option>
+                                    <option value="3" {% if empresa.datos_web == 3 %}selected{% endif %}>
+                                        Teléfono y MAIL de WEB
+                                    </option>
+                                </select>
+                            </td>
+
                             <td>
                                 <button
                                     type="submit"
                                     class="boton azul"
+                                    style="height: 28px; padding: 0 7px; font-size: 11px;"
                                 >
                                     GUARDAR
                                 </button>
                             </td>
+
+
 
                         </form>
 

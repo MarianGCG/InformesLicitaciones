@@ -1371,7 +1371,13 @@ def guardar_emails(request, empresa_id):
     empresa.comentarios = (
         request.POST.get("comentarios") or None
     )
+    # ========================================================
 
+    empresa.datos_web = (
+        int(request.POST.get("datos_web"))
+        if request.POST.get("datos_web")
+        else None
+    )
     # ========================================================
     # archivo_inicial
     # ========================================================
@@ -1404,6 +1410,7 @@ def guardar_emails(request, empresa_id):
             "email_2",
             "email_3",
             "comentarios",
+            "datos_web",
             "archivo_inicial",
             "tipo_destinatario",
             "genero",
@@ -2422,6 +2429,13 @@ def exportar_excel_seguimiento_cartas(request):
                 empresa.provincia,
             ]
 
+
+            # Datos de WEB: agregar solo si tiene valor
+            if empresa.datos_web is not None:
+                contactos.append(
+                    empresa.get_datos_web_display()
+                )
+
             contactos = [
                 str(dato).strip()
                 for dato in contactos
@@ -2439,7 +2453,12 @@ def exportar_excel_seguimiento_cartas(request):
                 wrap_text=True
             )
 
+            # Datos de WEB en rojo
+            if empresa.datos_web is not None:
+                celda_contactos.font = Font(color="FF0000")
+
             fila += 1
+
 
             # -----------------------------------------
             # LÍNEA ENTRE PROVEEDORES

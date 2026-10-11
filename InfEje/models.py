@@ -40,6 +40,18 @@ class Empresa(models.Model):
         null=True
     )
 
+
+    datos_web = models.IntegerField(
+        choices=[
+            (1, "Teléfono de WEB"),
+            (2, "Mail de WEB"),
+            (3, "Teléfono y MAIL de WEB"),
+        ],
+        blank=True,
+        null=True,
+        verbose_name="Datos de WEB",
+    )
+
     comentarios = models.TextField(
         blank=True,
         null=True
