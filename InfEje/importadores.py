@@ -576,6 +576,31 @@ def importar_emails_excel(archivo):
             )
         )
 
+
+        # =====================================================
+        # DATOS WEB
+        # =====================================================
+
+        if "Datos WEB" in df.columns:
+            valor_web = valor_o_none(fila["Datos WEB"])
+        elif "datos_web" in df.columns:
+            valor_web = valor_o_none(fila["datos_web"])
+        else:
+            valor_web = None
+
+        if "Datos WEB" in df.columns or "datos_web" in df.columns:
+            try:
+                empresa.datos_web = (
+                    int(float(valor_web))
+                    if valor_web is not None
+                    else None
+                )
+            except (ValueError, TypeError):
+                empresa.datos_web = None
+
+
+
+
         # =====================================================
         # COMENTARIOS
         # =====================================================
@@ -630,6 +655,7 @@ def importar_emails_excel(archivo):
                     "email_2",
                     "email_3",
                     "provincia",
+                    "datos_web",
                     "tipo_destinatario",
                     "comentarios",
                 ]
