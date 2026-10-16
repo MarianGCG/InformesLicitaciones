@@ -388,6 +388,7 @@ class CartaPlantilla(models.Model):
         ("1", "Carta 1"),
         ("2", "Carta 2"),
         ("3", "Carta 3"),
+        ("4", "Carta al Vencimiento"),
     ]
 
     TIPO_DESTINATARIO_CHOICES = [

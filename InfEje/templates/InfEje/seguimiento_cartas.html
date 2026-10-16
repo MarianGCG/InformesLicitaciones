@@ -144,8 +144,8 @@
             display: grid;
 
             grid-template-columns:
-                0.9fr
-                1.1fr
+                0.6fr
+                1.4fr
                 1.5fr;
 
             gap: 10px;
@@ -803,6 +803,20 @@
         .listas-cartas > #cartas-enviadas > .panel-lista .tabla-contenedor {
             flex: 1;
         }
+
+
+
+        /* Tabla de proveedores: una sola línea por empresa */
+        #tablaTodos td:nth-child(2),
+        #tablaTodos th:nth-child(2) {
+            white-space: nowrap;
+        }
+
+        /* Tabla más ancha que el panel: permite desplazarse hasta el email */
+        #tablaTodos {
+            min-width: 600px;
+        }
+
     </style>
 
 </head>
@@ -877,6 +891,12 @@
             4. Carta 2
         </div>
 
+        <div
+            class="pestana"
+            data-pestana="carta-vencimiento"
+        >
+            5. Carta al Vencimiento
+        </div>
 
     </div>
 
@@ -991,11 +1011,11 @@
 
 
 
+
+
                         <thead>
-
                             <tr>
-
-                                <th style="width: 30px; text-align:center;">
+                                <th style="width:30px; text-align:center;">
                                     <input
                                         type="checkbox"
                                         id="todosProveedores"
@@ -1004,12 +1024,14 @@
                                     >
                                 </th>
 
-                                <th>Empresa</th>
-                                <th>Email 1</th>
-                   
+                                <th class="th-ordenable" onclick="ordenarProveedores('empresa')">
+                                    Empresa <span class="flechas-orden">↕</span>
+                                </th>
 
+                                <th class="th-ordenable" onclick="ordenarProveedores('email')">
+                                    Email 1 <span class="flechas-orden">↕</span>
+                                </th>
                             </tr>
-
                         </thead>
 
                         <tbody id="tablaTodos">
@@ -1085,7 +1107,7 @@
                 
 
                     <label for="cartaSeleccionada">
-                        Próximo Evento:
+                        Evento:
                     </label>
 
                     <select id="cartaSeleccionada" style="margin-left:20px;font-weight:bold;font-size: 20px;">
@@ -1097,7 +1119,11 @@
                         <option value="2">
                             Carta 2
                         </option>
-
+                        
+                        <option value="4">
+                            Carta Vencimiento
+                        </option>
+            
                         <option value="leyo_carta1">
                             Leyó Carta 1
                         </option>
@@ -1123,6 +1149,28 @@
                         </option>
 
                     </select>
+
+                    <div
+                        id="rangoVencimiento"
+                        style="
+                            display:none;
+                            align-items:center;
+                            gap:8px;
+                            margin-left:15px;
+                        "
+                    >
+                        <label for="fechaDesdeVencimiento" style="font-weight:bold;">
+                            Desde:
+                        </label>
+
+                        <input type="date" id="fechaDesdeVencimiento">
+
+                        <label for="fechaHastaVencimiento" style="font-weight:bold;">
+                            Hasta:
+                        </label>
+
+                        <input type="date" id="fechaHastaVencimiento">
+                    </div>
 
                 </div>
                 <div class="zona-carta">
@@ -1198,10 +1246,8 @@
                     <button
                         type="button"
                         id="btnCSVdoppler"
-                        class="boton-destino"
+                        class="boton-destino boton-gmail"
                         style="
-                            background:#6f42c1;
-                            color:white;
                             margin-left:4px;
                             width:100px;
                             border:none;
@@ -1250,20 +1296,21 @@
                         type="button"
                         id="btnAplicarFecha"
                         class="boton boton-agregar"
-                        style="font-size: 14px; width: 120px;"
+                        style="margin-left: 23px;font-size: 14px; width: 120px;"
 
                     >
                         Aplicar Fecha
                     </button>
 
 
+                            
 
                     <button
                         type="button"
                         id="btnAplicarCartaEnviada"
                         class="boton boton-agregar"
                         
-                        style="margin-left: 43px;font-size: 14px; width: 158px;"
+                        style="margin-left: 125px;font-size: 14px; width: 158px;background:#6f42c1; color:white;"
                     >
                         Aplicar EVENTO
                                                 
@@ -2074,6 +2121,160 @@
     </div>
 
 
+    <!-- =================================================
+        PESTAÑA 5
+        CARTA AL VENCIMIENTO
+    ================================================= -->
+
+    <div
+        id="carta-vencimiento"
+        class="contenido-pestana"
+    >
+
+        <div class="panel-lista">
+
+            <div class="panel-titulo">
+                Editar Carta al Vencimiento
+            </div>
+
+            <div class="panel-subtitulo">
+                Texto independiente para los proveedores
+                cuyos contratos están próximos a vencer.
+            </div>
+
+            <div style="padding:20px;">
+
+                <div style="margin-bottom:15px;">
+
+                    <label style="font-weight:bold;">
+                        Tipo de destinatario:
+                    </label>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn activo"
+                        onclick="cargarEditorCarta(4, 'empresa')"
+                    >
+                        Empresa
+                    </button>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn"
+                        onclick="cargarEditorCarta(4, 'mujer')"
+                    >
+                        Persona Mujer
+                    </button>
+
+                    <button
+                        type="button"
+                        class="tipo-carta-btn"
+                        onclick="cargarEditorCarta(4, 'hombre')"
+                    >
+                        Persona Hombre
+                    </button>
+
+                </div>
+
+                <div class="campo">
+                    <label>Asunto</label>
+
+                    <input
+                        type="text"
+                        id="asuntoCarta4"
+                        class="asunto-editor"
+                        placeholder="Asunto del mail..."
+                    >
+                </div>
+
+                <div class="toolbar-editor">
+
+                    <button type="button"
+                        onclick="editorEjecutar(4, 'bold')">
+                        <strong>B</strong>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(4, 'italic')">
+                        <em>I</em>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(4, 'underline')">
+                        <u>U</u>
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(4, 'justifyLeft')">
+                        ☰
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(4, 'justifyCenter')">
+                        ≡
+                    </button>
+
+                    <button type="button"
+                        onclick="editorEjecutar(4, 'justifyRight')">
+                        ☷
+                    </button>
+
+                </div>
+
+                <div
+                    id="editorCarta4"
+                    class="editor-carta"
+                    contenteditable="true"
+                ></div>
+
+                <div class="variables-editor">
+
+                    <strong>Variables disponibles:</strong>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; nombre &#125;&#125;"
+                        onclick="insertarVariableEditor(4, this.dataset.variable)"
+                    >
+                        &#123;&#123; nombre &#125;&#125;
+                    </button>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; nombre_pila &#125;&#125;"
+                        onclick="insertarVariableEditor(4, this.dataset.variable)"
+                    >
+                        &#123;&#123; nombre_pila &#125;&#125;
+                    </button>
+
+                    <button
+                        type="button"
+                        data-variable="&#123;&#123; organismos &#125;&#125;"
+                        onclick="insertarVariableEditor(4, this.dataset.variable)"
+                    >
+                        &#123;&#123; organismos &#125;&#125;
+                    </button>
+
+                </div>
+
+                <div style="margin-top:20px;">
+
+                    <button
+                        type="button"
+                        class="boton boton-agregar"
+                        onclick="guardarEditorCarta(4)"
+                    >
+                        💾 Guardar Carta al Vencimiento
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
 
 
 </div>
@@ -2292,16 +2493,6 @@ const cartaSeleccionada =
     );
 
 
-
-cartaSeleccionada.addEventListener(
-    "change",
-    function () {
-
-      
-        actualizarProveedoresCarta();
-
-    }
-);
 /* =========================================================
    ARMAR AUTOMÁTICAMENTE "CARTA A ENVIAR"
 ========================================================= */
@@ -2310,6 +2501,11 @@ function actualizarProveedoresCarta() {
 
     const carta =
         cartaSeleccionada.value;
+
+    if (carta === "4") {
+        buscarVencimientosCarta();
+        return;
+    }
 
     const filasTodos =
         Array.from(
@@ -2614,6 +2810,113 @@ function actualizarProveedoresCarta() {
     actualizarResumenCartasEnviar();
 }
 
+
+
+async function buscarVencimientosCarta() {
+    const fechaDesde = document.getElementById(
+        "fechaDesdeVencimiento"
+    ).value;
+
+    const fechaHasta = document.getElementById(
+        "fechaHastaVencimiento"
+    ).value;
+
+    // Limpiar la tabla mientras se valida la búsqueda
+    tablaSeleccionados.innerHTML = "";
+
+    if (!fechaDesde || !fechaHasta) {
+        actualizarTodosSeleccionados();
+        actualizarResumenCartasEnviar();
+        return;
+    }
+
+    // Las fechas ISO YYYY-MM-DD se pueden comparar directamente
+    if (fechaDesde > fechaHasta) {
+        actualizarTodosSeleccionados();
+        actualizarResumenCartasEnviar();
+
+        alert(
+            "La fecha Desde no puede ser posterior a la fecha Hasta."
+        );
+        return;
+    }
+
+    try {
+        const parametros = new URLSearchParams({
+            fechaDesdeVencimiento: fechaDesde,
+            fechaHastaVencimiento: fechaHasta
+        });
+
+        const respuesta = await fetch(
+            `/api/vencimientos-carta/?${parametros.toString()}`
+        );
+
+        const data = await respuesta.json();
+
+        if (!respuesta.ok || !data.ok) {
+            throw new Error(
+                data.error || "No se pudieron buscar los vencimientos."
+            );
+        }
+
+        // Cargar las empresas encontradas
+        data.empresas.forEach(function (empresa) {
+            const fila = document.createElement("tr");
+
+            fila.dataset.empresaId = empresa.id;
+
+            const celdaCheckbox = document.createElement("td");
+            celdaCheckbox.style.textAlign = "center";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.className = "checkbox seleccionado-checkbox";
+            checkbox.value = empresa.id;
+
+            celdaCheckbox.appendChild(checkbox);
+
+            const celdaEmpresa = document.createElement("td");
+            celdaEmpresa.style.fontSize = "18px";
+            celdaEmpresa.textContent = empresa.nombre;
+
+            const celdaFecha = document.createElement("td");
+            celdaFecha.className = "fecha-envio";
+            celdaFecha.style.fontSize = "18px";
+            celdaFecha.textContent = "-";
+
+            fila.appendChild(celdaCheckbox);
+            fila.appendChild(celdaEmpresa);
+            fila.appendChild(celdaFecha);
+
+            tablaSeleccionados.appendChild(fila);
+        });
+
+        actualizarTodosSeleccionados();
+        actualizarResumenCartasEnviar();
+
+        if (data.empresas.length === 0) {
+            alert(
+                "No se encontraron empresas con contratos que venzan en ese período."
+            );
+        }
+
+    } catch (error) {
+        console.error(
+            "Error al buscar vencimientos:",
+            error
+        );
+
+        alert(
+            "Error al buscar los vencimientos: " + error.message
+        );
+    }
+}
+
+
+
+
+
+
 /* =========================================================
    GENERAR WORD - CARTAS A ENVIAR
 ========================================================= */
@@ -2733,6 +3036,24 @@ btnGenerarWord.addEventListener(
                 : "0"
         );
 
+
+        if (cartaSeleccionada.value === "4") {
+            const fechaDesde = document.getElementById("fechaDesdeVencimiento").value;
+            const fechaHasta = document.getElementById("fechaHastaVencimiento").value;
+
+            if (!fechaDesde || !fechaHasta) {
+                alert("Para generar la Carta al Vencimiento, completá las fechas Desde y Hasta.");
+                return;
+            }
+
+            if (fechaDesde > fechaHasta) {
+                alert("La fecha Desde no puede ser posterior a la fecha Hasta.");
+                return;
+            }
+
+            params.set("fechaDesdeVencimiento", fechaDesde);
+            params.set("fechaHastaVencimiento", fechaHasta);
+        }
 
         /* =================================================
         SI IMPRIME MOVIMIENTOS Y COTIZACIÓN
@@ -4309,7 +4630,8 @@ btnQuitar.addEventListener(
 
 let tipoEditorCarta1 = "empresa";
 let tipoEditorCarta2 = "empresa";
-
+let tipoEditorCarta4 = "empresa";
+let tipoCargadoCarta4 = null;
 /*
    Guarda qué tipo de carta está actualmente cargado
    en cada editor.
@@ -4338,8 +4660,12 @@ const estadosEditores = {
         empresa: null,
         mujer: null,
         hombre: null
+    },
+    4: {
+        empresa: null,
+        mujer: null,
+        hombre: null
     }
-
 };
 
 
@@ -4352,7 +4678,6 @@ function cargarEditorCarta(carta, tipo) {
         tipo
     );
 
-
     const editor = document.getElementById(
         "editorCarta" + carta
     );
@@ -4361,143 +4686,99 @@ function cargarEditorCarta(carta, tipo) {
         "asuntoCarta" + carta
     );
 
+    if (!editor || !asunto || !estadosEditores[carta]) {
+        console.error("No se encontró el editor de la carta:", carta);
+        return;
+    }
 
-    /*
-       -----------------------------------------
-       1. GUARDAR LO QUE ESTÁBAMOS EDITANDO
-       -----------------------------------------
-    */
+    // 1. IDENTIFICAR EL TIPO ANTERIOR Y EL QUE ESTÁ CARGADO
 
     const tipoAnterior =
         carta === 1
             ? tipoEditorCarta1
-            : tipoEditorCarta2;
+            : carta === 2
+                ? tipoEditorCarta2
+                : tipoEditorCarta4;
 
     const tipoCargado =
         carta === 1
             ? tipoCargadoCarta1
-            : tipoCargadoCarta2;
+            : carta === 2
+                ? tipoCargadoCarta2
+                : tipoCargadoCarta4;
 
+    // Guardar en memoria lo que estábamos editando
 
     if (tipoCargado !== null) {
-
         estadosEditores[carta][tipoAnterior] = {
-
             contenido: editor.innerHTML,
-
             asunto: asunto.value
-
         };
-
     }
 
-
-    /*
-       -----------------------------------------
-       2. CAMBIAR EL TIPO ACTUAL
-       -----------------------------------------
-    */
+    // 2. CAMBIAR EL TIPO ACTUAL
 
     if (carta === 1) {
-
         tipoEditorCarta1 = tipo;
-
-    } else {
-
+    } else if (carta === 2) {
         tipoEditorCarta2 = tipo;
-
+    } else {
+        tipoEditorCarta4 = tipo;
     }
 
+    // 3. IDENTIFICAR EL PANEL CORRECTO
 
-    /*
-       -----------------------------------------
-       3. BOTÓN ACTIVO
-       -----------------------------------------
-    */
-
-    const contenedor = document.getElementById(
+    const idContenedor =
         carta === 1
             ? "carta-1"
-            : "carta-2"
-    );
+            : carta === 2
+                ? "carta-2"
+                : "carta-vencimiento";
 
+    const contenedor = document.getElementById(idContenedor);
+
+    if (!contenedor) {
+        console.error("No se encontró el panel:", idContenedor);
+        return;
+    }
 
     contenedor
         .querySelectorAll(".tipo-carta-btn")
         .forEach(function (boton) {
-
             boton.classList.remove("activo");
-
         });
 
-
-    const botones =
-        contenedor.querySelectorAll(
-            ".tipo-carta-btn"
-        );
-
+    const botones = contenedor.querySelectorAll(".tipo-carta-btn");
 
     if (tipo === "empresa") {
-
-        botones[0].classList.add("activo");
-
+        botones[0]?.classList.add("activo");
     } else if (tipo === "mujer") {
-
-        botones[1].classList.add("activo");
-
+        botones[1]?.classList.add("activo");
     } else if (tipo === "hombre") {
-
-        botones[2].classList.add("activo");
-
+        botones[2]?.classList.add("activo");
     }
 
+    // 4. SI YA ESTÁ EN MEMORIA, RESTAURARLO
 
-    /*
-       -----------------------------------------
-       4. ¿YA TENEMOS ESTA CARTA EN MEMORIA?
-       -----------------------------------------
-    */
-
-    const estado =
-        estadosEditores[carta][tipo];
-
+    const estado = estadosEditores[carta][tipo];
 
     if (estado !== null) {
-
-        editor.innerHTML =
-            estado.contenido || "";
-
-        asunto.value =
-            estado.asunto || "";
-
+        editor.innerHTML = estado.contenido || "";
+        asunto.value = estado.asunto || "";
 
         if (carta === 1) {
-
             tipoCargadoCarta1 = tipo;
-
-        } else {
-
+        } else if (carta === 2) {
             tipoCargadoCarta2 = tipo;
-
+        } else {
+            tipoCargadoCarta4 = tipo;
         }
 
-
-        console.log(
-            "Restaurando desde memoria:",
-            carta,
-            tipo
-        );
-
+        console.log("Restaurando desde memoria:", carta, tipo);
         return;
-
     }
 
-
-    /*
-       -----------------------------------------
-       5. DETERMINAR TIPO Y GÉNERO
-       -----------------------------------------
-    */
+    // 5. DETERMINAR DESTINATARIO Y GÉNERO
 
     const tipoDestinatario =
         tipo === "empresa"
@@ -4511,12 +4792,7 @@ function cargarEditorCarta(carta, tipo) {
                 ? "hombre"
                 : "";
 
-
-    /*
-       -----------------------------------------
-       6. PRIMERA VEZ QUE ENTRAMOS A ESTE TIPO
-       -----------------------------------------
-    */
+    // 6. CARGAR LA PLANTILLA DESDE DJANGO
 
     fetch(
         "/api/plantilla-carta/"
@@ -4527,117 +4803,74 @@ function cargarEditorCarta(carta, tipo) {
         + "?genero="
         + encodeURIComponent(genero)
     )
-
     .then(function (response) {
-
         if (!response.ok) {
-
-            throw new Error(
-                "No se pudo cargar la plantilla."
-            );
-
+            throw new Error("No se pudo cargar la plantilla.");
         }
-
         return response.json();
-
     })
-
     .then(function (data) {
 
-        const contenido =
-            data.contenido_html || "";
-
-        const asuntoTexto =
-            data.asunto || "";
-
-
-        /*
-           Guardamos en memoria
-        */
+        const contenido = data.contenido_html || "";
+        const asuntoTexto = data.asunto || "";
 
         estadosEditores[carta][tipo] = {
-
             contenido: contenido,
-
             asunto: asuntoTexto
-
         };
 
-
-        /*
-           Lo mostramos
-        */
-
-        editor.innerHTML =
-            contenido;
-
-        asunto.value =
-            asuntoTexto;
-
-
-        /*
-           Marcamos qué tipo está cargado
-        */
+        editor.innerHTML = contenido;
+        asunto.value = asuntoTexto;
 
         if (carta === 1) {
-
             tipoCargadoCarta1 = tipo;
-
-        } else {
-
+        } else if (carta === 2) {
             tipoCargadoCarta2 = tipo;
-
+        } else {
+            tipoCargadoCarta4 = tipo;
         }
 
-
         console.log(
-            "Plantilla cargada desde servidor:",
+            "Plantilla cargada:",
             carta,
             tipo,
-            "Tipo destinatario:",
             tipoDestinatario,
-            "Genero:",
             genero
         );
-
     })
-
     .catch(function (error) {
-
         console.error(error);
-
-        alert(
-            "No se pudo cargar la plantilla."
-        );
-
+        alert("No se pudo cargar la plantilla.");
     });
-
 }
 
 
 function guardarEditorCarta(carta) {
 
+    // 1. IDENTIFICAR EL TIPO ACTUAL
+
     const tipo =
         carta === 1
             ? tipoEditorCarta1
-            : tipoEditorCarta2;
+            : carta === 2
+                ? tipoEditorCarta2
+                : tipoEditorCarta4;
 
-    const editor =
-        document.getElementById(
-            "editorCarta" + carta
-        );
+    const editor = document.getElementById(
+        "editorCarta" + carta
+    );
 
-    const asunto =
-        document.getElementById(
-            "asuntoCarta" + carta
-        );
+    const asunto = document.getElementById(
+        "asuntoCarta" + carta
+    );
 
+    if (!editor || !asunto || !estadosEditores[carta]) {
+        console.error("No se encontró el editor de la carta:", carta);
+        alert("No se encontró el editor de la carta.");
+        return;
+    }
 
-    /*
-       -----------------------------------------
-       DETERMINAR TIPO Y GÉNERO
-       -----------------------------------------
-    */
+    // 2. DETERMINAR DESTINATARIO Y GÉNERO
 
     const tipoDestinatario =
         tipo === "empresa"
@@ -4651,179 +4884,90 @@ function guardarEditorCarta(carta) {
                 ? "hombre"
                 : null;
 
-
-    /*
-       -----------------------------------------
-       GUARDAR TAMBIÉN EN MEMORIA
-       -----------------------------------------
-    */
+    // 3. GUARDAR TAMBIÉN EN MEMORIA
 
     estadosEditores[carta][tipo] = {
-
         contenido: editor.innerHTML,
-
         asunto: asunto.value
-
     };
 
+    // 4. OBTENER TOKEN CSRF
 
-    /*
-       -----------------------------------------
-       OBTENER CSRF
-       -----------------------------------------
-    */
-
-    const csrfInput =
-        document.querySelector(
-            "[name=csrfmiddlewaretoken]"
-        );
-
+    const csrfInput = document.querySelector(
+        "[name=csrfmiddlewaretoken]"
+    );
 
     if (!csrfInput) {
-
-        alert(
-            "No se encontró el token CSRF."
-        );
-
+        alert("No se encontró el token CSRF.");
         return;
-
     }
 
-
-    const csrfToken =
-        csrfInput.value;
-
+    const csrfToken = csrfInput.value;
 
     console.log(
         "GUARDANDO:",
         carta,
         "Tipo:",
         tipoDestinatario,
-        "Genero:",
+        "Género:",
         genero
     );
 
+    // 5. ENVIAR A DJANGO
 
-    /*
-       -----------------------------------------
-       ENVIAR A DJANGO
-       -----------------------------------------
-    */
+    fetch("/api/guardar-plantilla-carta/", {
+        method: "POST",
 
-    fetch(
-        "/api/guardar-plantilla-carta/",
-        {
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
 
-            method: "POST",
-
-            headers: {
-
-                "Content-Type":
-                    "application/json",
-
-                "X-CSRFToken":
-                    csrfToken
-
-            },
-
-            body: JSON.stringify({
-
-                carta: carta,
-
-                tipo_destinatario:
-                    tipoDestinatario,
-
-                genero:
-                    genero,
-
-                asunto:
-                    asunto.value,
-
-                contenido_html:
-                    editor.innerHTML
-
-            })
-
-        }
-    )
+        body: JSON.stringify({
+            carta: carta,
+            tipo_destinatario: tipoDestinatario,
+            genero: genero,
+            asunto: asunto.value,
+            contenido_html: editor.innerHTML
+        })
+    })
 
     .then(function(response) {
 
-        console.log(
-            "Respuesta guardar:",
-            response.status
-        );
-
-
         if (!response.ok) {
-
-            return response.text()
-                .then(function(texto) {
-
-                    console.error(
-                        "ERROR DEL SERVIDOR:",
-                        texto
-                    );
-
-                    throw new Error(
-                        "Error HTTP " +
-                        response.status
-                    );
-
-                });
-
+            return response.text().then(function(texto) {
+                console.error("ERROR DEL SERVIDOR:", texto);
+                throw new Error("Error HTTP " + response.status);
+            });
         }
 
-
         return response.json();
-
     })
 
     .then(function(data) {
 
-        console.log(
-            "Datos recibidos:",
-            data
-        );
-
+        console.log("Datos recibidos:", data);
 
         if (data.ok) {
-
-            alert(
-                "Plantilla guardada correctamente."
-            );
-
+            alert("Plantilla guardada correctamente.");
         } else {
-
             alert(
                 data.error ||
                 "No se pudo guardar la plantilla."
             );
-
         }
-
     })
 
     .catch(function(error) {
 
-        console.error(
-            "ERROR AL GUARDAR:",
-            error
-        );
+        console.error("ERROR AL GUARDAR:", error);
 
         alert(
-            "Error al guardar la plantilla.\n\n"
-            + (
-                error.message
-                    ? error.message
-                    : "Revisá la consola del navegador."
-            )
+            "Error al guardar la plantilla.\n\n" +
+            (error.message || "Revisá la consola del navegador.")
         );
-
     });
-
 }
-
 
 
 /* =========================================================
@@ -5585,6 +5729,106 @@ document.getElementById("btnCSVdoppler").addEventListener(
         }
     }
 );
+
+
+
+const rangoVencimiento = document.getElementById("rangoVencimiento");
+function mostrarRangoVencimiento() {
+    if (cartaSeleccionada.value === "4") {
+        rangoVencimiento.style.display = "flex";
+    } else {
+        rangoVencimiento.style.display = "none";
+    }
+}
+
+
+
+function mostrarRangoVencimiento() {
+    const esCartaVencimiento =
+        cartaSeleccionada.value === "4";
+
+    rangoVencimiento.style.display =
+        esCartaVencimiento ? "flex" : "none";
+
+    if (esCartaVencimiento) {
+        buscarVencimientosCarta();
+    } else {
+        actualizarProveedoresCarta();
+    }
+}
+
+
+cartaSeleccionada.addEventListener(
+    "change",
+    function () {
+        mostrarRangoVencimiento();
+    }
+);
+
+
+// Estado inicial
+mostrarRangoVencimiento();
+
+
+document.getElementById("fechaDesdeVencimiento")
+    .addEventListener("change", function () {
+        // No validar todavía: esperar a que se complete Hasta.
+        const fechaHasta = document.getElementById("fechaHastaVencimiento").value;
+        if (fechaHasta) {
+            buscarVencimientosCarta();
+        }
+    });
+
+document.getElementById("fechaHastaVencimiento")
+    .addEventListener("change", function () {
+        const fechaDesde = document.getElementById("fechaDesdeVencimiento").value;
+        const fechaHasta = document.getElementById("fechaHastaVencimiento").value;
+
+        if (fechaDesde && fechaHasta) {
+            buscarVencimientosCarta();
+        }
+    });
+
+
+let ordenEmpresaAscendente = true;
+let ordenEmailAscendente = true;
+
+function ordenarProveedores(campo) {
+    const tabla = document.getElementById("tablaTodos");
+    if (!tabla) return;
+
+    const filas = Array.from(
+        tabla.querySelectorAll("tr[data-empresa-id]")
+    );
+
+    if (campo === "empresa") {
+        filas.sort((a, b) => {
+            const nombreA = a.cells[1].textContent.trim();
+            const nombreB = b.cells[1].textContent.trim();
+
+            return ordenEmpresaAscendente
+                ? nombreA.localeCompare(nombreB, "es", { sensitivity: "base" })
+                : nombreB.localeCompare(nombreA, "es", { sensitivity: "base" });
+        });
+
+        ordenEmpresaAscendente = !ordenEmpresaAscendente;
+
+    } else if (campo === "email") {
+        filas.sort((a, b) => {
+            const emailA = a.dataset.email || "";
+            const emailB = b.dataset.email || "";
+
+            return ordenEmailAscendente
+                ? emailA.localeCompare(emailB, "es", { sensitivity: "base" })
+                : emailB.localeCompare(emailA, "es", { sensitivity: "base" });
+        });
+
+        ordenEmailAscendente = !ordenEmailAscendente;
+    }
+
+    filas.forEach(fila => tabla.appendChild(fila));
+}
+
 </script>
 </body>
 

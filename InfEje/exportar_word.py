@@ -1,6 +1,6 @@
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
-
+from datetime import datetime, date
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -1191,7 +1191,6 @@ def agregar_html_como_word(documento, contenido_html, variables):
     parser.close()
 
 
-
 def generar_word_mails(
     empresas_con_registros,
     empresas_para_registro=None,
@@ -1200,6 +1199,8 @@ def generar_word_mails(
     tc=None,
     carta="1",
     imprimir_movimientos=True,
+    fecha_desde=None,
+    fecha_hasta=None,
 ):
 
 
@@ -1219,9 +1220,9 @@ def generar_word_mails(
 
     seccion = documento.sections[0]
 
-    seccion.top_margin = Inches(0.55)
-    seccion.bottom_margin = Inches(0.55)
-    seccion.left_margin = Inches(0.55)
+    seccion.top_margin      = Inches(0.55)
+    seccion.bottom_margin   = Inches(0.55)
+    seccion.left_margin        = Inches(0.55)
     seccion.right_margin = Inches(0.55)
 
     for indice, (
@@ -1244,14 +1245,17 @@ def generar_word_mails(
             if not registro.numero_oc
         ]
 
+ 
+
         hay_mas_registros = (
             len(registros_ordenados) > 6
         )
 
-        registros = registros_ordenados[:6]
-
-        registros_movimientos = registros_movimientos[:6]
-
+        if str(carta) == "4":
+            registros = registros_ordenados
+        else:
+            registros = registros_ordenados[:6]
+            registros_movimientos = registros_movimientos[:6]
 
         # ----------------------------------------------------
         # ORGANISMOS DE LOS 6 REGISTROS DE MAYOR IMPORTE
@@ -1328,11 +1332,20 @@ def generar_word_mails(
 
 
 
+
         variables = {
             "nombre": str(empresa.nombre or ""),
             "nombre_pila": nombre_pila,
             "cuit": str(empresa.cuit or ""),
             "organismos": organismos,
+            "fecha_desde": (
+                datetime.strptime(fecha_desde, "%Y-%m-%d").strftime("%d/%m/%Y")
+                if fecha_desde else ""
+            ),
+            "fecha_hasta": (
+                datetime.strptime(fecha_hasta, "%Y-%m-%d").strftime("%d/%m/%Y")
+                if fecha_hasta else ""
+            ),
         }
 
         mails_destinatario = [
@@ -1406,8 +1419,8 @@ def generar_word_mails(
         # ----------------------------------------------------
         # COTIZAR SOLAMENTE LA OFERTA MÁS ALTA
         # ----------------------------------------------------
+        if imprimir_movimientos and str(carta) != "4":
 
-        if imprimir_movimientos:
 
             registro_cotizacion = (
                 registros[0]

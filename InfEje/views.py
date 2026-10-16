@@ -28,8 +28,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from .importadores import importar_excel
 from django.http import HttpResponse, JsonResponse
-from django.views.decorators.http import require_POST
-
+from django.views.decorators.http import require_POST, require_GET
 from django.db.models import Q, Count
 from .exportar_pdf import (
     construir_pdf,
@@ -356,13 +355,9 @@ def consultar(request):
 
 
 
-    # Con "No" ocultamos esas filas.
-    # Con "Sí" quedan visibles y se marcarán como "Asig".
-    if ids_a_excluir:
-        registros = registros.exclude(
-            id__in=ids_a_excluir
-        )
-                
+    # Mostrar siempre los registros adjudicados a otra empresa.
+    # No excluir registros de la consulta.
+    ids_a_excluir = []
     # ========================================================
     # COMPETIDORES POR PROCESO + RENGLÓN
     #
@@ -861,6 +856,70 @@ def consultar(request):
         "InfEje/consultar.html",
         contexto
     )
+
+
+
+@require_GET
+def api_vencimientos_carta(request):
+    fecha_desde = request.GET.get("fechaDesdeVencimiento", "")
+    fecha_hasta = request.GET.get("fechaHastaVencimiento", "")
+
+    if not fecha_desde or not fecha_hasta:
+        return JsonResponse({
+            "ok": False,
+            "error": "Ingresá las fechas Desde y Hasta."
+        }, status=400)
+
+    if fecha_desde > fecha_hasta:
+        return JsonResponse({
+            "ok": False,
+            "error": "La fecha Desde no puede ser posterior a Hasta."
+        }, status=400)
+
+    procesos = (
+        RegistroLicitacion.objects
+        .filter(
+            fecha_fin_contrato__range=(fecha_desde, fecha_hasta)
+        )
+        .exclude(numero_proceso__isnull=True)
+        .exclude(numero_proceso="")
+        .values_list("numero_proceso", flat=True)
+        .distinct()
+    )
+
+    registros = (
+        RegistroLicitacion.objects
+        .filter(numero_proceso__in=procesos)
+        .select_related("empresa_oferente", "empresa_proveedor")
+    )
+
+    empresas = {}
+
+    for registro in registros:
+        for empresa in (
+            registro.empresa_oferente,
+            registro.empresa_proveedor,
+        ):
+            if not empresa or not empresa.email:
+                continue
+
+            empresas[empresa.id] = {
+                "id": empresa.id,
+                "nombre": empresa.nombre or "",
+                "email": empresa.email or "",
+            }
+
+    return JsonResponse({
+        "ok": True,
+        "empresas": sorted(
+            empresas.values(),
+            key=lambda empresa: empresa["nombre"].lower()
+        )
+    })
+
+
+
+
 
 @require_POST
 def eliminar_lote(request, lote_id):
@@ -1716,6 +1775,14 @@ def guardar_ficha_empresa(request, empresa_id):
         ]
     )
 
+
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({
+            "ok": True,
+            "mensaje": "Información guardada correctamente."
+        })
+
     messages.success(
         request,
         f"Información de {empresa.nombre} actualizada correctamente."
@@ -1724,8 +1791,14 @@ def guardar_ficha_empresa(request, empresa_id):
     return redirect(
         f"{reverse('consultar')}?{request.GET.urlencode()}"
     )
-    
+
+
+
+
+
 def exportar_word_mails(request):
+
+    carta = request.GET.get("carta", "1")
 
     # ========================================================
     # TOMAR LOS REGISTROS SEGÚN LOS FILTROS DE LA PANTALLA
@@ -1742,6 +1815,53 @@ def exportar_word_mails(request):
         )
     )
 
+
+    if carta == "4":
+        fecha_desde = request.GET.get("fechaDesdeVencimiento", "")
+        fecha_hasta = request.GET.get("fechaHastaVencimiento", "")
+
+        # Validar que las dos fechas estén informadas
+        if not fecha_desde or not fecha_hasta:
+            return HttpResponse(
+                "Para generar la Carta al Vencimiento, "
+                "tenés que indicar las fechas Desde y Hasta.",
+                status=400,
+            )
+
+        if fecha_desde > fecha_hasta:
+            return HttpResponse(
+                "La fecha Desde no puede ser posterior a la fecha Hasta.",
+                status=400,
+            )
+
+        # Buscar los procesos que tienen contratos
+        # con vencimiento dentro del período elegido.
+        procesos_vencimiento = (
+            RegistroLicitacion.objects
+            .filter(
+                fecha_fin_contrato__range=(
+                    fecha_desde,
+                    fecha_hasta,
+                )
+            )
+            .exclude(numero_proceso__isnull=True)
+            .exclude(numero_proceso="")
+            .values_list("numero_proceso", flat=True)
+            .distinct()
+        )
+
+        # Recuperar todos los registros de esos procesos,
+        # incluyendo las empresas que participaron y no ganaron.
+        registros = (
+            RegistroLicitacion.objects
+            .filter(numero_proceso__in=procesos_vencimiento)
+            .select_related(
+                "empresa_oferente",
+                "empresa_proveedor",
+                "lote",
+            )
+        )
+
     # ========================================================
     # EXCLUIR EN WORD PROCESOS + RENGLONES
     # YA ADJUDICADOS
@@ -1752,12 +1872,9 @@ def exportar_word_mails(request):
     #   aunque sea de la misma empresa adjudicataria.
     # ========================================================
 
-    mostrar_adjudicados = (
-        request.GET.get("mostrar_adjudicados", "0") == "1"
-    )
+    mostrar_adjudicados = True
 
-    if not mostrar_adjudicados:
-
+    if not mostrar_adjudicados and carta != "4":
         claves_con_oc = set(
             RegistroLicitacion.objects
             .exclude(
@@ -1835,16 +1952,13 @@ def exportar_word_mails(request):
 
         for registro in registros:
 
+
             if registro.empresa_oferente_id:
-                empresas_con_registros_ids.add(
-                    registro.empresa_oferente_id
-                )
+                empresas_con_registros_ids.add(registro.empresa_oferente_id)
 
-            elif registro.empresa_proveedor_id:
-                empresas_con_registros_ids.add(
-                    registro.empresa_proveedor_id
-                )
-
+            if registro.empresa_proveedor_id:
+                empresas_con_registros_ids.add(registro.empresa_proveedor_id)
+                
         empresas_para_registro = (
             Empresa.objects
             .filter(
@@ -2011,6 +2125,9 @@ def exportar_word_mails(request):
                 key=str.lower
             )
         )
+
+
+
     # ========================================================
     # AGRUPAR POR EMPRESA
     # ========================================================
@@ -2019,26 +2136,37 @@ def exportar_word_mails(request):
 
     for registro in registros:
 
-        empresa = None
+        empresas_del_registro = []
 
         if registro.empresa_oferente:
-            empresa = registro.empresa_oferente
+            empresas_del_registro.append(
+                registro.empresa_oferente
+            )
 
-        elif registro.empresa_proveedor:
-            empresa = registro.empresa_proveedor
+        if (
+            registro.empresa_proveedor
+            and (
+                carta == "4"
+                or not registro.empresa_oferente
+            )
+        ):
+            empresas_del_registro.append(
+                registro.empresa_proveedor
+            )
 
-        if not empresa:
-            continue
+        for empresa in empresas_del_registro:
 
-        if empresa.id not in empresas:
-            empresas[empresa.id] = {
-                "empresa": empresa,
-                "registros": [],
-            }
+            if empresa.id not in empresas:
+                empresas[empresa.id] = {
+                    "empresa": empresa,
+                    "registros": [],
+                }
 
-        empresas[empresa.id]["registros"].append(
-            registro
-        )
+            empresas[empresa.id]["registros"].append(
+                registro
+            )
+
+
 
     # ========================================================
     # ORDENAR EMPRESAS
@@ -2084,7 +2212,7 @@ def exportar_word_mails(request):
 
     carta = request.GET.get("carta", "1")
 
-    if carta not in ("1", "2"):
+    if carta not in ("1", "2", "4"):
         carta = "1"
 
 
@@ -2092,6 +2220,11 @@ def exportar_word_mails(request):
         request.GET.get("imprimir_movimientos", "0") == "1"
     )
 
+
+
+
+    fecha_desde = request.GET.get("fechaDesdeVencimiento", "")
+    fecha_hasta = request.GET.get("fechaHastaVencimiento", "")
 
     buffer = generar_word_mails(
         empresas_con_registros,
@@ -2101,7 +2234,11 @@ def exportar_word_mails(request):
         tc=tc,
         carta=carta,
         imprimir_movimientos=imprimir_movimientos,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
     )
+
+
 
     respuesta = HttpResponse(
         buffer.getvalue(),

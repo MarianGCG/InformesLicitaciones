@@ -133,5 +133,9 @@ urlpatterns = [
         name="eliminar_seguimiento_carta",
     ),
 
-
+    path(
+        "api/vencimientos-carta/",
+        views.api_vencimientos_carta,
+        name="api_vencimientos_carta",
+    ),
 ]
