@@ -22,7 +22,7 @@
         }
 
         .contenedor {
-            width: 95%;
+            width: 98%;
             max-width: none;
             margin: 20px auto;
         }
@@ -71,16 +71,21 @@
         .campo-lotes {
             grid-column: 1;
             grid-row: 1 / span 2;
+            font-size: 16px;
+            font-weight: bold;
         }
 
         .campo {
             display: flex;
             flex-direction: column;
             gap: 6px;
+            font-weight: bold;
+            font-size: 16px;
+            font-weight: bold;
         }
 
         .campo label {
-            font-size: 13px;
+            font-size: 16px;
             font-weight: bold;
             color: #495057;
         }
@@ -93,6 +98,8 @@
             border: 1px solid #ced4da;
             border-radius: 6px;
             background: white;
+            font-size: 16px;
+            font-weight: bold;
         }
 
         .boton {
@@ -125,27 +132,35 @@
             font-weight: 600;
         }
 
+
         .vistas-tabs {
             display: flex;
+            align-items: flex-end;
             gap: 6px;
-            margin-top: 12px;
-            border-bottom: 1px solid #dee2e6;
+            box-sizing: border-box;
+            width: calc(100% - 28px);
+            margin: 12px 14px 0;
+            padding: 10px 12px 0;
+            background: #e9edf2;
+            border: 1px solid #cbd5e1;
+            border-bottom: 2px solid #7b858e;
+            border-radius: 8px 8px 0 0;
         }
 
         .vista-tab {
-            border: 1px solid #dee2e6;
-            border-bottom: none;
-            background: #f1f3f5;
-            color: #495057;
             padding: 10px 18px;
+            border: 1px solid #d5dce3;
+            border-bottom: none;
             border-radius: 8px 8px 0 0;
-            cursor: pointer;
-            font-weight: 700;
+            background: #e4e8ec;
+            color: #495057;
             font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
         }
 
         .vista-tab.activa {
-            background: white;
+            background: #fff;
             color: #198754;
             border-top: 3px solid #198754;
             padding-top: 8px;
@@ -507,8 +522,10 @@
 
             background: #fff;
 
-            font-size: 13px;
+
             font-weight: 600;
+            font-size: 16px;
+            font-weight: bold;
             color: #000;
 
             outline: none;
@@ -517,6 +534,8 @@
         .empresa-control input:focus {
             border-color: #86b7fe;
             box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+            font-size: 16px;
+            font-weight: bold;
         }
 
         .empresa-flecha {
@@ -859,6 +878,8 @@
             grid-column: 2 / span 2;
             grid-row: 1;
             width: 100%;
+            margin-left: 10px;
+
         }
 
         .campo-archivo-inicial {
@@ -868,32 +889,59 @@
             display: block !important;
         }
 
+        .campo-archivo-inicial .selector-lotes {
+            display: block !important;
+            width: 100%;
+        }
+
+
         .zona-botones {
             grid-column: 5;
             grid-row: 1;
             width: 100%;
             padding-top: 14px;
+            position: relative;
         }
-        .campo-archivo-inicial .selector-lotes {
-            display: block !important;
-            width: 100%;
-        }
+
         .zona-botones .botones-filtros {
             display: flex;
             gap: 8px;
             width: 100%;
         }
 
-        .zona-botones .boton,
-        .zona-botones .boton-pdf {
-            flex: 1;
-            width: auto !important;
+        .zona-botones .botones-filtros-superior {
+            position: absolute;
+            left: 0;
+            top: 14px;
+            width: 100px;
+            margin: 0;
+        }
+
+        .zona-botones .botones-filtros-superior .boton {
+            width: 100px !important;
+            min-width: 100px !important;
+            max-width: 100px !important;
+            height: 84px;
+            padding: 0 4px;
+            white-space: normal;
+        }
+
+        .zona-botones .botones-filtros-inferior {
+            margin-left: 108px;
+            width: 210px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .zona-botones .botones-filtros-inferior .boton-pdf {
+            width: 100% !important;
             min-width: 0 !important;
             max-width: none !important;
+            height: 38px;
             padding: 0 8px;
+            box-sizing: border-box;
             text-align: center;
-            padding-top: 16px;
-
         }
 
 
@@ -921,10 +969,14 @@
                 auto;
             gap: 12px;
             align-items: end;
+            margin-top: 40px;
+            margin-left: 50px;
+
         }
 
         .fila-inferior {
-            margin-top: 6px;
+            margin-top: 0px;
+
         }
 
         .botones-filtros {
@@ -933,37 +985,39 @@
             display: flex;
             justify-content: flex-end;
             align-items: center;
-
             gap: 8px;
-
             white-space: nowrap;
+
         }
 
-        .botones-filtros .boton,
-        .botones-filtros .boton-pdf {
-            flex-shrink: 0;
-            white-space: nowrap;
-        }
 
         .botones-filtros-inferior {
             grid-column: 3;
             justify-content: flex-start;
             margin-top: 0;
+
+            
         }
         .botones-filtros-superior {
             grid-column: 3;
             justify-content: flex-start;
             margin-top: 0;
+
         }
+
 
         .botones-filtros .boton,
         .botones-filtros .boton-pdf {
-            width: 220px;
-            min-width: 220px;
-            max-width: 220px;
             box-sizing: border-box;
-            padding: 0;
+            width: 220px;
+            min-width: 0;
+            max-width: 100%;
+            min-height: 40px;
+            padding: 8px 10px;
             text-align: center;
+            white-space: nowrap;
+            flex-shrink: 1;
+
         }
 
         .dato-principal {
@@ -1149,6 +1203,133 @@
 
 
 
+        .pestanas-principales {
+            display: flex;
+            gap: 6px;
+            margin: 0 0 16px;
+            border-bottom: 2px solid #198754;
+        }
+
+        .pestana-principal {
+            padding: 11px 22px;
+            background: #e9ecef;
+            color: #495057;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .pestana-principal:hover {
+            background: #dcefe4;
+            color: #146c43;
+        }
+
+        .pestana-principal.activa {
+            background: #198754;
+            color: white;
+            border-color: #198754;
+        }
+
+        /* Pestañas Resultados y Totales por Empresa */
+        .pestanas-resultados {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            padding: 0 12px;
+            margin-top: 12px;
+            border-bottom: 2px solid #7b858e;
+        }
+
+        .pestanas-resultados button,
+        .pestanas-resultados a {
+            border: 1px solid #d5dce3;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            background: #e9edf1;
+            padding: 10px 18px;
+            color: #495057;
+        }
+
+        .menu-principal {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0 0 18px;
+            padding: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+        }
+
+        .bloque-menu,
+        .bloque-menu:link,
+        .bloque-menu:visited {
+            display: block;
+            box-sizing: border-box;
+            min-width: 0;
+            height: 86px;
+            padding: 16px 24px;
+            background: white;
+            color: #212529;
+            text-decoration: none;
+            border: 1px solid #e9ecef;
+            border-bottom: 1px solid #e9ecef;
+            border-radius: 10px;
+        }
+
+        .bloque-menu h1,
+        .bloque-menu h2 {
+            margin: 0;
+            font-size: 24px;
+            line-height: 1.3;
+            font-weight: 700;
+        }
+
+        .bloque-menu p {
+            margin: 8px 0 0;
+            color: #6c757d;
+            font-size: 13px;
+            line-height: 1.3;
+        }
+
+        .bloque-menu:hover {
+            background: #f8f9fa;
+        }
+
+
+
+        .bloque-menu.activo {
+            background: #e8eef4;
+            border: 1px solid #cbd5e1;
+            border-bottom: 4px solid #198754;
+            color: #212529;
+        }
+
+        @media (max-width: 700px) {
+            .menu-principal {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
+
+        .encabezado-lotes {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+
+        .encabezado-lotes label {
+            margin: 0;
+        }
+
 
     </style>
     <style>
@@ -1230,10 +1411,27 @@
 
 <div class="contenedor">
 
-    <div class="encabezado">
-        <h1>Licitaciones - Cauciones</h1>
-        <p>Consulta de procesos, oferentes y proveedores</p>
+
+
+    <div class="menu-principal">
+
+        <a href="{% url 'consultar' %}" class="bloque-menu activo">
+            <h1>Licitaciones - Cauciones</h1>
+            <p>Consulta de procesos, oferentes y proveedores</p>
+        </a>
+
+        <a href="{% url 'empresas' %}" class="bloque-menu">
+            <h2>Empresas</h2>
+            <p>Gestión de empresas y correos electrónicos</p>
+        </a>
+
+        <a href="{% url 'seguimiento_cartas' %}" class="bloque-menu">
+            <h2>Seguimiento de Cartas</h2>
+        </a>
+
     </div>
+
+
 
     {% if messages %}
         <div style="margin: 10px 0 12px;">
@@ -1259,13 +1457,27 @@
 
             <div class="filtros-layout">
 
+
                 <!-- =====================================================
                     LOTES
                 ====================================================== -->
 
                 <div class="campo campo-lotes">
 
-                    <label>Lotes</label>
+                    <div class="encabezado-lotes">
+                        <label>Lotes</label>
+
+                        <a
+                            href="{% url 'importar' %}"
+                            class="boton-pdf"
+                            style="background:#fd7e14;"
+                        >
+                            Importar EXCEL
+                        </a>
+                    </div>
+
+
+
 
                     <div class="selector-lotes">
 
@@ -1573,64 +1785,43 @@
                 <!-- BOTONES -->
                 <div class="zona-botones">
 
-                    <!-- FILA 1 -->
-                    <div class="botones-filtros botones-filtros-superior">
-                        <button
-                            type="submit"
-                            class="boton"
-                            style="background:#198754;"
-                        >
-                            BUSCAR
-                        </button>
 
-                        <a
-                            href="{% url 'empresas' %}"
-                            class="boton-pdf"
-                            style="background:#374151;"
-                        >
-                            EMPRESAS
-                        </a>
-                    </div>
+                <div class="botones-filtros botones-filtros-superior">
+                    <button
+                        type="submit"
+                        class="boton"
+                        style="background:#198754;"
+                    >
+                        BUSCAR
+                    </button>
+                </div>
 
-                    <!-- FILA 2 -->
-                    <div class="botones-filtros botones-filtros-inferior">
-                        <a
-                            href="#"
-                            id="btnExportarPDF"
-                            class="boton-pdf"
-                        >
-                            Exportar PDF
-                        </a>
+                <div class="botones-filtros botones-filtros-inferior">
+                    <a
+                        href="#"
+                        id="btnExportarPDF"
+                        class="boton-pdf"
+                        style="background:boton azul;"
+                    >
+                        Exportar PDF
+                    </a>
 
-                        <button
-                            type="button"
-                            id="btnPDFEmpresas"
-                            class="boton-pdf"
-                        >
-                            Exportar PDF por EMPRESA
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        id="btnPDFEmpresas"
+                        class="boton-pdf"
+                        style="background:boton azul;"
+                    >
+                        Exportar PDF por EMPRESA
+                    </button>
+                </div>
 
-                    <!-- FILA 3 -->
-                    <div class="botones-filtros botones-filtros-inferior">
-                        <a
-                            href="{% url 'importar' %}"
-                            class="boton-pdf"
-                            style="background:#fd7e14;"
-                        >
-                            Importar EXCEL
-                        </a>
 
-                        <a
-                            href="{% url 'seguimiento_cartas' %}"
-                            class="boton-pdf"
-                            style="background:#fd7e14;"
-                        >
-                            Seguimiento de Cartas
-                        </a>
-                    </div>
+
 
                 </div>
+                </div>
+
 
                 
             </div>
@@ -2581,6 +2772,30 @@
         }
     );
 
+
+    // =========================================================
+    // BORRAR NUMERO DE PROCESO -> BUSCAR AUTOMATICAMENTE
+    // =========================================================
+
+    const filtroProceso = document.querySelector(
+        '.filtros form input[name="proceso"]'
+    );
+
+    if (filtroProceso) {
+
+        filtroProceso.addEventListener("input", function () {
+
+            // Si el campo quedó vacío, volver a buscar automáticamente.
+            if (this.value.trim() === "") {
+
+                const formulario = this.closest("form");
+
+                if (formulario) {
+                    formulario.requestSubmit();
+                }
+            }
+        });
+    }
 
     // =========================================================
     // DOBLE CLICK EN EMPRESA -> FILTRAR AUTOMÁTICAMENTE
@@ -4989,6 +5204,54 @@ const formularioFicha = campoNovedades
 });
 
 
+/* Fondo de pantalla alrededor de la tabla */
+#vista-resultados,
+#vista-totales {
+    background: #e9edf2;
+    padding: 12px 14px 16px;
+    box-sizing: border-box;
+}
+
+/* El contenedor de la tabla permanece blanco */
+#vista-resultados .resultados,
+#vista-totales .resultados {
+    background: #ffffff;
+    padding: 12px;
+    border-radius: 4px;
+}
+
+/* La tabla sigue blanca */
+#vista-resultados table,
+#vista-totales table {
+    background: #ffffff;
+}
+
+
+/* Fondo gris detrás de las pestañas y los resultados */
+.vista-panel {
+    background: #e9edf2 !important;
+    padding: 12px 14px 16px !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+}
+
+/* Panel blanco que contiene el título y la tabla */
+.vista-panel .resultados {
+    background: #ffffff !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* Mantener la tabla blanca */
+.vista-panel .tabla-contenedor {
+    background: #ffffff !important;
+}
+
+.vista-panel .tabla-contenedor table {
+    background: #ffffff !important;
+}
 
 </script>
 
