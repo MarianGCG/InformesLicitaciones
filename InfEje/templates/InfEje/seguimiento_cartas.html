@@ -154,11 +154,10 @@
             display: grid;
 
             grid-template-columns:
-                0.6fr
-                1.4fr
-                1.5fr;
-
-            gap: 10px;
+                0.45fr
+                1.5fr
+                1.25fr;
+            gap: 20px;
             align-items: stretch;
         }
 
@@ -172,7 +171,7 @@
 
         .panel-titulo {
             padding: 10px 12px;
-            background: #dcecf8;
+            background: #d6dfe6;
             font-size: 17px;
             font-weight: bold;
         }
@@ -319,33 +318,35 @@
         }
 
 
-
         .tabla-historial {
             width: 100%;
             table-layout: fixed;
         }
+
         .tabla-historial th:nth-child(1),
         .tabla-historial td:nth-child(1) {
-            width: 1%;
+            width: 25px;
         }
+
         .tabla-historial th:nth-child(2),
         .tabla-historial td:nth-child(2) {
-            width: 34%;
+            width: 40%;
+            
         }
 
         .tabla-historial th:nth-child(3),
         .tabla-historial td:nth-child(3) {
-            width: 15%;
+            width: 25%;
         }
 
         .tabla-historial th:nth-child(4),
         .tabla-historial td:nth-child(4) {
-            width: 10%;
+            width: 15%;
         }
 
         .tabla-historial th:nth-child(5),
         .tabla-historial td:nth-child(5) {
-            width: 8%;
+            width: 20%;
         }
 
         .tabla-historial th:nth-child(6),
@@ -704,9 +705,15 @@
             height: 38px;
             box-sizing: border-box;
             display: flex;
-            align-items: center;
+            align-items: left;
         }
-
+        /* Encabezado más alto del bloque central */
+        .listas-cartas > .panel-lista:nth-child(2) > .panel-titulo {
+            height: 58px;
+            min-height: 58px;
+            padding-left: 14px;
+            font-size: 20px;
+        }
         /* =========================================================
         ALINEAR ENCABEZADOS DE LAS 3 TABLAS
         ========================================================= */
@@ -740,6 +747,8 @@
         .listas-cartas > .panel-lista:nth-child(2) .tabla-contenedor {
             background: white;
             border-top: 8px solid white;
+
+
         }
 
 
@@ -765,6 +774,7 @@
             background: #eef3f8;
             font-size: 13px;
             font-weight: bold;
+            margin-top: -20px;
         }
 
         .resumen-cartas span {
@@ -903,8 +913,41 @@
                 grid-template-columns: 1fr;
             }
         }
+        /* Título del bloque central */
+        .listas-cartas > .panel-lista:nth-child(2) > .panel-titulo {
+            background-color: #52a6c5;
+            color: white;
+        }
 
+        /* Título del bloque Cartas enviadas */
+        .listas-cartas > .panel-lista:nth-child(3) > .panel-titulo {
+            background-color: #4b49c8;
+            color: white;
+        }
+        /* Título del bloque central */
+        .listas-cartas > .panel-lista:nth-child(2) > .panel-titulo {
+            background-color: #62a5bd;
+            color: white;
 
+            height: 90px;
+            min-height: 90px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            padding-left: 12px;
+        }
+
+        /* Título del bloque Cartas enviadas */
+        .listas-cartas > .panel-lista:nth-child(3) > .panel-titulo {
+            height: 85px !important;
+            min-height: 85px !important;
+            box-sizing: border-box;
+            display: flex;
+            align-items: flex-start;
+            padding: 12px;
+            background-color: #4b49c8;
+            color: white;
+        }
     </style>
 
 </head>
@@ -1058,25 +1101,30 @@
                     </div>
 
 
-                    <div class="resumen-proveedores" >
+                    <div class="resumen-proveedores" style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 8px;
+                        padding: 10px 12px;
+                    ">
 
-                        <span style="margin-top:62px;">
+                        <span style="margin-top: 0;">
                             Total Empresas:
                             <strong id="totalEmpresas">0</strong>
                         </span>
 
-                        <span style="margin-top:62px;">
+                        <span style="margin-top: 0;">
                             Con mail:
                             <strong id="totalConMail">0</strong>
                         </span>
 
-                        <span style="margin-top:62px;">
+                        <span style="margin-top: 0;">
                             Con teléfono:
                             <strong id="totalConTelefono">0</strong>
                         </span>
 
                     </div>
-
 
                     <div class="tabla-contenedor">
 
@@ -1197,20 +1245,12 @@
                             Carta Vencimiento
                         </option>
             
-                        <option value="leyo_carta1">
-                            Leyó Carta 1
-                        </option>
-
                         <option value="respuesta1_fin">
                             Respondió Carta 1 - Fin
                         </option>
 
                         <option value="respuesta1_click">
                             Respondió Carta 1 - Click
-                        </option>
-
-                        <option value="leyo_carta2">
-                            Leyó Carta 2
                         </option>
 
                         <option value="respuesta2_fin">
@@ -1229,7 +1269,7 @@
                             display:none;
                             align-items:center;
                             gap:8px;
-                            margin-left:15px;
+                            margin-left:124px;
                         "
                     >
                         <label for="fechaDesdeVencimiento" style="font-weight:bold;">
@@ -1288,7 +1328,7 @@
                         Quitar
                     </button>
 
-                    <label style="margin-left: 65px;">
+                    <label style="margin-left: 250px;">
                           Generar:
                     </label>
 
@@ -1375,18 +1415,18 @@
                         Aplicar Fecha
                     </button>
 
-
-                            
+                    <label style="margin-left: 170px;">
+                        Aplicar EVENTO:
+                    </label>                            
 
                     <button
                         type="button"
                         id="btnAplicarCartaEnviada"
                         class="boton boton-agregar"
-                        
-                        style="margin-left: 125px;font-size: 14px; width: 158px;background:#6f42c1; color:white;"
+                        style="margin-left: 14px;font-size: 14px; width: 158px;background:#6f42c1; color:white;"
                     >
-                        Aplicar EVENTO
-                                                
+                        
+                        → Cartas Enviadas          
                     </button>
                     
                 </div>
@@ -1576,17 +1616,16 @@
                     </label>
 
 
-                    <div
-                        style="
-                            display:flex;
-                            justify-content:flex-start;
-                            gap:10px;
-                            margin-bottom:1px;
-                            margin-left:2px;
-                        "
-                    >
 
-
+                    <div style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 6px;
+                        margin-bottom: 1px;
+                        margin-left: 2px;
+                    ">
+                      
                         <button
                             type="button"
                             id="btnEliminarHistorial"
@@ -1599,6 +1638,7 @@
                         <button
                             type="button"
                             class="boton boton-agregar"
+                            
                             onclick="window.location.href='{% url 'exportar_excel_seguimiento_cartas' %}'"
                         >
                             📊 Generar Excel
@@ -1617,13 +1657,9 @@
                         <div>
                             Totales:
                             <strong class="numero-total" id="totalCartasEnviadas"></strong>
-
                             <br>
                             Carta 1:
                             <strong class="numero-total" id="totalCartas1"></strong>
-                            &nbsp;&nbsp;
-                            Leyó:
-                            <strong class="numero" id="totalLeyoCarta1"></strong>
                             &nbsp;&nbsp;
                             Fin:
                             <strong class="numero" id="totalFinCarta1"></strong>
@@ -1633,9 +1669,6 @@
                             <br>
                             Carta 2:
                             <strong class="numero-total" id="totalCartas2"></strong>
-                            &nbsp;&nbsp;
-                            Leyó:
-                            <strong class="numero" id="totalLeyoCarta2"></strong>
                             &nbsp;&nbsp;
                             Fin:
                             <strong class="numero" id="totalFinCarta2"></strong>
@@ -1701,9 +1734,6 @@
                                         <span class="flechas-orden">▲▼</span>
                                     </th>
 
-                                    <th>
-                                        F/Abrio
-                                    </th>
 
                                     <th
                                         class="th-ordenable"
@@ -1764,17 +1794,6 @@
                                         </td>
 
 
-                                        <!-- FECHA APERTURA/RECIBIÓ -->
-
-                                        <td style="font-size: 18;">
-
-                                            {% if seguimiento.fecha_apertura %}
-                                                {{ seguimiento.fecha_apertura|date:"d/m/Y" }}
-                                            {% else %}
-                                                -
-                                            {% endif %}
-
-                                        </td>
 
                                         <!-- FECHA RESPUESTA -->
                                         <td style="font-size: 18;">
@@ -2851,8 +2870,7 @@ function actualizarProveedoresCarta() {
             nuevaFila.dataset.empresaId =
                 empresaId;
 
-            nuevaFila.dataset.fechaEnvioAnterior =
-                    fechaEnvioAnterior || "";
+            nuevaFila.dataset.fechaEnvioAnterior = "";
 
             nuevaFila.innerHTML = `
                 <td style="text-align:center;">
@@ -4246,8 +4264,7 @@ btnAgregar.addEventListener(
                 nuevaFila.dataset.empresaId =
                     empresaId;
 
-                nuevaFila.dataset.fechaEnvioAnterior =
-                    fechaEnvioAnterior || "";
+                nuevaFila.dataset.fechaEnvioAnterior = "";
 
 
                 nuevaFila.innerHTML = `
