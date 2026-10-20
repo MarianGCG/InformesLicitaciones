@@ -1045,6 +1045,7 @@
             display: flex;
             gap: 18px;
             margin-top: 18px;
+            font-size: 14px;
         }
 
         .ficha-novedades {
@@ -1053,13 +1054,14 @@
 
         .ficha-comentarios {
             width: 25%;
+            
         }
 
         .ficha-novedades strong,
         .ficha-comentarios strong {
             display: block;
             margin-bottom: 6px;
-            font-size: 12px;
+            font-size: 15px;
             color: #1a1d20;
         }
 
@@ -1072,7 +1074,7 @@
             border: 1px solid #ced4da;
             border-radius: 6px;
             font-family: Arial, sans-serif;
-            font-size: 14px;
+            font-size: 15px;
             resize: vertical;
         }
         .ficha-notas .ficha-comentarios {
@@ -1343,6 +1345,61 @@
             transform: rotate(360deg);
         }
     }
+
+
+
+
+
+    /* Fondo de pantalla alrededor de la tabla */
+    #vista-resultados,
+    #vista-totales {
+        background: #e9edf2;
+        padding: 12px 14px 16px;
+        box-sizing: border-box;
+    }
+
+    /* El contenedor de la tabla permanece blanco */
+    #vista-resultados .resultados,
+    #vista-totales .resultados {
+        background: #ffffff;
+        padding: 12px;
+        border-radius: 4px;
+    }
+
+    /* La tabla sigue blanca */
+    #vista-resultados table,
+    #vista-totales table {
+        background: #ffffff;
+    }
+
+
+    /* Fondo gris detrás de las pestañas y los resultados */
+    .vista-panel {
+        background: #e9edf2 !important;
+        padding: 12px 14px 16px !important;
+        margin: 0 !important;
+        box-sizing: border-box;
+    }
+
+    /* Panel blanco que contiene el título y la tabla */
+    .vista-panel .resultados {
+        background: #ffffff !important;
+        padding: 12px !important;
+        margin: 0 !important;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    /* Mantener la tabla blanca */
+    .vista-panel .tabla-contenedor {
+        background: #ffffff !important;
+    }
+
+    .vista-panel .tabla-contenedor table {
+        background: #ffffff !important;
+    }
+
+
 
     </style>
 
@@ -1941,8 +1998,27 @@
                                 id="btnFechaActualNovedades"
                                 class="btn btn-sm btn-outline-primary"
                             >
-                                Incluir Fecha actual en Novedades
+                                Incluir Fecha actual
                             </button>
+
+
+
+
+                            <select id="eventoNovedades"
+                                    class="form-select form-select-sm"
+                                    style="width: 260px;">
+                                <option value="">— Seleccionar evento —</option>
+                                <option value="Carta 1">Carta 1</option>
+                                <option value="Carta 2">Carta 2</option>
+                                <option value="Renov 30">Renov 30</option>
+                                <option value="Renov 60">Renov 60</option>
+                                <option value="Renov 90">Renov 90</option>
+                                <option value="Respondió Carta 1 - Fin">Respondió Carta 1 - Fin</option>
+                                <option value="Respondió Carta 1 - Click">Respondió Carta 1 - Click</option>
+                                <option value="Respondió Carta 2 - Fin">Respondió Carta 2 - Fin</option>
+                                <option value="Respondió Carta 2 - Click">Respondió Carta 2 - Click</option>
+                            </select>
+
                         </div>
 
                         <textarea
@@ -3817,56 +3893,40 @@ document.getElementById("btnCSVdoppler")?.addEventListener(
 
 </script>
 
-<script>
 
+<script>
     const toggleCompetidores =
-        document.getElementById(
-            "toggleCompetidores"
-        );
+        document.getElementById("toggleCompetidores");
 
     const columnasCompetidores =
-        document.querySelectorAll(
-            ".columna-competidores"
-        );
+        document.querySelectorAll(".columna-competidores");
 
+    let competidoresVisible = true;
 
-    let competidoresVisible = false;
+    // Mostrar competidores al cargar la página.
+    columnasCompetidores.forEach(function (columna) {
+        columna.style.display = "";
+    });
 
+    toggleCompetidores.textContent = "−";
+    toggleCompetidores.title = "Ocultar competidores";
 
-    toggleCompetidores.addEventListener(
-        "click",
-        function () {
+    // Mantener la posibilidad de mostrar u ocultar.
+    toggleCompetidores.addEventListener("click", function () {
+        competidoresVisible = !competidoresVisible;
 
-            competidoresVisible =
-                !competidoresVisible;
+        columnasCompetidores.forEach(function (columna) {
+            columna.style.display = competidoresVisible ? "" : "none";
+        });
 
+        toggleCompetidores.textContent =
+            competidoresVisible ? "−" : "+";
 
-            columnasCompetidores.forEach(
-                function (columna) {
-
-                    columna.style.display =
-                        competidoresVisible
-                            ? ""
-                            : "none";
-
-                }
-            );
-
-
-            toggleCompetidores.textContent =
-                competidoresVisible
-                    ? "−"
-                    : "+";
-
-
-            toggleCompetidores.title =
-                competidoresVisible
-                    ? "Ocultar competidores"
-                    : "Mostrar competidores";
-
-        }
-    );
-
+        toggleCompetidores.title =
+            competidoresVisible
+                ? "Ocultar competidores"
+                : "Mostrar competidores";
+    });
 </script>
 
 
@@ -5113,24 +5173,49 @@ document.querySelectorAll(
 
 
 
-document.getElementById("btnFechaActualNovedades")?.addEventListener("click", function () {
-    const campo = document.getElementById("id_novedades");
 
+function obtenerFechaActual() {
     const ahora = new Date();
-    const fecha = [
+
+    return [
         String(ahora.getDate()).padStart(2, "0"),
         String(ahora.getMonth() + 1).padStart(2, "0"),
         ahora.getFullYear()
     ].join("/");
+}
+function agregarNovedad(texto) {
+    const campo = document.getElementById("id_novedades");
+    if (!campo) return;
 
     const textoActual = campo.value.trimEnd();
 
     campo.value = textoActual
-        ? textoActual + "\n" + fecha + ":"
-        : fecha + ":";
+        ? textoActual + "\n" + texto + "\n"
+        : texto + "\n";
 
     campo.focus();
-});
+    campo.setSelectionRange(campo.value.length, campo.value.length);
+}
+
+// Botón: agrega la fecha para escribir manualmente.
+document.getElementById("btnFechaActualNovedades")
+    ?.addEventListener("click", function () {
+        agregarNovedad(obtenerFechaActual() + ":");
+    });
+
+// Combo: agrega la fecha y el evento entre corchetes.
+document.getElementById("eventoNovedades")
+    ?.addEventListener("change", function () {
+        const combo = this;
+        const evento = combo.value;
+
+        if (!evento) return;
+
+        agregarNovedad(obtenerFechaActual() + ": [" + evento + "]");
+
+        // Deja el combo listo para elegir otro evento.
+        combo.value = "";
+    });
 
 
 
@@ -5203,55 +5288,6 @@ const formularioFicha = campoNovedades
     });
 });
 
-
-/* Fondo de pantalla alrededor de la tabla */
-#vista-resultados,
-#vista-totales {
-    background: #e9edf2;
-    padding: 12px 14px 16px;
-    box-sizing: border-box;
-}
-
-/* El contenedor de la tabla permanece blanco */
-#vista-resultados .resultados,
-#vista-totales .resultados {
-    background: #ffffff;
-    padding: 12px;
-    border-radius: 4px;
-}
-
-/* La tabla sigue blanca */
-#vista-resultados table,
-#vista-totales table {
-    background: #ffffff;
-}
-
-
-/* Fondo gris detrás de las pestañas y los resultados */
-.vista-panel {
-    background: #e9edf2 !important;
-    padding: 12px 14px 16px !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-}
-
-/* Panel blanco que contiene el título y la tabla */
-.vista-panel .resultados {
-    background: #ffffff !important;
-    padding: 12px !important;
-    margin: 0 !important;
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-
-/* Mantener la tabla blanca */
-.vista-panel .tabla-contenedor {
-    background: #ffffff !important;
-}
-
-.vista-panel .tabla-contenedor table {
-    background: #ffffff !important;
-}
 
 </script>
 

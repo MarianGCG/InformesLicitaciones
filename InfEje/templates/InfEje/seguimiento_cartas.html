@@ -989,7 +989,7 @@
             class="pestana activa"
             data-pestana="preparar-envio"
         >
-            1. Preparar envío
+            Preparar envío
         </div>
 
 
@@ -997,21 +997,21 @@
             class="pestana"
             data-pestana="carta-1"
         >
-            3. Carta 1
+            Carta 1
         </div>
 
         <div
             class="pestana"
             data-pestana="carta-2"
         >
-            4. Carta 2
+            Carta 2
         </div>
 
         <div
             class="pestana"
-            data-pestana="carta-vencimiento"
+            data-pestana="carta-renovacion"
         >
-            5. Carta al Vencimiento
+            Carta Renovación
         </div>
 
     </div>
@@ -1233,33 +1233,15 @@
 
                     <select id="cartaSeleccionada" style="margin-left:20px;font-weight:bold;font-size: 20px;">
 
-                        <option value="1">
-                            Carta 1
-                        </option>
-
-                        <option value="2">
-                            Carta 2
-                        </option>
-                        
-                        <option value="4">
-                            Carta Vencimiento
-                        </option>
-            
-                        <option value="respuesta1_fin">
-                            Respondió Carta 1 - Fin
-                        </option>
-
-                        <option value="respuesta1_click">
-                            Respondió Carta 1 - Click
-                        </option>
-
-                        <option value="respuesta2_fin">
-                            Respondió Carta 2 - Fin
-                        </option>
-
-                        <option value="respuesta2_click">
-                            Respondió Carta 2 - Click
-                        </option>
+                        <option value="1">Carta 1</option>
+                        <option value="2">Carta 2</option>
+                        <option value="R3">Renov 30</option>
+                        <option value="R6">Renov 60</option>
+                        <option value="R9">Renov 90</option>
+                        <option value="respuesta1_fin">Respondió Carta 1 - Fin</option>
+                        <option value="respuesta1_click">Respondió Carta 1 - Click</option>
+                        <option value="respuesta2_fin">Respondió Carta 2 - Fin</option>
+                        <option value="respuesta2_click">Respondió Carta 2 - Click</option>
 
                     </select>
 
@@ -2219,7 +2201,7 @@
     ================================================= -->
 
     <div
-        id="carta-vencimiento"
+        id="carta-renovacion"
         class="contenido-pestana"
     >
 
@@ -4823,7 +4805,7 @@ function cargarEditorCarta(carta, tipo) {
             ? "carta-1"
             : carta === 2
                 ? "carta-2"
-                : "carta-vencimiento";
+                : "carta-renovacion";
 
     const contenedor = document.getElementById(idContenedor);
 
