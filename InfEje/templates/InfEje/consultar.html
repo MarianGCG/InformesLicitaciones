@@ -2007,16 +2007,25 @@
                             <select id="eventoNovedades"
                                     class="form-select form-select-sm"
                                     style="width: 260px;">
+
                                 <option value="">— Seleccionar evento —</option>
-                                <option value="Carta 1">Carta 1</option>
-                                <option value="Carta 2">Carta 2</option>
-                                <option value="Renov 30">Renov 30</option>
-                                <option value="Renov 60">Renov 60</option>
-                                <option value="Renov 90">Renov 90</option>
-                                <option value="Respondió Carta 1 - Fin">Respondió Carta 1 - Fin</option>
-                                <option value="Respondió Carta 1 - Click">Respondió Carta 1 - Click</option>
-                                <option value="Respondió Carta 2 - Fin">Respondió Carta 2 - Fin</option>
-                                <option value="Respondió Carta 2 - Click">Respondió Carta 2 - Click</option>
+                                <option value="Carta 1. Presentación">Carta 1. Presentación</option>
+                                <option value="Carta 2. Simulación">Carta 2. Simulación</option>
+                                <option value="Carta 3. Invitación">Carta 3. Invitación</option>
+                                <option value="Renov 01">Renov 01</option>
+                                <option value="Renov 02">Renov 02</option>
+                                <option value="Renov 03">Renov 03</option>
+                                <option value="Renov 04">Renov 04</option>
+                                <option value="Renov 05">Renov 05</option>
+                                <option value="Renov 06">Renov 06</option>
+                                <option value="Renov 07">Renov 07</option>
+                                <option value="Renov 08">Renov 08</option>
+                                <option value="Renov 09">Renov 09</option>
+                                <option value="Renov 10">Renov 10</option>
+                                <option value="Renov 11">Renov 11</option>
+                                <option value="Renov 12">Renov 12</option>
+
+
                             </select>
 
                         </div>
@@ -5173,7 +5182,6 @@ document.querySelectorAll(
 
 
 
-
 function obtenerFechaActual() {
     const ahora = new Date();
 
@@ -5183,40 +5191,99 @@ function obtenerFechaActual() {
         ahora.getFullYear()
     ].join("/");
 }
-function agregarNovedad(texto) {
+
+function agregarNovedad(texto, bajarRenglon = false) {
     const campo = document.getElementById("id_novedades");
     if (!campo) return;
 
     const textoActual = campo.value.trimEnd();
 
     campo.value = textoActual
-        ? textoActual + "\n" + texto + "\n"
-        : texto + "\n";
+        ? textoActual + "\n" + texto
+        : texto;
+
+    if (bajarRenglon) {
+        campo.value += "\n";
+    }
 
     campo.focus();
-    campo.setSelectionRange(campo.value.length, campo.value.length);
+
+    const posicion = campo.value.length;
+    campo.setSelectionRange(posicion, posicion);
 }
 
-// Botón: agrega la fecha para escribir manualmente.
+// Botón: agrega la fecha y deja el cursor después de los dos puntos.
 document.getElementById("btnFechaActualNovedades")
     ?.addEventListener("click", function () {
-        agregarNovedad(obtenerFechaActual() + ":");
+        const campo = document.getElementById("id_novedades");
+        if (!campo) return;
+
+        const fecha = obtenerFechaActual() + ":";
+        const textoActual = campo.value.trimEnd();
+
+        campo.value = textoActual
+            ? textoActual + "\n" + fecha
+            : fecha;
+
+        campo.focus();
+        campo.setSelectionRange(campo.value.length, campo.value.length);
     });
 
-// Combo: agrega la fecha y el evento entre corchetes.
+// Combo: agrega el evento, baja un renglón y guarda automáticamente.
 document.getElementById("eventoNovedades")
-    ?.addEventListener("change", function () {
+    ?.addEventListener("change", async function () {
         const combo = this;
         const evento = combo.value;
 
         if (!evento) return;
 
-        agregarNovedad(obtenerFechaActual() + ": [" + evento + "]");
+        const campo = document.getElementById("id_novedades");
+        const formulario = campo?.closest("form");
 
-        // Deja el combo listo para elegir otro evento.
-        combo.value = "";
+        if (!campo || !formulario) {
+            alert("No se encontró el formulario para guardar la ficha.");
+            return;
+        }
+
+        const textoAnterior = campo.value;
+
+        agregarNovedad(
+            obtenerFechaActual() + ": [" + evento + "]",
+            true
+        );
+
+        combo.disabled = true;
+
+        try {
+            const respuesta = await fetch(formulario.action, {
+                method: "POST",
+                body: new FormData(formulario),
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            const data = await respuesta.json();
+
+            if (!respuesta.ok || !data.ok) {
+                throw new Error(
+                    data.error || "No se pudo guardar la ficha."
+                );
+            }
+
+            combo.value = "";
+
+        } catch (error) {
+            // Si falla el guardado, restaurar el texto anterior.
+            campo.value = textoAnterior;
+            campo.focus();
+
+            alert(error.message);
+
+        } finally {
+            combo.disabled = false;
+        }
     });
-
 
 
 
