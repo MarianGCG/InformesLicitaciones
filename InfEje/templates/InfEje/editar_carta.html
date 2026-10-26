@@ -563,6 +563,25 @@
             background-color: #fff !important;
         }
 
+        /* Selector principal de cartas */
+        select.selector-carta {
+            display: block;
+            width: 100%;
+            height: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
+            color: #222;
+            background-color: #fff;
+            font-size: 14px;
+        }
+
+        select.selector-carta option {
+            color: #222;
+            background-color: #fff;
+        }
+
+
+
     </style>
 
 </head>
@@ -586,7 +605,7 @@
                 <select
                     id="selectorCarta"
                     name="carta"
-                    class="asunto"
+                    class="selector-carta"
                     onchange="seleccionarCarta(this)"
                 >
 
