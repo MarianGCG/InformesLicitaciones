@@ -540,7 +540,7 @@
         }
 
 
-        /* CORRECCIÓN DE TEXTO BLANCO EN COMBOS */
+        /* Colores de los combos */
         select,
         select option,
         .combo-detalle select,
@@ -552,34 +552,22 @@
 
         /* Selector principal de cartas */
         #selectorCarta {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            height: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
             color: #222 !important;
             background-color: #fff !important;
-            height: 32px !important;
             font-size: 14px;
         }
 
         #selectorCarta option {
             color: #222 !important;
             background-color: #fff !important;
+            -webkit-text-fill-color: #222 !important;
         }
-
-        /* Selector principal de cartas */
-        select.selector-carta {
-            display: block;
-            width: 100%;
-            height: 32px;
-            min-height: 32px;
-            box-sizing: border-box;
-            color: #222;
-            background-color: #fff;
-            font-size: 14px;
-        }
-
-        select.selector-carta option {
-            color: #222;
-            background-color: #fff;
-        }
-
 
 
     </style>
