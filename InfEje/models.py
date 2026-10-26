@@ -328,17 +328,6 @@ class RegistroLicitacion(models.Model):
 
 class SeguimientoCartasFlow(models.Model):
 
-    EVENTO_CHOICES = [
-        ("carta1", "Carta 1"),
-        ("leyo_carta1", "Leyó Carta 1"),
-        ("respuesta1_fin", "Respondió Carta 1 - Fin"),
-        ("respuesta1_click", "Respondió Carta 1 - Click"),
-
-        ("carta2", "Carta 2"),
-        ("leyo_carta2", "Leyó Carta 2"),
-        ("respuesta2_fin", "Respondió Carta 2 - Fin"),
-        ("respuesta2_click", "Respondió Carta 2 - Click"),
-    ]
 
     empresa = models.ForeignKey(
         Empresa,
@@ -347,11 +336,11 @@ class SeguimientoCartasFlow(models.Model):
     )
 
 
-
     evento = models.CharField(
         max_length=100,
         db_index=True
     )
+
 
 
     fecha_envio = models.DateField(
@@ -370,6 +359,15 @@ class SeguimientoCartasFlow(models.Model):
     )
 
     acciones = models.TextField(
+        blank=True,
+        null=True
+    )
+
+
+    carta = models.ForeignKey(
+        "CartaDefinicion",
+        on_delete=models.PROTECT,
+        related_name="seguimientos",
         blank=True,
         null=True
     )

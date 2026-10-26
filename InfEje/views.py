@@ -2261,7 +2261,12 @@ def exportar_word_mails(request):
     )
 
     return respuesta
-  
+
+
+from django.db.models import Count
+from django.shortcuts import render
+
+
 def seguimiento_cartas(request):
 
     empresas = (
@@ -2271,11 +2276,9 @@ def seguimiento_cartas(request):
     )
 
     # Se muestran TODOS los eventos del flujo.
-    # La pantalla se encargará de determinar cuál es el último
-    # evento de cada empresa para decidir en qué etapa está.
     seguimientos = (
         SeguimientoCartasFlow.objects
-        .select_related("empresa")
+        .select_related("empresa", "carta")
         .order_by(
             "empresa__nombre",
             "fecha_envio",
@@ -2283,14 +2286,46 @@ def seguimiento_cartas(request):
         )
     )
 
+    # Total de movimientos registrados.
+    total_movimientos = SeguimientoCartasFlow.objects.count()
+
+    # Cantidad de movimientos por cada tipo de evento.
+    resumen_eventos = (
+        SeguimientoCartasFlow.objects
+        .values("evento")
+        .annotate(cantidad=Count("id"))
+        .order_by("evento")
+    )
+
+    # Cartas configuradas y activas, ordenadas por nombre.
+    cartas_activas = (
+        CartaDefinicion.objects
+        .filter(activa=True)
+        .order_by("nombre")
+    )
+
+
+    for carta in cartas_activas:
+        print(f"\nCARTA: {carta.nombre} | CÓDIGO: {carta.codigo} | ID: {carta.id}")
+
+        for condicion in carta.condiciones.all():
+            print(
+                f"    {condicion.tipo} -> "
+                f"{condicion.codigo_evento}"
+            )
+
     return render(
         request,
         "InfEje/seguimiento_cartas.html",
         {
             "empresas": empresas,
             "seguimientos": seguimientos,
+            "total_movimientos": total_movimientos,
+            "resumen_eventos": resumen_eventos,
+            "cartas_activas": cartas_activas,
         }
     )
+
 
 def exportar_excel_seguimiento_cartas(request):
 
@@ -2692,15 +2727,31 @@ def exportar_excel_seguimiento_cartas(request):
     return respuesta
 
 
+
 @require_POST
 def aplicar_cartas_enviadas(request):
 
     try:
-
         datos = json.loads(request.body)
-
         envios = datos.get("envios", [])
 
+        carta_valor = datos.get("carta")
+        carta_obj = None
+
+        if carta_valor:
+            # Primero buscamos por código, que es lo que envía el selector.
+            carta_obj = CartaDefinicion.objects.filter(
+                codigo=carta_valor
+            ).first()
+
+            # Si no existe ese código, el selector puede haber enviado el ID.
+            if carta_obj is None and str(carta_valor).isdigit():
+                carta_obj = CartaDefinicion.objects.filter(
+                    id=int(carta_valor)
+                ).first()
+
+
+                
         if not envios:
             return JsonResponse(
                 {
@@ -2710,17 +2761,6 @@ def aplicar_cartas_enviadas(request):
                 status=400
             )
 
-        eventos_validos = {
-            "carta1",
-            "leyo_carta1",
-            "respuesta1_fin",
-            "respuesta1_click",
-            "carta2",
-            "leyo_carta2",
-            "respuesta2_fin",
-            "respuesta2_click",
-        }
-
         cantidad = 0
 
         for envio in envios:
@@ -2728,13 +2768,8 @@ def aplicar_cartas_enviadas(request):
             empresa_id = envio.get("empresa_id")
             evento = envio.get("evento")
             fecha_texto = envio.get("fecha")
-            fecha_envio_anterior_texto = envio.get("fecha_envio_anterior")
 
-            if (
-                not empresa_id
-                or evento not in eventos_validos
-                or not fecha_texto
-            ):
+            if not empresa_id or not evento or not fecha_texto:
                 continue
 
             try:
@@ -2752,125 +2787,15 @@ def aplicar_cartas_enviadas(request):
 
             if not empresa:
                 continue
-
-            # ----------------------------------------------------
-            # Cada evento guarda la fecha en su campo correspondiente
-            # ----------------------------------------------------
-
-
-            # ----------------------------------------------------
-            # FECHAS DEL EVENTO
-            # ----------------------------------------------------
-
-            fecha_envio = None
-            fecha_apertura = None
-            fecha_respuesta = None
-
-
-            # ----------------------------------------------------
-            # CARTA 1 / CARTA 2
-            # La fecha actual es la fecha de envío
-            # ----------------------------------------------------
-
-            if evento in (
-                "carta1",
-                "carta2",
-            ):
-
-                fecha_envio = fecha
-
-
-            # ----------------------------------------------------
-            # LEYÓ CARTA
-            #
-            # La fecha del evento va en fecha_apertura.
-            # Pero además conservamos la fecha original
-            # en que se envió la carta.
-            # ----------------------------------------------------
-
-            elif evento in (
-                "leyo_carta1",
-                "leyo_carta2",
-            ):
-
-                fecha_apertura = datetime.combine(
-                    fecha,
-                    datetime.min.time()
-                )
-
-
-                fecha_envio_anterior_texto = envio.get(
-                    "fecha_envio_anterior"
-                )
-
-
-                if fecha_envio_anterior_texto:
-
-                    try:
-
-                        fecha_envio = datetime.strptime(
-                            fecha_envio_anterior_texto,
-                            "%Y-%m-%d"
-                        ).date()
-
-                    except (
-                        ValueError,
-                        TypeError
-                    ):
-
-                        fecha_envio = None
-
-
-            # ----------------------------------------------------
-            # RESPUESTA
-            #
-            # La fecha del evento va en fecha_respuesta.
-            # Pero además conservamos la fecha original
-            # en que se envió la carta.
-            # ----------------------------------------------------
-
-            elif evento in (
-                "respuesta1_fin",
-                "respuesta1_click",
-                "respuesta2_fin",
-                "respuesta2_click",
-            ):
-
-                fecha_respuesta = fecha
-
-
-                fecha_envio_anterior_texto = envio.get(
-                    "fecha_envio_anterior"
-                )
-
-
-                if fecha_envio_anterior_texto:
-
-                    try:
-
-                        fecha_envio = datetime.strptime(
-                            fecha_envio_anterior_texto,
-                            "%Y-%m-%d"
-                        ).date()
-
-                    except (
-                        ValueError,
-                        TypeError
-                    ):
-
-                        fecha_envio = None
-            # ----------------------------------------------------
-            # CREAR NUEVO EVENTO
-            # ----------------------------------------------------
+            print("CARTA RECIBIDA:", carta_valor)
+            print("CARTA ENCONTRADA:", carta_obj)
 
             SeguimientoCartasFlow.objects.create(
                 empresa=empresa,
+                carta=carta_obj,
                 evento=evento,
-                fecha_envio=fecha_envio,
-                fecha_apertura=fecha_apertura,
-                fecha_respuesta=fecha_respuesta,
+                fecha_envio=fecha,
             )
-
             cantidad += 1
 
         if cantidad == 0:
@@ -2908,6 +2833,8 @@ def aplicar_cartas_enviadas(request):
 
 
 
+
+
 @require_POST
 def guardar_seguimiento_carta(request):
     """
@@ -2918,16 +2845,11 @@ def guardar_seguimiento_carta(request):
     """
 
     try:
-
         datos = json.loads(request.body)
 
-        seguimientos = datos.get(
-            "seguimientos",
-            []
-        )
+        seguimientos = datos.get("seguimientos", [])
 
         if not seguimientos:
-
             return JsonResponse(
                 {
                     "ok": False,
@@ -2936,33 +2858,13 @@ def guardar_seguimiento_carta(request):
                 status=400
             )
 
-        eventos_validos = {
-            "carta1",
-            "leyo_carta1",
-            "respuesta1_fin",
-            "respuesta1_click",
-            "carta2",
-            "leyo_carta2",
-            "respuesta2_fin",
-            "respuesta2_click",
-        }
-
         cantidad = 0
 
         for dato in seguimientos:
+            empresa_id = dato.get("empresa_id")
+            evento = dato.get("evento")
 
-            empresa_id = dato.get(
-                "empresa_id"
-            )
-
-            evento = dato.get(
-                "evento"
-            )
-
-            if (
-                not empresa_id
-                or evento not in eventos_validos
-            ):
+            if not empresa_id or not evento:
                 continue
 
             empresa = Empresa.objects.filter(
@@ -2972,88 +2874,35 @@ def guardar_seguimiento_carta(request):
             if not empresa:
                 continue
 
-            # ----------------------------------------------------
-            # Inicializar fechas
-            # ----------------------------------------------------
-
             fecha_envio = None
-            fecha_apertura = None
-            fecha_respuesta = None
-
-            fecha_texto = dato.get(
-                "fecha"
-            )
-
-            # ----------------------------------------------------
-            # Convertir fecha
-            # ----------------------------------------------------
-
-            fecha = None
+            fecha_texto = dato.get("fecha")
 
             if fecha_texto:
-
                 try:
-
-                    fecha = datetime.strptime(
+                    fecha_envio = datetime.strptime(
                         fecha_texto,
                         "%Y-%m-%d"
                     ).date()
-
-                except (
-                    ValueError,
-                    TypeError
-                ):
-
-                    fecha = None
-
-            # ----------------------------------------------------
-            # Guardar la fecha según el evento
-            # ----------------------------------------------------
-
-            if fecha:
-
-                if evento in (
-                    "carta1",
-                    "carta2",
-                ):
-
-                    fecha_envio = fecha
-
-                elif evento in (
-                    "leyo_carta1",
-                    "leyo_carta2",
-                ):
-
-                    fecha_apertura = datetime.combine(
-                        fecha,
-                        datetime.min.time()
-                    )
-
-                elif evento in (
-                    "respuesta1_fin",
-                    "respuesta1_click",
-                    "respuesta2_fin",
-                    "respuesta2_click",
-                ):
-
-                    fecha_respuesta = fecha
-
-            # ----------------------------------------------------
-            # Crear nuevo evento
-            # ----------------------------------------------------
+                except (ValueError, TypeError):
+                    fecha_envio = None
 
             SeguimientoCartasFlow.objects.create(
                 empresa=empresa,
                 evento=evento,
                 fecha_envio=fecha_envio,
-                fecha_apertura=fecha_apertura,
-                fecha_respuesta=fecha_respuesta,
-                acciones=dato.get(
-                    "acciones"
-                ) or None,
+                acciones=dato.get("acciones") or None,
             )
 
             cantidad += 1
+
+        if cantidad == 0:
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "No se pudo guardar ningún evento."
+                },
+                status=400
+            )
 
         return JsonResponse(
             {
@@ -3063,7 +2912,6 @@ def guardar_seguimiento_carta(request):
         )
 
     except Exception as e:
-
         print(
             "ERROR GUARDAR SEGUIMIENTO:",
             e
@@ -3479,41 +3327,25 @@ def editar_carta(request):
     # ------------------------------------------------------------
 
 
+    cartas_definidas = sorted(
+        list(
+            CartaDefinicion.objects
+            .exclude(codigo__isnull=True)
+            .exclude(codigo="")
+            .values("codigo", "nombre")
+        ),
+        key=lambda carta: carta["nombre"].casefold()
+    )
 
-    cartas_definidas = [
-        {"codigo": "1", "nombre": "Carta 1. Presentación"},
-        {"codigo": "2", "nombre": "Carta 2. Simulación"},
-        {"codigo": "3", "nombre": "Carta 3. Invitación"},
-    ]
-
-    cartas_definidas += [
-        {"codigo": f"R{i}", "nombre": f"Renov {i:02d}"}
-        for i in range(1, 13)
-    ]
-
-    cartas_definidas += [
-        {"codigo": "Fin", "nombre": "Fin"},
-        {"codigo": "Click", "nombre": "Click"},
-    ]
-
-    # Agregar las cartas nuevas guardadas en la base de datos.
-    cartas_personalizadas = CartaDefinicion.objects.exclude(
-        codigo__in=[
-            "1", "2", "3",
-            *[f"R{i}" for i in range(1, 13)],
-            "Fin", "Click",
-        ]
-    ).order_by("nombre")
-
-    cartas_definidas += [
-        {"codigo": carta.codigo, "nombre": carta.nombre}
-        for carta in cartas_personalizadas
-        if carta.codigo
-    ]
-
-
-
-
+    # NOMBRE COMPLETO DE LA CARTA SELECCIONADA
+    nombre_carta = next(
+        (
+            item["nombre"]
+            for item in cartas_definidas
+            if item["codigo"] == codigo_carta
+        ),
+        codigo_carta
+    )
 
     # ------------------------------------------------------------
     # NOMBRE COMPLETO DE LA CARTA SELECCIONADA
@@ -3954,3 +3786,26 @@ def configurar_cartas(request):
             "excluir_seleccionados": excluir_seleccionados,
         }
     )
+
+
+    
+from django.http import JsonResponse
+
+
+def api_cartas_activas(request):
+    cartas = (
+        CartaDefinicion.objects
+        .filter(activa=True)
+        .order_by("nombre")
+        .values("id", "codigo", "nombre")
+    )
+
+    return JsonResponse({
+        "cartas": [
+            {
+                "valor": carta["codigo"] or str(carta["id"]),
+                "nombre": carta["nombre"],
+            }
+            for carta in cartas
+        ]
+    })

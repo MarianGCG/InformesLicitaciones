@@ -145,4 +145,11 @@ urlpatterns = [
         views.configurar_cartas,
         name="configurar_cartas",
     ),
+
+    path(
+        "api/cartas-activas/",
+        views.api_cartas_activas,
+        name="api_cartas_activas",
+    ),
+
 ]

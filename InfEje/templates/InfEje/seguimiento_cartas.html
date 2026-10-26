@@ -915,18 +915,14 @@
         }
         /* Título del bloque central */
         .listas-cartas > .panel-lista:nth-child(2) > .panel-titulo {
-            background-color: #52a6c5;
-            color: white;
-        }
-
-        /* Título del bloque Cartas enviadas */
-        .listas-cartas > .panel-lista:nth-child(3) > .panel-titulo {
             background-color: #4b49c8;
             color: white;
         }
+
+
         /* Título del bloque central */
         .listas-cartas > .panel-lista:nth-child(2) > .panel-titulo {
-            background-color: #62a5bd;
+            background-color: #4b49c8;
             color: white;
 
             height: 90px;
@@ -944,9 +940,47 @@
             box-sizing: border-box;
             display: flex;
             align-items: flex-start;
-            padding: 12px;
-            background-color: #4b49c8;
+            padding: 14px;
+            background-color: #1a795c;
             color: white;
+        }
+
+
+            
+        .resumen-cartas {
+            margin-bottom: 15px;
+        }
+
+        .resumen-eventos {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px 18px;
+            margin-top: 10px;
+        }
+
+        .resumen-evento {
+            display: block;
+        }
+
+        @media (max-width: 900px) {
+            .resumen-eventos {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 500px) {
+            .resumen-eventos {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        #cartaSeleccionada {
+            font-size: 28px !important;
+            font-weight: bold !important;
+        }
+        #cartaSeleccionada option {
+            font-size: 24px !important;
+            font-weight: bold !important;
         }
     </style>
 
@@ -1228,35 +1262,25 @@
 
 
                 <div class="panel-titulo">
-                
 
                     <label for="cartaSeleccionada">
                         Evento:
                     </label>
 
-                    <select id="cartaSeleccionada" style="margin-left:20px;font-weight:bold;font-size: 20px;">
+                    <select id="cartaSeleccionada" 
+                        style="margin-left:20px;
+                        font-weight:bold;
+                        width:660px;
+                        font-size:28px !important;">
 
-                        <option value="1">Carta 1. Presentación</option>
-                        <option value="2">Carta 2. Simulación</option>
-                        <option value="3">Carta 3. Invitación</option>
-
-                        <option value="R1">Renov 01</option>
-                        <option value="R2">Renov 02</option>
-                        <option value="R3">Renov 03</option>
-                        <option value="R4">Renov 04</option>
-                        <option value="R5">Renov 05</option>
-                        <option value="R6">Renov 06</option>
-                        <option value="R7">Renov 07</option>
-                        <option value="R8">Renov 08</option>
-                        <option value="R9">Renov 09</option>
-                        <option value="R10">Renov 10</option>
-                        <option value="R11">Renov 11</option>
-                        <option value="R12">Renov 12</option>
-
-                        <option value="Fin">Fin</option>
-                        <option value="Click">Click</option>
+                        {% for carta in cartas_activas %}
+                            <option value="{{ carta.codigo|default:carta.id }}">
+                                {{ carta.nombre }}
+                            </option>
+                        {% endfor %}
 
                     </select>
+
 
                     <div
                         id="rangoVencimiento"
@@ -1497,7 +1521,8 @@
 
             
                 <div class="panel-titulo">
-                    Cartas enviadas
+                    
+                    CARTAS ENVIADAS
 
                 </div>
                 <div class="panel-subtitulo">
@@ -1647,33 +1672,23 @@
 
                 </div>
 
-                    <div class="resumen-cartas">
 
+
+                    <div class="resumen-cartas">
                         <div>
-                            Totales:
-                            <strong class="numero-total" id="totalCartasEnviadas"></strong>
-                            <br>
-                            Carta 1:
-                            <strong class="numero-total" id="totalCartas1"></strong>
-                            &nbsp;&nbsp;
-                            Fin:
-                            <strong class="numero" id="totalFinCarta1"></strong>
-                            &nbsp;&nbsp;
-                            ClickUp:
-                            <strong class="numero" id="totalClickCarta1"></strong>
-                            <br>
-                            Carta 2:
-                            <strong class="numero-total" id="totalCartas2"></strong>
-                            &nbsp;&nbsp;
-                            Fin:
-                            <strong class="numero" id="totalFinCarta2"></strong>
-                            &nbsp;&nbsp;
-                            ClickUp:
-                            <strong class="numero" id="totalClickCarta2"></strong>
+                            Total de movimientos:
+                            <strong class="numero-total">{{ total_movimientos }}</strong>
                         </div>
 
+                        <div class="resumen-eventos">
+                            {% for evento in resumen_eventos %}
+                                <span class="resumen-evento">
+                                    {{ evento.evento|title }}:
+                                    <strong class="numero-total">{{ evento.cantidad }}</strong>
+                                </span>
+                            {% endfor %}
+                        </div>
                     </div>
-
 
 
 
@@ -1773,11 +1788,15 @@
                                         </td>
 
 
-                                        <!-- EVENTO -->
-                                        <td style="font-size: 18;">
-                                            {{ seguimiento.get_evento_display }}
-                                        </td>
 
+                                        <!-- CARTA -->
+                                        <td style="font-size: 18;">
+                                            {% if seguimiento.carta %}
+                                                {{ seguimiento.carta.nombre }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
 
                                         <!-- FECHA ENVÍO -->
                                         <td style="font-size: 18;">
@@ -2578,6 +2597,47 @@ const cartaSeleccionada =
     document.getElementById(
         "cartaSeleccionada"
     );
+
+
+
+// Actualizar las cartas al enfocar el combo.
+cartaSeleccionada.addEventListener("focus", async function () {
+    try {
+        const respuesta = await fetch(
+            "{% url 'api_cartas_activas' %}",
+            {
+                cache: "no-store"
+            }
+        );
+
+        if (!respuesta.ok) {
+            throw new Error("No se pudieron cargar las cartas.");
+        }
+
+        const datos = await respuesta.json();
+        const valorActual = cartaSeleccionada.value;
+
+        cartaSeleccionada.replaceChildren();
+
+        datos.cartas.forEach(function (carta) {
+            const opcion = document.createElement("option");
+            opcion.value = carta.valor;
+            opcion.textContent = carta.nombre;
+            cartaSeleccionada.appendChild(opcion);
+        });
+
+        // Mantener seleccionada la carta actual si sigue existiendo.
+        if (
+            Array.from(cartaSeleccionada.options)
+                .some(opcion => opcion.value === valorActual)
+        ) {
+            cartaSeleccionada.value = valorActual;
+        }
+
+    } catch (error) {
+        console.error("Error al actualizar las cartas:", error);
+    }
+});
 
 
 /* =========================================================
@@ -3845,28 +3905,21 @@ encabezadosOrden.forEach(
                             columna === "carta"
                         ) {
 
-                            const ordenEventos = {
-                                "carta1": 1,
-                                "leyo_carta1": 2,
-                                "respuesta1_fin": 3,
-                                "respuesta1_click": 4,
-                                "carta2": 5,
-                                "leyo_carta2": 6,
-                                "respuesta2_fin": 7,
-                                "respuesta2_click": 8
-                            };
-
                             valorA =
-                                ordenEventos[
-                                    filaA.dataset.evento
-                                ] || 99;
+                                filaA.cells[2]
+                                    .textContent
+                                    .trim()
+                                    .toLowerCase();
 
                             valorB =
-                                ordenEventos[
-                                    filaB.dataset.evento
-                                ] || 99;
+                                filaB.cells[2]
+                                    .textContent
+                                    .trim()
+                                    .toLowerCase();
 
                         }
+
+
                         /* ---------------------------------
                            FECHA DE ENVÍO
                         --------------------------------- */
@@ -5618,133 +5671,6 @@ actualizarResumenProveedores();
    RESUMEN CARTAS ENVIADAS
 ========================================================= */
 
-function actualizarResumenCartas() {
-
-    const filas =
-        document.querySelectorAll(
-            "#tablaHistorial .fila-historial"
-        );
-
-    let total = 0;
-
-    let cartas1 = 0;
-    let leyo1 = 0;
-    let fin1 = 0;
-    let click1 = 0;
-
-    let cartas2 = 0;
-    let leyo2 = 0;
-    let fin2 = 0;
-    let click2 = 0;
-
-
-    filas.forEach(
-        function (fila) {
-
-            total++;
-
-            const evento =
-                fila.dataset.evento;
-
-
-            /* -----------------------------
-               CARTA 1
-            ----------------------------- */
-
-            if (evento === "carta1") {
-                cartas1++;
-            }
-
-            if (evento === "leyo_carta1") {
-                leyo1++;
-            }
-
-            if (evento === "respuesta1_fin") {
-                fin1++;
-            }
-
-            if (evento === "respuesta1_click") {
-                click1++;
-            }
-
-
-            /* -----------------------------
-               CARTA 2
-            ----------------------------- */
-
-            if (evento === "carta2") {
-                cartas2++;
-            }
-
-            if (evento === "leyo_carta2") {
-                leyo2++;
-            }
-
-            if (evento === "respuesta2_fin") {
-                fin2++;
-            }
-
-            if (evento === "respuesta2_click") {
-                click2++;
-            }
-
-        }
-    );
-
-
-    /* -----------------------------
-       TOTAL
-    ----------------------------- */
-
-    document.getElementById(
-        "totalCartasEnviadas"
-    ).textContent = total;
-
-
-    /* -----------------------------
-       CARTA 1
-    ----------------------------- */
-
-    document.getElementById(
-        "totalCartas1"
-    ).textContent = cartas1;
-
-    document.getElementById(
-        "totalLeyoCarta1"
-    ).textContent = leyo1;
-
-    document.getElementById(
-        "totalFinCarta1"
-    ).textContent = fin1;
-
-    document.getElementById(
-        "totalClickCarta1"
-    ).textContent = click1;
-
-
-    /* -----------------------------
-       CARTA 2
-    ----------------------------- */
-
-    document.getElementById(
-        "totalCartas2"
-    ).textContent = cartas2;
-
-    document.getElementById(
-        "totalLeyoCarta2"
-    ).textContent = leyo2;
-
-    document.getElementById(
-        "totalFinCarta2"
-    ).textContent = fin2;
-
-    document.getElementById(
-        "totalClickCarta2"
-    ).textContent = click2;
-
-}
-
-actualizarResumenCartas();
 
 
 function actualizarResumenCartasEnviar() {
