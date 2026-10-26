@@ -995,25 +995,28 @@
 
         <div
             class="pestana"
-            data-pestana="carta-1"
+            data-pestana="editor-cartas"
         >
-            Carta 1
+            Editar Cartas
         </div>
 
-        <div
-            class="pestana"
-            data-pestana="carta-2"
-        >
-            Carta 2
-        </div>
+    </div>
 
-        <div
-            class="pestana"
-            data-pestana="carta-renovacion"
-        >
-            Carta Renovación
-        </div>
 
+    <!-- =================================================
+         PESTAÑA 2
+         EDITOR NUEVO DE CARTAS
+    ================================================= -->
+
+    <div
+        id="editor-cartas"
+        class="contenido-pestana"
+    >
+        <iframe
+            src="{% url 'editar_carta' %}"
+            title="Editor de cartas"
+            style="display:block; width:100%; height:1150px; border:0; background:#f4f6f8;"
+        ></iframe>
     </div>
 
 

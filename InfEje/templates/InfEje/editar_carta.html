@@ -12,22 +12,30 @@
         body {
             font-family: Arial, sans-serif;
             background: #f4f6f8;
+            color: #222;
             margin: 0;
-            padding: 30px;
+            padding: 12px;
         }
 
         .contenedor {
-            max-width: 1100px;
-            margin: auto;
+            width: 100%;
+            max-width: none;
+            box-sizing: border-box;
+            margin: 0;
             background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            padding: 16px;
+            border: 1px solid #d5dbe3;
+            border-radius: 6px;
+            box-shadow: none;
         }
 
         h1 {
-            margin-top: 0;
-            margin-bottom: 25px;
+            margin: 0 0 14px;
+            padding: 10px 12px;
+            background: #d6dfe6;
+            color: #222;
+            font-size: 18px;
+            line-height: 1.3;
         }
 
         .campo {
@@ -46,7 +54,7 @@
             padding: 9px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            font-size: 14px;
+            font-size: 20px;
         }
 
         .toolbar {
@@ -67,7 +75,7 @@
             background: white;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 18px;
         }
 
         .toolbar button:hover {
@@ -83,17 +91,32 @@
             cursor: pointer;
         }
 
+
+        /* ALTURA DEL CONTENIDO DE LA CARTA */
         .editor {
-            min-height: 500px;
+
+            height: 60vh;
+            min-height: 380px;
+            max-height: 480px;
+            overflow-y: auto;
+            box-sizing: border-box;
             padding: 15px;
             border: 1px solid #ccc;
             border-radius: 0 0 5px 5px;
             outline: none;
             font-family: Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 18px;
+            line-height: 1.6;
+
         }
 
+        /* Forzar tamaño en el texto y sus elementos internos */
+        .editor,
+        .editor * {
+            font-size: 18px !important;
+            line-height: 1.5 !important;
+
+        }
         .editor:focus {
             border-color: #888;
         }
@@ -109,7 +132,7 @@
             border-radius: 5px;
             padding: 10px 18px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 18px;
         }
 
         .guardar {
@@ -128,7 +151,7 @@
             background: #f8f9fa;
             border: 1px solid #ddd;
             border-radius: 5px;
-            font-size: 13px;
+            font-size: 18px;
         }
 
         .variable {
@@ -143,6 +166,340 @@
 
         }
 
+        /* Carta Tipo queda en la primera línea del mismo marco; variables abajo */
+        .variables-tipo {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding-bottom: 9px;
+            margin-bottom: 9px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .checks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin: 15px 0;
+        }
+
+        .checks label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+        }
+
+        .condicion {
+            display: grid;
+            grid-template-columns: 150px minmax(200px, 1fr) auto;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        @media (max-width: 700px) {
+            .condicion {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
+        .cartas-fila-superior {
+            display: grid;
+            grid-template-columns: minmax(250px, 1.1fr) minmax(180px, 1fr);
+            gap: 16px;
+            align-items: end;
+            padding: 8px 12px;
+            border-bottom: 1px solid #d5dce2;
+        }
+
+        .cartas-fila-superior label {
+            display: block;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .cartas-fila-superior select,
+        .cartas-fila-superior input {
+            width: 100%;
+            min-width: 0;
+            height: 28px;
+            box-sizing: border-box;
+        }
+
+        .cartas-configuracion {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr 1.3fr;
+            gap: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #d5dce2;
+            align-items: stretch;
+        }
+
+        .cartas-destinatario,
+        .cartas-renovacion,
+        .cartas-condiciones {
+            min-width: 0;
+            padding: 10px;
+            border-right: 1px solid #d5dce2;
+        }
+
+        .cartas-destinatario-botones,
+        .cartas-opciones {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .cartas-destinatario-botones label,
+        .cartas-opciones label,
+        .cartas-check-renovacion,
+        .cartas-activa {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .cartas-renovacion {
+            display: flex;
+            flex-direction: column;
+            gap: 6x;
+        }
+
+        .cartas-fechas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .cartas-fechas label {
+            font-size: 18px;
+        }
+
+        .cartas-fechas input {
+            width: 100%;
+            min-width: 0;
+            font-size: 18px;
+            box-sizing: border-box;
+        }
+
+        .cartas-condicion-titulo {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            text-align: center;
+            font-size: 18px;
+            padding-bottom: 5px;
+        }
+
+        .cartas-condicion {
+            display: grid;
+            grid-template-columns: minmax(90px, 1fr) minmax(100px, 1fr) 25px;
+            gap: 5px;
+            margin-bottom: 6px;
+        }
+
+        .cartas-condicion select,
+        .cartas-condicion input {
+            width: 100%;
+            min-width: 0;
+            height: 28px;
+            box-sizing: border-box;
+        }
+
+        .cartas-condicion button {
+            border: 0;
+            background: #e9edf0;
+            cursor: pointer;
+        }
+
+        .cartas-agregar-condicion {
+            margin-top: 3px;
+            padding: 5px 9px;
+            border: 1px solid #cbd3da;
+            border-radius: 4px;
+            background: #f3f5f7;
+            cursor: pointer;
+        }
+
+        @media (max-width: 850px) {
+            .cartas-configuracion {
+                grid-template-columns: 1fr;
+            }
+
+            .cartas-destinatario,
+            .cartas-renovacion,
+            .cartas-condiciones {
+                border-right: 0;
+                border-bottom: 1px solid #d5dce2;
+            }
+        }
+
+        .cartas-condiciones {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            min-width: 0;
+        }
+
+        .combo-multiple {
+            min-width: 0;
+        }
+
+        .combo-multiple > label {
+            display: block;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 7px;
+        }
+
+        .combo-detalle {
+            position: relative;
+        }
+
+        .combo-detalle.abrir-arriba .combo-opciones {
+            top: auto;
+            bottom: 100%;
+        }
+
+        .combo-detalle summary {
+            cursor: pointer;
+            border: 1px solid #d5dce2;
+            border-radius: 22px;
+            background: #fff;
+            padding: 10px 14px;
+            font-size: 18px;
+            list-style: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .combo-detalle summary::after {
+            content: " ▾";
+            float: right;
+        }
+
+        .combo-opciones {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: min(60vh, 520px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            background: #fff;
+            border: 1px solid #cbd3da;
+            box-shadow: 0 4px 10px #0002;
+            padding: 8px;
+        }
+
+        .combo-detalle[open] .combo-opciones {
+            display: block;
+        }
+        .combo-opciones label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .combo-opciones label:hover {
+            background: #eef3f7;
+        }
+
+        .combo-opciones .opcion-todos {
+            position: sticky;
+            top: -8px;
+            z-index: 1;
+            background: #f1f4f6;
+            border-bottom: 1px solid #d5dce2;
+            margin: -8px -8px 6px;
+            padding: 9px 13px;
+        }
+
+        @media (max-width: 700px) {
+            .cartas-condiciones {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        #selectorCarta {
+            font-family: Arial, sans-serif !important;
+            font-size: 18px !important;
+            color: #222 !important;
+            background: #fff !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: #222 !important;
+        }
+
+        #selectorCarta option {
+            font-family: Arial, sans-serif !important;
+            font-size: 20px !important;
+            color: #222 !important;
+            background: #fff !important;
+            -webkit-text-fill-color: #222 !important;
+        }
+        /* Combo Seleccionar carta */
+        #selectorCarta {
+            font-size: 18px !important;
+        }
+
+        /* Combos INCLUIR y EXCLUIR */
+        #listaIncluir,
+        #listaExcluir {
+            font-size: 18px !important;
+        }
+
+        /* Contenido de la carta */
+        #editor {
+            font-size: 18px !important;
+        }
+
+
+        /* Calendario: números un poquito más grandes */
+        input[type="date"] {
+            font-size: 16px;
+        }
+
+        input[type="date"]::-webkit-datetime-edit {
+            font-size: 16px;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+        }
+
+        /* Texto del contenido de la carta */
+        #editor {
+            font-size: 38px !important;
+            line-height: 1.6;
+        }
+
+
+        /* Combo Seleccionar carta: texto siempre visible */
+        #id_definicion {
+            font-size: 18px !important;
+            color: #222 !important;
+            background-color: #fff !important;
+        }
+
+        #id_definicion option {
+            color: #222 !important;
+            background-color: #fff !important;
+        }        
     </style>
 
 </head>
@@ -159,21 +516,195 @@
 
         {% csrf_token %}
 
-        <input
-            type="hidden"
-            name="carta"
-            value="{{ plantilla.carta }}"
-        >
-        <input
-            type="hidden"
-            name="tipo_destinatario"
-            value="{{ plantilla.tipo_destinatario }}"
-        >
+            <!-- Selección de carta -->
+            <div class="campo">
+                <label for="selectorCarta">Seleccionar carta</label>
+
+                <select
+                    id="selectorCarta"
+                    name="carta"
+                    class="asunto"
+                    onchange="seleccionarCarta(this)"
+                >
+
+
+
+                    <option
+                        value="__nueva__"
+                        {% if es_carta_nueva %}selected{% endif %}
+                    >
+                        CARTA NUEVA
+                    </option>
+
+                    {% for item in cartas_definidas %}
+                        <option
+                            value="{{ item.codigo }}"
+                            {% if codigo_carta == item.codigo %}selected{% endif %}
+                        >
+                            {{ item.nombre }}
+                        </option>
+                    {% endfor %}
+
+                </select>
+            </div>
+
+
+            <input
+                type="hidden"
+                name="definicion_id"
+                id="definicion_id"
+                value="{% if definicion %}{{ definicion.id }}{% endif %}"
+            >
+
+            <input
+                type="hidden"
+                name="tipo_destinatario"
+                value="{{ plantilla.tipo_destinatario }}"
+            >
+
 
     <h1>
-        Editar {{ plantilla.get_carta_display }}
+        {% if codigo_carta == "__nueva__" %}
+            Carta nueva
+        {% else %}
+            {{ nombre_carta }}
+        {% endif %}
     </h1>
 
+    <!-- FILA SUPERIOR: selector, nombre si es nueva y código -->
+    <div class="cartas-fila-superior">
+
+
+        {% if es_carta_nueva %}
+        <div class="cartas-nombre-nueva">
+            <label for="nombre">Nombre</label>
+            <input id="nombre" name="nombre" type="text"
+                placeholder="Nombre de la nueva carta" required>
+        </div>
+        {% endif %}
+
+
+    </div>
+
+    <!-- FILA DE CONFIGURACIÓN COMPACTA -->
+    <div class="cartas-configuracion">
+
+
+        <div class="cartas-destinatario">
+
+
+            
+
+            <div class="cartas-opciones">
+                <label>
+                    <input type="checkbox" name="incluir_movimientos"
+                        {% if definicion and definicion.incluir_movimientos %}checked{% endif %}>
+                    Incluir movimientos
+                </label>
+
+                <label>
+                    <input type="checkbox" name="incluir_cotizacion"
+                        {% if definicion and definicion.incluir_cotizacion %}checked{% endif %}>
+                    Incluir cotización
+                </label>
+
+                <label style="display: block; width: 100%;">
+                    <input type="checkbox" name="requiere_email"
+                        {% if not definicion or definicion.requiere_email %}checked{% endif %}>
+                    Proveedor debe tener email
+                </label>
+
+
+                <label class="cartas-activa">
+                    <input type="checkbox" name="activa"
+                        {% if not definicion or definicion.activa %}checked{% endif %}>
+                    Activa
+                </label>
+
+            </div>
+
+        </div>
+
+
+
+
+        <div class="cartas-renovacion">
+            <label class="cartas-check-renovacion">
+                <input type="checkbox" name="es_renovacion"
+                    {% if definicion and definicion.es_renovacion %}checked{% endif %}>
+                Es Renovación?
+            </label>
+
+            <div class="cartas-fechas">
+                <label>
+                    Desde
+                    <input type="date" name="fecha_desde"
+                        value="{% if definicion and definicion.fecha_desde %}{{ definicion.fecha_desde|date:'Y-m-d' }}{% endif %}">
+                </label>
+
+                <label>
+                    Hasta
+                    <input type="date" name="fecha_hasta"
+                        value="{% if definicion and definicion.fecha_hasta %}{{ definicion.fecha_hasta|date:'Y-m-d' }}{% endif %}">
+                </label>
+            </div>
+
+
+        </div>
+
+        <div class="cartas-condiciones">
+
+            <div class="combo-multiple">
+                <label>INCLUIR</label>
+
+                <details class="combo-detalle">
+                    <summary id="resumenIncluir">Seleccionar cartas</summary>
+                    <div class="combo-opciones">
+                        <label class="opcion-todos">
+                            <input type="checkbox" class="seleccionar-todos" aria-label="Seleccionar todas las cartas">
+                            <strong>Todos</strong>
+                        </label>
+                        {% for opcion in opciones_condicion %}
+                        <label>
+                            <input type="checkbox"
+                                name="condicion_incluir"
+                                value="{{ opcion.codigo }}"
+                                {% if opcion.codigo in incluir_seleccionados %}checked{% endif %}>
+                            {{ opcion.nombre }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </details>
+            </div>
+
+            <div class="combo-multiple">
+                <label>EXCLUIR</label>
+
+                <details class="combo-detalle">
+                    <summary id="resumenExcluir">Seleccionar cartas</summary>
+                    <div class="combo-opciones">
+                        <label class="opcion-todos">
+                            <input type="checkbox" class="seleccionar-todos" aria-label="Seleccionar todas las cartas">
+                            <strong>Todos</strong>
+                        </label>
+                        {% for opcion in opciones_condicion %}
+                        <label>
+                            <input type="checkbox"
+                                name="condicion_excluir"
+                                value="{{ opcion.codigo }}"
+                                {% if opcion.codigo in excluir_seleccionados %}checked{% endif %}>
+                            {{ opcion.nombre }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </details>
+            </div>
+
+            <input type="hidden" name="condiciones_presentes" value="1">
+
+        </div>
+
+    </div>
 
     <!-- ================================================== -->
     <!-- ASUNTO -->
@@ -322,14 +853,40 @@
 
     <div class="variables">
 
-        <strong>
-            Variables disponibles:
-        </strong>
+        <div class="variables-tipo">
+            <strong>Carta Tipo:</strong>
+
+            <label>
+                <input type="radio" name="destinatario_vista"
+                    value="empresa"
+                    {% if destinatario_vista == "empresa" or not destinatario_vista %}checked{% endif %}>
+                Empresa
+            </label>
+
+            <label>
+                <input type="radio" name="destinatario_vista"
+                    value="mujer"
+                    {% if destinatario_vista == "mujer" %}checked{% endif %}>
+                Mujer
+            </label>
+
+            <label>
+                <input type="radio" name="destinatario_vista"
+                    value="hombre"
+                    {% if destinatario_vista == "hombre" %}checked{% endif %}>
+                Hombre
+            </label>
+        </div>
+
+        <div class="variables-lista">
+            <strong>Variables disponibles:</strong>
 
         <button
             type="button"
             class="variable"
             data-variable="&#123;&#123; nombre_pila &#125;&#125;"
+            onmousedown="guardarRangoEditor()"
+
             onclick="insertarVariableEditor(1, this.dataset.variable)"
         >
             &#123;&#123; nombre_pila &#125;&#125;
@@ -339,6 +896,7 @@
             type="button"
             class="variable"
             data-variable="&#123;&#123; nombre &#125;&#125;"
+            onmousedown="guardarRangoEditor()"
             onclick="insertarVariableEditor(1, this.dataset.variable)"
         >
             &#123;&#123; nombre &#125;&#125;
@@ -348,68 +906,17 @@
             type="button"
             class="variable"
             data-variable="&#123;&#123; organismos &#125;&#125;"
+            onmousedown="guardarRangoEditor()"
             onclick="insertarVariableEditor(1, this.dataset.variable)"
         >
             &#123;&#123; organismos &#125;&#125;
         </button>
 
-
-    
+        </div>
     </div>
 
 
-    <div
-        style="
-            margin-top: 20px;
-            padding: 12px;
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        "
-    >
 
-        <label
-            for="empresaVistaPrevia"
-            style="
-                font-weight: bold;
-                margin-right: 10px;
-            "
-        >
-            Empresa para vista previa:
-        </label>
-
-
-        <select
-            id="empresaVistaPrevia"
-            onchange="cargarPlantillaEmpresa()"
-            style="
-                padding: 7px;
-                min-width: 350px;
-            "
-        >
-            <option value="">
-                Seleccionar empresa...
-            </option>
-
-            {% for empresa in empresas %}
-
-                <option
-                    value="{{ empresa.id }}"
-                    data-nombre="{{ empresa.nombre }}"
-                    data-nombre-pila="{{ empresa.nombre_pila|default:'' }}"
-                    data-tipo="{{ empresa.tipo_destinatario }}"
-                    {% if empresa_seleccionada and empresa_seleccionada.id == empresa.id %}selected{% endif %}
-                >
-                    {{ empresa.nombre }}
-                </option>
-
-
-
-            {% endfor %}
-
-        </select>
-
-    </div>
 
 
 
@@ -426,13 +933,6 @@
             💾 Guardar cambios
         </button>
 
-        <button
-            type="button"
-            class="boton vista-previa"
-            onclick="vistaPrevia()"
-        >
-            👁 Vista previa
-        </button>
 
     </div>
 
@@ -613,18 +1113,6 @@
 
 
 
-    function insertarVariable(texto) {
-
-        document.execCommand(
-            "insertText",
-            false,
-            texto
-        );
-
-    }
-
-
-
     function cargarPlantillaEmpresa() {
 
         const selector =
@@ -649,6 +1137,293 @@
 
 
 
+let rangoEditor = null;
+
+function guardarRangoEditor() {
+    const editor = document.getElementById("editor");
+    if (!editor) return;
+
+    const seleccion = window.getSelection();
+
+    if (
+        seleccion &&
+        seleccion.rangeCount > 0 &&
+        editor.contains(seleccion.anchorNode)
+    ) {
+        rangoEditor = seleccion.getRangeAt(0).cloneRange();
+    }
+}
+
+function insertarVariableEditor(numero, texto) {
+    const editor = document.getElementById("editor");
+    if (!editor) return;
+   
+    editor.focus();
+
+    const seleccion = window.getSelection();
+
+    if (rangoEditor) {
+        seleccion.removeAllRanges();
+        seleccion.addRange(rangoEditor);
+    } else {
+        // Si no hay una posición guardada, insertar al final del editor.
+        const rango = document.createRange();
+        rango.selectNodeContents(editor);
+        rango.collapse(false);
+        seleccion.removeAllRanges();
+        seleccion.addRange(rango);
+    }
+
+    const rangoActual = seleccion.getRangeAt(0);
+    rangoActual.deleteContents();
+
+    const nodoTexto = document.createTextNode(texto);
+    rangoActual.insertNode(nodoTexto);
+
+    // Dejar el cursor justo después de la variable insertada.
+    rangoActual.setStartAfter(nodoTexto);
+    rangoActual.collapse(true);
+    seleccion.removeAllRanges();
+    seleccion.addRange(rangoActual);
+
+    rangoEditor = rangoActual.cloneRange();
+}
+
+const editorCarta = document.getElementById("editor");
+
+if (editorCarta) {
+    editorCarta.addEventListener("keyup", guardarRangoEditor);
+    editorCarta.addEventListener("mouseup", guardarRangoEditor);
+    editorCarta.addEventListener("input", guardarRangoEditor);
+    editorCarta.addEventListener("focus", guardarRangoEditor);
+}
+
+
+function seleccionarCarta(selector) {
+    const carta = selector.value;
+    const params = new URLSearchParams();
+
+    params.set("carta", carta);
+
+    const definicionId = document.getElementById("definicion_id")?.value;
+
+    if (definicionId && definicionId !== "None") {
+        params.set("definicion_id", definicionId);
+    }
+
+    const destinatario = document.querySelector(
+        'input[name="destinatario_vista"]:checked'
+    );
+
+    if (destinatario) {
+        params.set("destinatario_vista", destinatario.value);
+    }
+
+    const empresaId = document.querySelector('[name="empresa_id"]');
+
+    if (empresaId && empresaId.value) {
+        params.set("empresa_id", empresaId.value);
+    }
+
+    window.location.href = "{% url 'editar_carta' %}?" + params.toString();
+}
+
+
+
+function agregarCondicion() {
+    const lista = document.getElementById("listaCondiciones");
+
+    const fila = document.createElement("div");
+    fila.className = "condicion";
+
+    fila.innerHTML = `
+        <select name="condicion_tipo" class="asunto">
+            <option value="incluir">Incluir</option>
+            <option value="excluir">Excluir</option>
+        </select>
+
+        <input
+            type="text"
+            name="codigo_evento"
+            class="asunto"
+            placeholder="Código de evento"
+        >
+
+        <button
+            type="button"
+            class="boton"
+            onclick="this.parentElement.remove()"
+        >
+            Quitar
+        </button>
+    `;
+
+    lista.appendChild(fila);
+    fila.querySelector('input[name="codigo_evento"]').focus();
+}
+
+
+</script>
+<script>
+document.querySelectorAll('input[name="destinatario_vista"]').forEach(
+    function (radio) {
+        radio.addEventListener("change", function () {
+
+            const params = new URLSearchParams(window.location.search);
+
+            const selectorCarta = document.querySelector(
+                'select[name="carta"]'
+            );
+
+            const carta = selectorCarta
+                ? selectorCarta.value
+                : params.get("carta");
+
+            if (!carta) {
+                return;
+            }
+
+            params.set("carta", carta);
+            params.set("destinatario_vista", this.value);
+
+            const definicionId = document.querySelector(
+                'input[name="definicion_id"]'
+            );
+
+            if (definicionId && definicionId.value) {
+                params.set("definicion_id", definicionId.value);
+            }
+
+            const empresaId = document.querySelector(
+                '[name="empresa_id"]'
+            );
+
+            if (empresaId && empresaId.value) {
+                params.set("empresa_id", empresaId.value);
+            }
+
+            window.location.href =
+                "{% url 'editar_carta' %}?" + params.toString();
+        });
+    }
+);
+</script>
+
+<script>
+(function () {
+    function actualizarTodos(detalle) {
+        const opciones = Array.from(detalle.querySelectorAll(
+            'input[type="checkbox"][name^="condicion_"]'
+        ));
+        const todos = detalle.querySelector('.seleccionar-todos');
+        if (!todos || !opciones.length) return;
+        const cantidadMarcadas = opciones.filter(c => c.checked).length;
+        todos.checked = cantidadMarcadas === opciones.length;
+        todos.indeterminate = cantidadMarcadas > 0 && cantidadMarcadas < opciones.length;
+    }
+
+    document.querySelectorAll('.combo-detalle').forEach(function (detalle) {
+        const todos = detalle.querySelector('.seleccionar-todos');
+        const opciones = detalle.querySelectorAll(
+            'input[type="checkbox"][name^="condicion_"]'
+        );
+
+        if (todos) {
+            todos.addEventListener('change', function () {
+                opciones.forEach(function (opcion) {
+                    opcion.checked = todos.checked;
+                });
+                actualizarTodos(detalle);
+            });
+        }
+
+        opciones.forEach(function (opcion) {
+            opcion.addEventListener('change', function () {
+                actualizarTodos(detalle);
+            });
+        });
+
+        detalle.addEventListener('toggle', function () {
+            if (!detalle.open) {
+                detalle.classList.remove('abrir-arriba');
+                return;
+            }
+            const resumen = detalle.querySelector('summary');
+            if (!resumen) return;
+            const espacioAbajo = window.innerHeight - resumen.getBoundingClientRect().bottom;
+            const espacioArriba = resumen.getBoundingClientRect().top;
+            detalle.classList.toggle('abrir-arriba', espacioAbajo < 240 && espacioArriba > espacioAbajo);
+            const lista = detalle.querySelector('.combo-opciones');
+            if (lista) {
+                const espacioDisponible = detalle.classList.contains('abrir-arriba') ? espacioArriba : espacioAbajo;
+                lista.style.maxHeight = Math.max(120, Math.min(520, espacioDisponible - 12)) + 'px';
+            }
+        });
+
+        actualizarTodos(detalle);
+    });
+})();
+</script>
+
+
+<script>
+(function () {
+    function actualizarTodos(detalle) {
+        const opciones = Array.from(detalle.querySelectorAll(
+            'input[type="checkbox"][name^="condicion_"]'
+        ));
+        const todos = detalle.querySelector('.seleccionar-todos');
+        if (!todos || !opciones.length) return;
+        const marcadas = opciones.filter(function (c) { return c.checked; }).length;
+        todos.checked = marcadas === opciones.length;
+        todos.indeterminate = marcadas > 0 && marcadas < opciones.length;
+    }
+
+    document.querySelectorAll('.combo-detalle').forEach(function (detalle) {
+        const todos = detalle.querySelector('.seleccionar-todos');
+        const opciones = detalle.querySelectorAll(
+            'input[type="checkbox"][name^="condicion_"]'
+        );
+
+        if (todos) {
+            todos.addEventListener('change', function () {
+                opciones.forEach(function (opcion) {
+                    opcion.checked = todos.checked;
+                });
+                actualizarTodos(detalle);
+            });
+        }
+
+        opciones.forEach(function (opcion) {
+            opcion.addEventListener('change', function () {
+                actualizarTodos(detalle);
+            });
+        });
+
+        detalle.addEventListener('toggle', function () {
+            if (!detalle.open) {
+                detalle.classList.remove('abrir-arriba');
+                return;
+            }
+            const resumen = detalle.querySelector('summary');
+            if (!resumen) return;
+            const espacioAbajo = window.innerHeight - resumen.getBoundingClientRect().bottom;
+            const espacioArriba = resumen.getBoundingClientRect().top;
+            detalle.classList.toggle(
+                'abrir-arriba',
+                espacioAbajo < 240 && espacioArriba > espacioAbajo
+            );
+            const lista = detalle.querySelector('.combo-opciones');
+            if (lista) {
+                const espacioDisponible = detalle.classList.contains('abrir-arriba')
+                    ? espacioArriba : espacioAbajo;
+                lista.style.maxHeight = Math.max(120, Math.min(520, espacioDisponible - 12)) + 'px';
+            }
+        });
+
+        actualizarTodos(detalle);
+    });
+})();
 </script>
 
 </body>

@@ -346,10 +346,13 @@ class SeguimientoCartasFlow(models.Model):
         related_name="seguimiento_cartas"
     )
 
+
+
     evento = models.CharField(
-        max_length=30,
-        choices=EVENTO_CHOICES
+        max_length=100,
+        db_index=True
     )
+
 
     fecha_envio = models.DateField(
         blank=True,
@@ -396,11 +399,11 @@ class CartaPlantilla(models.Model):
         ("empresa", "Empresa"),
     ]
 
-    carta = models.CharField(
-        max_length=1,
-        choices=CARTA_CHOICES
-    )
 
+    carta = models.CharField(
+        max_length=50,
+        db_index=True
+    )
     tipo_destinatario = models.CharField(
         max_length=20,
         choices=TIPO_DESTINATARIO_CHOICES,
@@ -453,3 +456,112 @@ class CartaPlantilla(models.Model):
             f"{self.get_carta_display()} - "
             f"{self.get_tipo_destinatario_display()}"
         )
+
+
+# ============================================================
+# CONFIGURACIÓN DINÁMICA DE CARTAS
+# ============================================================
+
+class CartaDefinicion(models.Model):
+
+    codigo = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True
+    )
+    nombre = models.CharField(
+        max_length=150,
+        unique=True
+    )
+
+    tipo_destinatario = models.CharField(
+        max_length=20,
+        choices=[
+            ("persona", "Persona"),
+            ("empresa", "Empresa"),
+        ],
+        default="empresa"
+    )
+
+    genero = models.CharField(
+        max_length=10,
+        choices=[
+            ("mujer", "Mujer"),
+            ("hombre", "Hombre"),
+        ],
+        blank=True,
+        null=True
+    )
+
+    incluir_movimientos = models.BooleanField(default=False)
+    incluir_cotizacion = models.BooleanField(default=False)
+    requiere_email = models.BooleanField(default=True)
+
+    es_renovacion = models.BooleanField(default=False)
+
+    fecha_desde = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    fecha_hasta = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    activa = models.BooleanField(default=True)
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.nombre
+
+
+class CartaCondicion(models.Model):
+
+    TIPO_CHOICES = [
+        ("incluir", "Incluir"),
+        ("excluir", "Excluir"),
+    ]
+
+    carta = models.ForeignKey(
+        CartaDefinicion,
+        on_delete=models.CASCADE,
+        related_name="condiciones"
+    )
+
+    tipo = models.CharField(
+        max_length=10,
+        choices=TIPO_CHOICES
+    )
+
+    # Identificador del evento que se evalúa.
+    # Ejemplos: carta1, carta2, respuesta1_fin.
+    codigo_evento = models.CharField(
+        max_length=100
+    )
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["carta", "tipo", "codigo_evento"],
+                name="unique_carta_condicion_evento"
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.carta.nombre} - "
+            f"{self.tipo} - "
+            f"{self.codigo_evento}"
+        )
+
+
+

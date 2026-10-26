@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from .models import SeguimientoCartasFlow
 from django.db.models import (
     Q,
     Case,
@@ -7,6 +8,8 @@ from django.db.models import (
     IntegerField,
     CharField,
 )
+from django.db import transaction
+from django.utils.dateparse import parse_date
 import json
 from django.db.models.functions import Coalesce, Cast, Lower
 
@@ -15,9 +18,10 @@ from .models import (
     Empresa,
     SeguimientoCartasFlow,
     CartaPlantilla,
-    RegistroLicitacion
+    CartaDefinicion,
+    CartaCondicion,
+    RegistroLicitacion,
 )
-
 import csv
 import re
 from openpyxl import Workbook
@@ -28,7 +32,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from .importadores import importar_excel
 from django.http import HttpResponse, JsonResponse
+
 from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.clickjacking import xframe_options_sameorigin
+
 from django.db.models import Q, Count
 from .exportar_pdf import (
     construir_pdf,
@@ -3103,68 +3110,109 @@ def eliminar_seguimiento_carta(request):
             status=500
         )
 
-        
+@xframe_options_sameorigin
+
 def editar_carta(request):
 
-    carta = request.GET.get(
-        "carta",
-        request.POST.get("carta", "1")
+    codigo_carta = (
+        request.POST.get("carta")
+        or request.GET.get("carta")
+        or "1"
     )
 
-    # ------------------------------------------------------------
-    # EMPRESAS
-    # ------------------------------------------------------------
 
-    empresas = (
-        Empresa.objects
-        .all()
-        .order_by("nombre")
+    definicion_id = (
+        request.POST.get("definicion_id")
+        or request.GET.get("definicion_id")
     )
 
+    if definicion_id in ("None", "null", ""):
+        definicion_id = None
     # ------------------------------------------------------------
-    # EMPRESA SELECCIONADA PARA LA VISTA PREVIA
+    # TIPO DE CARTA: EMPRESA, MUJER U HOMBRE
     # ------------------------------------------------------------
 
-    empresa_id = request.GET.get(
-        "empresa_id",
-        request.POST.get("empresa_id")
+    destinatario_vista = (
+        request.POST.get("destinatario_vista")
+        or request.GET.get("destinatario_vista")
+        or "empresa"
+    )
+
+    if destinatario_vista == "mujer":
+        tipo_destinatario = "persona"
+        genero = "mujer"
+    elif destinatario_vista == "hombre":
+        tipo_destinatario = "persona"
+        genero = "hombre"
+    else:
+        destinatario_vista = "empresa"
+        tipo_destinatario = "empresa"
+        genero = None
+
+    # ------------------------------------------------------------
+    # EMPRESA PARA VISTA PREVIA
+    # ------------------------------------------------------------
+
+    empresas = Empresa.objects.all().order_by("nombre")
+
+    empresa_id = (
+        request.GET.get("empresa_id")
+        or request.POST.get("empresa_id")
     )
 
     empresa_seleccionada = None
 
     if empresa_id:
-        try:
-            empresa_seleccionada = Empresa.objects.get(
-                id=empresa_id
-            )
-        except Empresa.DoesNotExist:
-            empresa_seleccionada = None
+        empresa_seleccionada = Empresa.objects.filter(
+            pk=empresa_id
+        ).first()
 
     # ------------------------------------------------------------
-    # TIPO DE DESTINATARIO
+    # DEFINICIÓN SELECCIONADA
     # ------------------------------------------------------------
 
-    tipo_destinatario = request.GET.get(
-        "tipo_destinatario",
-        request.POST.get(
-            "tipo_destinatario",
-            "empresa"
-        )
+    definicion = None
+
+    if codigo_carta != "__nueva__":
+        definicion = CartaDefinicion.objects.filter(
+            codigo=codigo_carta
+        ).first()
+
+        if definicion is None and definicion_id:
+            definicion = CartaDefinicion.objects.filter(
+                pk=definicion_id,
+                codigo=codigo_carta
+            ).first()
+
+    # Si una definición anterior no tenía código, asignarle uno.
+    if definicion and not definicion.codigo:
+        definicion.codigo = f"CARTA_{definicion.pk}"
+        definicion.save(update_fields=["codigo"])
+
+    # ------------------------------------------------------------
+    # CARGAR LA PLANTILLA PARA LA VISTA ACTUAL
+    # ------------------------------------------------------------
+
+    codigo_plantilla = (
+        str(definicion.codigo)
+        if definicion and definicion.codigo
+        else str(codigo_carta)
     )
 
-    if empresa_seleccionada:
-        tipo_destinatario = (
-            empresa_seleccionada.tipo_destinatario
+    plantilla = CartaPlantilla.objects.filter(
+        carta=codigo_plantilla,
+        tipo_destinatario=tipo_destinatario,
+        genero=genero,
+    ).first()
+
+    # Si todavía no existe, preparar una instancia vacía
+    # sin crear un registro en la base de datos.
+    if plantilla is None:
+        plantilla = CartaPlantilla(
+            carta=codigo_plantilla,
+            tipo_destinatario=tipo_destinatario,
+            genero=genero,
         )
-
-    # ------------------------------------------------------------
-    # PLANTILLA
-    # ------------------------------------------------------------
-
-    plantilla, creada = CartaPlantilla.objects.get_or_create(
-        carta=carta,
-        tipo_destinatario=tipo_destinatario
-    )
 
     # ------------------------------------------------------------
     # GUARDAR
@@ -3172,25 +3220,264 @@ def editar_carta(request):
 
     if request.method == "POST":
 
-        plantilla.asunto = (
-            request.POST.get("asunto") or None
+        nombre = (request.POST.get("nombre") or "").strip()
+        codigo = (request.POST.get("codigo") or "").strip()
+
+        fecha_desde_texto = request.POST.get("fecha_desde") or ""
+        fecha_hasta_texto = request.POST.get("fecha_hasta") or ""
+
+        fecha_desde = (
+            parse_date(fecha_desde_texto)
+            if fecha_desde_texto else None
         )
 
-        plantilla.contenido_html = (
-            request.POST.get("contenido_html") or None
+        fecha_hasta = (
+            parse_date(fecha_hasta_texto)
+            if fecha_hasta_texto else None
         )
 
-        plantilla.save()
+        es_nueva = codigo_carta == "__nueva__"
 
-        return redirect(
-            f"/editar-carta/?carta={carta}"
-            f"&empresa_id={empresa_id or ''}"
+        if es_nueva and not nombre:
+            messages.error(
+                request,
+                "Ingresá el nombre de la nueva carta."
+            )
+
+        elif (
+            (fecha_desde_texto and not fecha_desde)
+            or (fecha_hasta_texto and not fecha_hasta)
+        ):
+            messages.error(
+                request,
+                "Ingresá fechas válidas."
+            )
+
+        elif (
+            fecha_desde
+            and fecha_hasta
+            and fecha_desde > fecha_hasta
+        ):
+            messages.error(
+                request,
+                "La fecha Desde no puede ser posterior a Hasta."
+            )
+
+        else:
+            try:
+                with transaction.atomic():
+
+                    # Crear o actualizar la definición.
+                    if definicion is None:
+                        definicion = CartaDefinicion()
+                        # Si se está guardando una carta predefinida (1, 2, 3, R1...)
+                        # usar ese mismo código. Si se genera CARTA_<id>, al volver
+                        # a buscarla el selector no encuentra la configuración guardada.
+                        if not es_nueva and codigo_carta:
+                            definicion.codigo = str(codigo_carta)
+                            nombres_base = {
+                                "1": "Carta 1. Presentación",
+                                "2": "Carta 2. Simulación",
+                                "3": "Carta 3. Invitación",
+                                "Fin": "Fin",
+                                "Click": "Click",
+                            }
+                            if str(codigo_carta).startswith("R") and str(codigo_carta)[1:].isdigit():
+                                definicion.nombre = f"Renov {int(str(codigo_carta)[1:]):02d}"
+                            else:
+                                definicion.nombre = nombres_base.get(str(codigo_carta), str(codigo_carta))
+
+                    if nombre:
+                        definicion.nombre = nombre
+
+                    if codigo:
+                        definicion.codigo = codigo
+
+                    definicion.tipo_destinatario = tipo_destinatario
+                    definicion.genero = genero
+
+                    definicion.incluir_movimientos = (
+                        request.POST.get("incluir_movimientos") == "on"
+                    )
+
+                    definicion.incluir_cotizacion = (
+                        request.POST.get("incluir_cotizacion") == "on"
+                    )
+
+                    definicion.requiere_email = (
+                        request.POST.get("requiere_email") == "on"
+                    )
+
+                    definicion.es_renovacion = (
+                        request.POST.get("es_renovacion") == "on"
+                    )
+
+                    definicion.fecha_desde = fecha_desde
+                    definicion.fecha_hasta = fecha_hasta
+
+                    # En una carta nueva queda activa por defecto.
+                    definicion.activa = (
+                        request.POST.get("activa") == "on"
+                        if "activa" in request.POST
+                        else es_nueva
+                    )
+
+                    definicion.save()
+
+                    if not definicion.codigo:
+                        definicion.codigo = (
+                            f"CARTA_{definicion.pk}"
+                        )
+                        definicion.save(update_fields=["codigo"])
+
+                    # ------------------------------------------------
+                    # GUARDAR CONDICIONES
+                    # Solo si el formulario contiene esos campos.
+                    # ------------------------------------------------
+
+                    if "condiciones_presentes" in request.POST:
+
+                        incluir = request.POST.getlist(
+                            "condicion_incluir"
+                        )
+
+                        excluir = request.POST.getlist(
+                            "condicion_excluir"
+                        )
+
+                        definicion.condiciones.all().delete()
+
+                        condiciones = set()
+
+                        for evento in incluir:
+                            evento = evento.strip()
+                            if evento:
+                                condiciones.add(("incluir", evento))
+
+                        for evento in excluir:
+                            evento = evento.strip()
+                            if evento:
+                                condiciones.add(("excluir", evento))
+
+                        for tipo_condicion, evento in sorted(condiciones):
+                            CartaCondicion.objects.create(
+                                carta=definicion,
+                                tipo=tipo_condicion,
+                                codigo_evento=evento,
+                            )
+
+                    # ------------------------------------------------
+                    # GUARDAR ASUNTO Y CONTENIDO DE LA PLANTILLA
+                    # ------------------------------------------------
+
+                    plantilla, _ = CartaPlantilla.objects.get_or_create(
+                        carta=str(definicion.codigo),
+                        tipo_destinatario=tipo_destinatario,
+                        genero=genero,
+                    )
+
+                    plantilla.asunto = (
+                        request.POST.get("asunto") or ""
+                    )
+
+                    plantilla.contenido_html = (
+                        request.POST.get("contenido_html") or ""
+                    )
+
+                    plantilla.save()
+
+
+
+                return redirect(
+                    f"/editar-carta/?carta={definicion.codigo}"
+                    f"&definicion_id={definicion.pk}"
+                    f"&empresa_id={empresa_id or ''}"
+                    f"&destinatario_vista={destinatario_vista}"
+                )
+
+            except Exception as error:
+                messages.error(
+                    request,
+                    f"No se pudo guardar la carta: {error}"
+                )
+
+    # ------------------------------------------------------------
+    # LISTAS DE LOS COMBOS Y CARTAS
+    # ------------------------------------------------------------
+
+    cartas_definidas = [
+        {"codigo": "1", "nombre": "Carta 1. Presentación"},
+        {"codigo": "2", "nombre": "Carta 2. Simulación"},
+        {"codigo": "3", "nombre": "Carta 3. Invitación"},
+    ]
+
+    cartas_definidas += [
+        {"codigo": f"R{i}", "nombre": f"Renov {i:02d}"}
+        for i in range(1, 13)
+    ]
+
+    cartas_definidas += [
+        {"codigo": "Fin", "nombre": "Fin"},
+        {"codigo": "Click", "nombre": "Click"},
+    ]
+
+    # ------------------------------------------------------------
+    # NOMBRE COMPLETO DE LA CARTA SELECCIONADA
+    # ------------------------------------------------------------
+
+    nombre_carta = next(
+        (
+            item["nombre"]
+            for item in cartas_definidas
+            if item["codigo"] == codigo_carta
+        ),
+        codigo_carta
+    )
+
+    # ------------------------------------------------------------
+    # OPCIONES PARA LOS COMBOS INCLUIR Y EXCLUIR
+    # ------------------------------------------------------------
+
+    opciones_condicion = [
+        {"codigo": "1", "nombre": "Carta 1. Presentación"},
+        {"codigo": "2", "nombre": "Carta 2. Simulación"},
+        {"codigo": "3", "nombre": "Carta 3. Invitación"},
+        {"codigo": "R1", "nombre": "Renov 01"},
+        {"codigo": "R2", "nombre": "Renov 02"},
+        {"codigo": "R3", "nombre": "Renov 03"},
+        {"codigo": "R4", "nombre": "Renov 04"},
+        {"codigo": "R5", "nombre": "Renov 05"},
+        {"codigo": "R6", "nombre": "Renov 06"},
+        {"codigo": "R7", "nombre": "Renov 07"},
+        {"codigo": "R8", "nombre": "Renov 08"},
+        {"codigo": "R9", "nombre": "Renov 09"},
+        {"codigo": "R10", "nombre": "Renov 10"},
+        {"codigo": "R11", "nombre": "Renov 11"},
+        {"codigo": "R12", "nombre": "Renov 12"},
+        {"codigo": "Fin", "nombre": "Fin"},
+        {"codigo": "Click", "nombre": "Click"},
+    ]
+
+    incluir_seleccionados = set()
+    excluir_seleccionados = set()
+
+    if definicion:
+        incluir_seleccionados = set(
+            definicion.condiciones.filter(tipo="incluir")
+            .values_list("codigo_evento", flat=True)
+        )
+
+        excluir_seleccionados = set(
+            definicion.condiciones.filter(tipo="excluir")
+            .values_list("codigo_evento", flat=True)
         )
 
     # ------------------------------------------------------------
-    # MOSTRAR
+    # MOSTRAR PANTALLA
     # ------------------------------------------------------------
-
+    print("CODIGO CARTA:", codigo_carta)
+    print("DEFINICION:", definicion)
+    print("NOMBRE:", definicion.nombre if definicion else "SIN DEFINICION")
     return render(
         request,
         "InfEje/editar_carta.html",
@@ -3198,16 +3485,43 @@ def editar_carta(request):
             "plantilla": plantilla,
             "empresas": empresas,
             "empresa_seleccionada": empresa_seleccionada,
+            "definicion": definicion,
+            "cartas_definidas": cartas_definidas,
+            "condiciones": (
+                definicion.condiciones.all()
+                if definicion else []
+            ),
+            "opciones_condicion": opciones_condicion,
+            "incluir_seleccionados": incluir_seleccionados,
+            "excluir_seleccionados": excluir_seleccionados,
+            "es_carta_nueva": codigo_carta == "__nueva__",
+            "destinatario_vista": destinatario_vista,
+            "codigo_carta": codigo_carta,
+            "nombre_carta": nombre_carta,
         }
     )
 
-def obtener_plantilla_carta(
-    request,
-    carta,
-    tipo_destinatario
-):
 
-    genero = request.GET.get("genero") or None
+
+
+def obtener_plantilla_carta(request, carta, tipo_destinatario):
+
+    destinatario_vista = (
+        request.GET.get("destinatario_vista")
+        or request.POST.get("destinatario_vista")
+    )
+
+    if destinatario_vista == "mujer":
+        tipo_destinatario = "persona"
+        genero = "mujer"
+    elif destinatario_vista == "hombre":
+        tipo_destinatario = "persona"
+        genero = "hombre"
+    elif destinatario_vista == "empresa":
+        tipo_destinatario = "empresa"
+        genero = None
+    else:
+        genero = request.GET.get("genero") or None
 
     print("====================================")
     print("CARGANDO PLANTILLA")
@@ -3216,11 +3530,17 @@ def obtener_plantilla_carta(
     print("Genero:", genero)
     print("====================================")
 
-    plantilla, creada = CartaPlantilla.objects.get_or_create(
+    plantilla = CartaPlantilla.objects.filter(
         carta=str(carta),
         tipo_destinatario=tipo_destinatario,
-        genero=genero
-    )
+        genero=genero,
+    ).first()
+
+    if not plantilla:
+        return JsonResponse(
+            {"error": "No existe una plantilla para esa carta y destinatario."},
+            status=404,
+        )
 
     return JsonResponse({
         "asunto": plantilla.asunto or "",
@@ -3236,9 +3556,18 @@ def guardar_plantilla_carta(request):
         datos = json.loads(request.body)
 
         carta = str(datos.get("carta"))
-        tipo_destinatario = datos.get("tipo_destinatario")
-        genero = datos.get("genero") or None
 
+        destinatario_vista = datos.get("destinatario_vista")
+
+        if destinatario_vista == "mujer":
+            tipo_destinatario = "persona"
+            genero = "mujer"
+        elif destinatario_vista == "hombre":
+            tipo_destinatario = "persona"
+            genero = "hombre"
+        else:
+            tipo_destinatario = "empresa"
+            genero = None
         asunto = datos.get("asunto") or ""
         contenido_html = datos.get("contenido_html") or ""
 
@@ -3275,3 +3604,244 @@ def guardar_plantilla_carta(request):
             "error": str(e)
         }, status=500)
 
+# ============================================================
+# CONFIGURACIÓN DE CARTAS DESDE INFORMESLICITACIONES
+# ============================================================
+
+def configurar_cartas(request):
+
+    carta_id = (
+        request.POST.get("carta_id")
+        or request.GET.get("id")
+    )
+
+    carta = None
+
+    if carta_id:
+        carta = get_object_or_404(
+            CartaDefinicion,
+            pk=carta_id
+        )
+
+    # ========================================================
+    # GUARDAR CARTA Y CONDICIONES
+    # ========================================================
+
+    if request.method == "POST":
+
+        nombre = (
+            request.POST.get("nombre") or ""
+        ).strip()
+
+        codigo = (
+            request.POST.get("codigo") or ""
+        ).strip() or None
+
+        if not nombre:
+            messages.error(
+                request,
+                "El nombre de la carta es obligatorio."
+            )
+
+        else:
+
+            fecha_desde_texto = (
+                request.POST.get("fecha_desde") or ""
+            )
+
+            fecha_hasta_texto = (
+                request.POST.get("fecha_hasta") or ""
+            )
+
+            fecha_desde = (
+                parse_date(fecha_desde_texto)
+                if fecha_desde_texto else None
+            )
+
+            fecha_hasta = (
+                parse_date(fecha_hasta_texto)
+                if fecha_hasta_texto else None
+            )
+
+            if (
+                fecha_desde_texto and not fecha_desde
+            ) or (
+                fecha_hasta_texto and not fecha_hasta
+            ):
+                messages.error(
+                    request,
+                    "Ingresá fechas válidas."
+                )
+
+            elif (
+                fecha_desde
+                and fecha_hasta
+                and fecha_desde > fecha_hasta
+            ):
+                messages.error(
+                    request,
+                    "La fecha Desde no puede ser posterior a Hasta."
+                )
+
+            else:
+
+                try:
+
+                    with transaction.atomic():
+
+                        if carta is None:
+                            carta = CartaDefinicion()
+
+                        carta.codigo = codigo
+                        carta.nombre = nombre
+
+                        carta.tipo_destinatario = (
+                            request.POST.get(
+                                "tipo_destinatario",
+                                "empresa"
+                            )
+                        )
+
+                        carta.genero = (
+                            request.POST.get("genero") or None
+                        )
+
+                        carta.incluir_movimientos = (
+                            request.POST.get(
+                                "incluir_movimientos"
+                            ) == "on"
+                        )
+
+                        carta.incluir_cotizacion = (
+                            request.POST.get(
+                                "incluir_cotizacion"
+                            ) == "on"
+                        )
+
+                        carta.requiere_email = (
+                            request.POST.get(
+                                "requiere_email"
+                            ) == "on"
+                        )
+
+                        carta.es_renovacion = (
+                            request.POST.get(
+                                "es_renovacion"
+                            ) == "on"
+                        )
+
+                        carta.fecha_desde = fecha_desde
+                        carta.fecha_hasta = fecha_hasta
+
+                        carta.activa = (
+                            request.POST.get("activa") == "on"
+                        )
+
+                        carta.save()
+
+                        # ------------------------------------
+                        # CONDICIONES DE INCLUSION Y EXCLUSION
+                        # ------------------------------------
+
+                        codigos_incluir = (
+                            request.POST.getlist(
+                                "condicion_incluir"
+                            )
+                        )
+
+                        codigos_excluir = (
+                            request.POST.getlist(
+                                "condicion_excluir"
+                            )
+                        )
+
+                        # Reemplazamos las condiciones anteriores
+                        # por las seleccionadas en los combos.
+                        carta.condiciones.all().delete()
+
+                        condiciones_guardadas = set()
+
+                        for tipo, codigos in (
+                            ("incluir", codigos_incluir),
+                            ("excluir", codigos_excluir),
+                        ):
+
+                            for codigo_evento in codigos:
+
+                                codigo_evento = (
+                                    codigo_evento or ""
+                                ).strip()
+
+                                if not codigo_evento:
+                                    continue
+
+                                clave = (
+                                    tipo,
+                                    codigo_evento
+                                )
+
+                                # Evitar condiciones duplicadas.
+                                if clave in condiciones_guardadas:
+                                    continue
+
+                                CartaCondicion.objects.create(
+                                    carta=carta,
+                                    tipo=tipo,
+                                    codigo_evento=codigo_evento
+                                )
+
+                                condiciones_guardadas.add(clave)
+
+                    messages.success(
+                        request,
+                        "La carta y sus condiciones "
+                        "se guardaron correctamente."
+                    )
+
+                    return redirect(
+                        "configurar_cartas"
+                    )
+
+                except Exception as error:
+
+                    messages.error(
+                        request,
+                        f"No se pudo guardar la carta: {error}"
+                    )
+
+    # ========================================================
+    # LISTADO Y FORMULARIO
+    # ========================================================
+
+    cartas = CartaDefinicion.objects.all()
+
+    condiciones = (
+        carta.condiciones.all()
+        if carta else []
+    )
+
+    # Códigos seleccionados para mostrar las casillas marcadas.
+    incluir_seleccionados = set()
+    excluir_seleccionados = set()
+
+    for condicion in condiciones:
+        if condicion.tipo == "incluir":
+            incluir_seleccionados.add(
+                condicion.codigo_evento
+            )
+        elif condicion.tipo == "excluir":
+            excluir_seleccionados.add(
+                condicion.codigo_evento
+            )
+
+    return render(
+        request,
+        "InfEje/configurar_cartas.html",
+        {
+            "cartas": cartas,
+            "carta": carta,
+            "condiciones": condiciones,
+            "incluir_seleccionados": incluir_seleccionados,
+            "excluir_seleccionados": excluir_seleccionados,
+        }
+    )

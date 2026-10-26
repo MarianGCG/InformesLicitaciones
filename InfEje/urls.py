@@ -138,4 +138,11 @@ urlpatterns = [
         views.api_vencimientos_carta,
         name="api_vencimientos_carta",
     ),
+
+
+    path(
+        "configurar-cartas/",
+        views.configurar_cartas,
+        name="configurar_cartas",
+    ),
 ]
