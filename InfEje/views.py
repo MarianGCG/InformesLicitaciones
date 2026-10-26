@@ -3214,6 +3214,79 @@ def editar_carta(request):
             genero=genero,
         )
 
+
+
+
+    # ------------------------------------------------------------
+    # ELIMINAR CARTA PERSONALIZADA
+    # ------------------------------------------------------------
+
+    if (
+        request.method == "POST"
+        and request.POST.get("accion") == "eliminar"
+    ):
+        try:
+            definicion_eliminar = definicion
+
+            # Buscar por ID si no se encontró por código.
+            if definicion_eliminar is None and definicion_id:
+                definicion_eliminar = CartaDefinicion.objects.filter(
+                    pk=definicion_id
+                ).first()
+
+            codigos_protegidos = {
+                "1", "2", "3",
+                *[f"R{i}" for i in range(1, 13)],
+                "Fin", "Click",
+            }
+
+            if definicion_eliminar is None:
+                messages.error(
+                    request,
+                    "No se encontró la carta que querés eliminar."
+                )
+
+            elif (
+                not definicion_eliminar.codigo
+                or definicion_eliminar.codigo in codigos_protegidos
+            ):
+                messages.error(
+                    request,
+                    "No se puede eliminar una carta predefinida."
+                )
+
+            else:
+                with transaction.atomic():
+                    codigo_eliminar = definicion_eliminar.codigo
+
+                    # Las plantillas guardan el código como texto.
+                    CartaPlantilla.objects.filter(
+                        carta=str(codigo_eliminar)
+                    ).delete()
+
+                    # Las condiciones se eliminan por CASCADE.
+                    definicion_eliminar.delete()
+
+                messages.success(
+                    request,
+                    "La carta y sus plantillas se eliminaron correctamente."
+                )
+
+        except Exception as error:
+            messages.error(
+                request,
+                f"No se pudo eliminar la carta: {error}"
+            )
+
+        return redirect(
+            f"/editar-carta/?carta=1"
+            f"&empresa_id={empresa_id or ''}"
+            f"&destinatario_vista={destinatario_vista}"
+        )
+
+
+
+
     # ------------------------------------------------------------
     # GUARDAR
     # ------------------------------------------------------------
@@ -3405,6 +3478,8 @@ def editar_carta(request):
     # LISTAS DE LOS COMBOS Y CARTAS
     # ------------------------------------------------------------
 
+
+
     cartas_definidas = [
         {"codigo": "1", "nombre": "Carta 1. Presentación"},
         {"codigo": "2", "nombre": "Carta 2. Simulación"},
@@ -3420,6 +3495,25 @@ def editar_carta(request):
         {"codigo": "Fin", "nombre": "Fin"},
         {"codigo": "Click", "nombre": "Click"},
     ]
+
+    # Agregar las cartas nuevas guardadas en la base de datos.
+    cartas_personalizadas = CartaDefinicion.objects.exclude(
+        codigo__in=[
+            "1", "2", "3",
+            *[f"R{i}" for i in range(1, 13)],
+            "Fin", "Click",
+        ]
+    ).order_by("nombre")
+
+    cartas_definidas += [
+        {"codigo": carta.codigo, "nombre": carta.nombre}
+        for carta in cartas_personalizadas
+        if carta.codigo
+    ]
+
+
+
+
 
     # ------------------------------------------------------------
     # NOMBRE COMPLETO DE LA CARTA SELECCIONADA
@@ -3475,9 +3569,7 @@ def editar_carta(request):
     # ------------------------------------------------------------
     # MOSTRAR PANTALLA
     # ------------------------------------------------------------
-    print("CODIGO CARTA:", codigo_carta)
-    print("DEFINICION:", definicion)
-    print("NOMBRE:", definicion.nombre if definicion else "SIN DEFINICION")
+    
     return render(
         request,
         "InfEje/editar_carta.html",
@@ -3486,6 +3578,19 @@ def editar_carta(request):
             "empresas": empresas,
             "empresa_seleccionada": empresa_seleccionada,
             "definicion": definicion,
+
+
+            "puede_eliminar": (
+                bool(definicion and definicion.codigo)
+                and definicion.codigo not in {
+                    "1", "2", "3",
+                    *[f"R{i}" for i in range(1, 13)],
+                    "Fin", "Click",
+                }
+            ),
+
+
+
             "cartas_definidas": cartas_definidas,
             "condiciones": (
                 definicion.condiciones.all()
@@ -3498,6 +3603,10 @@ def editar_carta(request):
             "destinatario_vista": destinatario_vista,
             "codigo_carta": codigo_carta,
             "nombre_carta": nombre_carta,
+
+
+
+            
         }
     )
 

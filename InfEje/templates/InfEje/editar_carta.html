@@ -436,22 +436,30 @@
             }
         }
 
+        /* Combo Seleccionar carta */
         #selectorCarta {
+            display: block !important;
+            width: 100% !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
             font-family: Arial, sans-serif !important;
             font-size: 18px !important;
             color: #222 !important;
-            background: #fff !important;
+            background-color: #fff !important;
             opacity: 1 !important;
             -webkit-text-fill-color: #222 !important;
         }
 
         #selectorCarta option {
             font-family: Arial, sans-serif !important;
-            font-size: 20px !important;
+            font-size: 18px !important;
             color: #222 !important;
-            background: #fff !important;
-            -webkit-text-fill-color: #222 !important;
+            background-color: #fff !important;
         }
+
+
+
         /* Combo Seleccionar carta */
         #selectorCarta {
             font-size: 18px !important;
@@ -484,7 +492,7 @@
 
         /* Texto del contenido de la carta */
         #editor {
-            font-size: 38px !important;
+            font-size: 18px !important;
             line-height: 1.6;
         }
 
@@ -500,6 +508,40 @@
             color: #222 !important;
             background-color: #fff !important;
         }        
+
+
+
+        .encabezado-carta {
+            background: #d6e0e8;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+
+        .encabezado-carta label {
+            margin: 0;
+            white-space: nowrap;
+            font-size: 18px;
+        }
+
+        .encabezado-carta input {
+            width: 425px;
+            max-width: 70%;
+            box-sizing: border-box;
+            padding: 5px 8px;
+            border: 1px solid #aab7c4;
+            border-radius: 3px;
+            font-size: 18px;
+            font-weight: normal;
+            background: white;
+        }
+
+
+
+
     </style>
 
 </head>
@@ -563,24 +605,40 @@
             >
 
 
-    <h1>
-        {% if codigo_carta == "__nueva__" %}
-            Carta nueva
-        {% else %}
-            {{ nombre_carta }}
-        {% endif %}
+    <h1 class="encabezado-carta">
+        <label for="nombre">Nombre:</label>
+        <input
+            type="text"
+            id="nombre"
+            name="nombre"
+            value="{% if definicion %}{{ definicion.nombre }}{% elif codigo_carta == '__nueva__' %}{% else %}{{ nombre_carta }}{% endif %}"
+            maxlength="150"
+            required
+        >
     </h1>
+
 
     <!-- FILA SUPERIOR: selector, nombre si es nueva y código -->
     <div class="cartas-fila-superior">
 
 
         {% if es_carta_nueva %}
-        <div class="cartas-nombre-nueva">
-            <label for="nombre">Nombre</label>
-            <input id="nombre" name="nombre" type="text"
-                placeholder="Nombre de la nueva carta" required>
-        </div>
+
+
+            <div class="cartas-nombre-nueva">
+                <label for="nombre">Nombre de la carta</label>
+                <input
+                    id="nombre"
+                    name="nombre"
+                    type="text"
+                    value="{% if definicion %}{{ definicion.nombre }}{% endif %}"
+                    placeholder="Nombre de la carta"
+                    maxlength="150"
+                    required
+                >
+            </div>
+
+
         {% endif %}
 
 
@@ -920,6 +978,7 @@
 
 
 
+
     <!-- ================================================== -->
     <!-- BOTONES -->
     <!-- ================================================== -->
@@ -933,6 +992,18 @@
             💾 Guardar cambios
         </button>
 
+        {% if puede_eliminar %}
+            <button
+                type="submit"
+                name="accion"
+                value="eliminar"
+                class="boton eliminar"
+                formnovalidate
+                onclick="return confirm('¿Seguro que querés eliminar esta carta y sus plantillas?');"
+            >
+                🗑️ Eliminar
+            </button>
+        {% endif %}
 
     </div>
 
@@ -941,6 +1012,10 @@
         name="contenido_html"
         id="contenido_html"
     >
+
+
+
+
 
     </form>
 
