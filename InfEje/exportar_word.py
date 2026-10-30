@@ -10,7 +10,7 @@ from docx.oxml.ns import qn
 from decimal import Decimal, ROUND_HALF_UP
 from html.parser import HTMLParser
 import re
-
+from datetime import datetime
 def obtener_fuente(tamano, negrita=False):
     """
     Busca una fuente disponible en Windows o Linux.
@@ -110,7 +110,7 @@ def agregar_tabla_resultados(documento, registros, empresa, hay_mas_registros=Fa
     )
 
     fuente_normal = obtener_fuente(
-        19 
+        16 
     )
 
     # SOLO esta columna lleva letra más chica
@@ -822,6 +822,254 @@ def agregar_tabla_resultados(documento, registros, empresa, hay_mas_registros=Fa
         buffer,
         width=Inches(8.0)
     )
+
+def agregar_tabla_movimientos_renovacion(documento, registros):
+    """
+    Genera la tabla de movimientos de renovación como imagen
+    y la inserta en el documento Word.
+    """
+
+    columnas = [
+        ("Empresa", 260),
+        ("Comprador", 300),
+        ("Proceso", 200),
+        ("Renglón", 65),
+        ("Fecha fin", 110),
+        ("Descripción", 550),
+    ]
+
+    fuente_encabezado = obtener_fuente(20, negrita=True)
+    fuente_normal = obtener_fuente(19)
+
+    filas = []
+
+    for registro in registros:
+
+        empresa = (
+            getattr(registro, "empresa_proveedor", None)
+            or getattr(registro, "empresa_oferente", None)
+        )
+
+        nombre_empresa = (
+            empresa.nombre if empresa else "-"
+        )
+
+        fecha_fin = formatear_fecha(
+            getattr(registro, "fecha_fin_contrato", None)
+        )
+
+        filas.append([
+            texto(nombre_empresa),
+            texto(registro.comprador),
+            texto(registro.numero_proceso),
+            texto(registro.numero_renglon),
+            texto(fecha_fin),
+            texto(registro.descripcion_renglon),
+        ])
+
+    margen = 14
+    alto_linea = 30
+    alto_encabezado = 38
+
+    ancho_total = sum(ancho for _, ancho in columnas) + margen * 2
+
+    imagen_provisoria = Image.new(
+        "RGB", (ancho_total, 100), "white"
+    )
+    dibujo = ImageDraw.Draw(imagen_provisoria)
+
+    def envolver_texto(valor, fuente, ancho_disponible):
+
+        valor = str(valor or "-")
+        palabras = valor.split()
+
+        lineas = []
+        linea_actual = ""
+
+        for palabra in palabras:
+
+            candidata = (
+                palabra if not linea_actual
+                else linea_actual + " " + palabra
+            )
+
+            bbox = dibujo.textbbox(
+                (0, 0), candidata, font=fuente
+            )
+
+            if bbox[2] - bbox[0] <= ancho_disponible:
+                linea_actual = candidata
+            else:
+                if linea_actual:
+                    lineas.append(linea_actual)
+
+                linea_actual = palabra
+
+        if linea_actual:
+            lineas.append(linea_actual)
+
+        return lineas or ["-"]
+
+    alturas_filas = []
+
+    for fila in filas:
+
+        cantidad_lineas = 1
+
+        for indice, valor in enumerate(fila):
+
+            _, ancho = columnas[indice]
+
+            lineas = envolver_texto(
+                valor,
+                fuente_normal,
+                ancho - 12
+            )
+
+            cantidad_lineas = max(
+                cantidad_lineas,
+                len(lineas)
+            )
+
+        alturas_filas.append(
+            cantidad_lineas * alto_linea
+        )
+
+    alto_total = (
+        margen
+        + alto_encabezado
+        + sum(alturas_filas)
+        + margen
+    )
+
+    imagen = Image.new(
+        "RGB",
+        (ancho_total, alto_total),
+        "white"
+    )
+
+    dibujo = ImageDraw.Draw(imagen)
+
+    # ENCABEZADOS
+
+    x = margen
+    y = margen
+
+    for nombre_columna, ancho in columnas:
+
+        dibujo.rectangle(
+            [
+                (x, y),
+                (x + ancho, y + alto_encabezado)
+            ],
+            outline="black",
+            fill="#EAEAEA"
+        )
+
+        lineas = envolver_texto(
+            nombre_columna,
+            fuente_encabezado,
+            ancho - 10
+        )
+
+        y_texto = (
+            y
+            + (
+                alto_encabezado
+                - len(lineas) * alto_linea
+            ) / 2
+        )
+
+        for linea in lineas:
+
+            dibujo.text(
+                (x + 5, y_texto),
+                linea,
+                font=fuente_encabezado,
+                fill="black"
+            )
+
+            y_texto += alto_linea
+
+        x += ancho
+
+    y += alto_encabezado
+
+    # FILAS
+
+    for numero_fila, fila in enumerate(filas):
+
+        alto_fila = alturas_filas[numero_fila]
+        x = margen
+
+        for indice, valor in enumerate(fila):
+
+            _, ancho = columnas[indice]
+
+            lineas = envolver_texto(
+                valor,
+                fuente_normal,
+                ancho - 12
+            )
+
+            dibujo.rectangle(
+                [
+                    (x, y),
+                    (x + ancho, y + alto_fila)
+                ],
+                outline="black"
+            )
+
+            y_texto = (
+                y
+                + (
+                    alto_fila
+                    - len(lineas) * alto_linea
+                ) / 2
+            )
+
+            for linea in lineas:
+
+                dibujo.text(
+                    (x + 6, y_texto),
+                    linea,
+                    font=fuente_normal,
+                    fill="black"
+                )
+
+                y_texto += alto_linea
+
+            x += ancho
+
+        y += alto_fila
+
+    # GUARDAR IMAGEN EN MEMORIA
+
+    buffer = BytesIO()
+
+    imagen.save(
+        buffer,
+        format="PNG",
+        dpi=(300, 300),
+        optimize=True
+    )
+
+    buffer.seek(0)
+
+    # INSERTAR IMAGEN EN WORD
+
+    parrafo = documento.add_paragraph()
+
+    parrafo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    run = parrafo.add_run()
+
+    run.add_picture(
+        buffer,
+        width=Inches(8.0)
+    )
+
+
 def agregar_linea(documento, etiqueta, valor, tamano=None):
     """
     Agrega una línea:
@@ -1201,6 +1449,7 @@ def generar_word_mails(
     imprimir_movimientos=True,
     fecha_desde=None,
     fecha_hasta=None,
+    incluir_cotizacion=False,
 ):
 
 
@@ -1210,7 +1459,23 @@ def generar_word_mails(
     """
 
     # Import local para evitar problemas de importación circular.
-    from .models import CartaPlantilla
+    from .models import CartaPlantilla, CartaDefinicion
+
+
+    # --------------------------------------------------------
+    # CONFIGURACIÓN DINÁMICA DE LA CARTA
+    # --------------------------------------------------------
+
+    definicion_carta = CartaDefinicion.objects.filter(
+        codigo=str(carta)
+    ).first()
+
+    if definicion_carta:
+        imprimir_movimientos = (
+            definicion_carta.incluir_movimientos
+        )
+
+
 
     documento = Document()
 
@@ -1239,23 +1504,31 @@ def generar_word_mails(
             reverse=True
         )
 
-        registros_movimientos = [
-            registro
-            for registro in registros_ordenados
-            if not registro.numero_oc
-        ]
 
- 
-
-        hay_mas_registros = (
-            len(registros_ordenados) > 6
+        # Las renovaciones deben mostrar todos los movimientos
+        # asociados a las claves de vencimiento encontradas.
+        es_renovacion = bool(
+            definicion_carta and definicion_carta.es_renovacion
         )
 
-        if str(carta) == "4":
+        if es_renovacion:
+            registros_movimientos = registros_ordenados
             registros = registros_ordenados
+            hay_mas_registros = False
+
         else:
-            registros = registros_ordenados[:6]
-            registros_movimientos = registros_movimientos[:6]
+            registros_movimientos = [
+                registro
+                for registro in registros_ordenados
+                if not registro.numero_oc
+            ]
+
+            if str(carta) == "4":
+                registros = registros_ordenados
+            else:
+                registros = registros_ordenados[:6]
+                registros_movimientos = registros_movimientos[:6]
+
 
         # ----------------------------------------------------
         # ORGANISMOS DE LOS 6 REGISTROS DE MAYOR IMPORTE
@@ -1404,22 +1677,27 @@ def generar_word_mails(
         # RESULTADOS
         # ----------------------------------------------------
  
+
         if imprimir_movimientos:
 
-            agregar_tabla_resultados(
-                documento,
-                registros_movimientos,
-                empresa,
-                hay_mas_registros
-            )
-
-
+            if definicion_carta and definicion_carta.es_renovacion:
+                agregar_tabla_movimientos_renovacion(
+                    documento,
+                    registros_movimientos
+                )
+            else:
+                agregar_tabla_resultados(
+                    documento,
+                    registros_movimientos,
+                    empresa,
+                    hay_mas_registros
+                )
 
 
         # ----------------------------------------------------
         # COTIZAR SOLAMENTE LA OFERTA MÁS ALTA
         # ----------------------------------------------------
-        if imprimir_movimientos and str(carta) != "4":
+        if incluir_cotizacion:
 
 
             registro_cotizacion = (
@@ -1572,13 +1850,53 @@ def generar_word_mails(
 
     subtitulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    run = subtitulo.add_run(
-        "Envío de 2do Mail. "
-        "Retomando el mail anterior – "
-        "1er Mail sin respuesta"
+    fecha_hora_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    nombre_carta = (
+        definicion_carta.nombre
+        if definicion_carta
+        else str(carta)
     )
 
+    run = subtitulo.add_run(
+        f"{nombre_carta} - {fecha_hora_actual}"
+    )
     run.font.size = Pt(12)
+
+    # Condiciones utilizadas
+    condiciones = subtitulo.insert_paragraph_before("") if False else None
+
+    parrafo_condiciones = documento.add_paragraph()
+    parrafo_condiciones.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    texto_condiciones = (
+        f"Incluir movimientos: "
+        f"{'SI' if imprimir_movimientos else 'NO'}"
+        f" | Incluir cotización: "
+        f"{'SI' if incluir_cotizacion else 'NO'}"
+    )
+
+    if definicion_carta and definicion_carta.es_renovacion:
+
+        desde = (
+            definicion_carta.fecha_desde.strftime("%d/%m/%Y")
+            if definicion_carta.fecha_desde else "-"
+        )
+
+        hasta = (
+            definicion_carta.fecha_hasta.strftime("%d/%m/%Y")
+            if definicion_carta.fecha_hasta else "-"
+        )
+
+        texto_condiciones += (
+            f" | Fecha Desde: {desde}"
+            f" | Fecha Hasta: {hasta}"
+        )
+
+    run_condiciones = parrafo_condiciones.add_run(texto_condiciones)
+    run_condiciones.font.size = Pt(10)
+
+
     # ========================================================
     # DATOS DE COTIZACIÓN
     # ========================================================
@@ -1621,30 +1939,70 @@ def generar_word_mails(
     run.font.size = Pt(11)
 
 
+    # ========================================================
+    # TABLA RESUMEN
+    # ========================================================
+
+    es_renovacion = (
+        definicion_carta
+        and definicion_carta.es_renovacion
+    )
+
+    cantidad_columnas = 5 if es_renovacion else 8
 
     tabla_envios = documento.add_table(
         rows=1,
-        cols=8
+        cols=cantidad_columnas
     )
 
     tabla_envios.style = "Table Grid"
-   
-    # --------------------------------------------------------
-    # ANCHO DE COLUMNAS
-    # --------------------------------------------------------
     tabla_envios.autofit = False
 
+    if es_renovacion:
 
-    anchos = [
-        Inches(1.00),   # Fecha envío
-        Inches(0.80),   # CUIT
-        Inches(1.70),   # Proveedor/Oferente
-        Inches(1.05),   # Oferta
-        Inches(0.95),   # Suma Asegurada 5%
-        Inches(0.75),   # Premio simple 5%
-        Inches(0.95),   # Suma Asegurada 10%
-        Inches(0.75),   # Premio simple 10%
-    ]
+        anchos = [
+            Inches(1.00),   # Fecha envío
+            Inches(0.90),   # CUIT
+            Inches(2.30),   # Proveedor/Oferente
+            Inches(1.00),   # Adjudicado
+            Inches(1.00),   # Ofertó solo
+        ]
+
+        titulos = [
+            "Fecha envío",
+            "CUIT",
+            "Proveedor/Oferente",
+            "Adjudicado?",
+            "Ofertó solo?",
+        ]
+
+    else:
+
+        # ====================================================
+        # RESUMEN ORIGINAL: NO MODIFICAR
+        # ====================================================
+
+        anchos = [
+            Inches(1.00),
+            Inches(0.80),
+            Inches(1.70),
+            Inches(1.05),
+            Inches(0.95),
+            Inches(0.75),
+            Inches(0.95),
+            Inches(0.75),
+        ]
+
+        titulos = [
+            "Fecha envío",
+            "CUIT",
+            "Proveedor/Oferente",
+            "Oferta",
+            "Suma Asegurada 5%",
+            "Premio simple 5%",
+            "Suma Asegurada 10%",
+            "Premio simple 10%",
+        ]
 
     for fila in tabla_envios.rows:
         for i, ancho in enumerate(anchos):
@@ -1655,21 +2013,11 @@ def generar_word_mails(
 
     encabezados = tabla_envios.rows[0].cells
 
-    encabezados[0].text = "Fecha envío"
-    encabezados[1].text = "CUIT"
-    encabezados[2].text = "Proveedor/Oferente"
-    encabezados[3].text = "Oferta"
-    encabezados[4].text = "Suma Asegurada 5%"
-    encabezados[5].text = "Premio simple 5%"
-    encabezados[6].text = "Suma Asegurada 10%"
-    encabezados[7].text = "Premio simple 10%"
-
-    for celda in encabezados:
+    for celda, titulo in zip(encabezados, titulos):
+        celda.text = titulo
 
         for parrafo in celda.paragraphs:
-
             for run in parrafo.runs:
-
                 run.bold = True
                 run.font.size = Pt(10)
 
@@ -1728,173 +2076,250 @@ def generar_word_mails(
     
     numero_proveedor = 1
 
-    for empresa in empresas_registro:
+    if es_renovacion:
 
-        # ----------------------------------------------------
-        # BUSCAR EL REGISTRO DE COTIZACIÓN DE ESTA EMPRESA
-        # ----------------------------------------------------
+        # ====================================================
+        # RESUMEN DE RENOVACIONES - 5 COLUMNAS
+        # ====================================================
 
-        registros_empresa = []
+        todos_los_registros = {}
 
         for empresa_lista, registros_lista in empresas_con_registros:
+            for registro in registros_lista:
+                todos_los_registros[registro.pk] = registro
 
-            if empresa_lista.id == empresa.id:
-                registros_empresa = registros_lista
-                break
+        todos_los_registros = list(todos_los_registros.values())
+
+        for empresa in empresas_registro:
+
+            registros_empresa = []
+
+            for empresa_lista, registros_lista in empresas_con_registros:
+                if empresa_lista.id == empresa.id:
+                    registros_empresa = registros_lista
+                    break
 
 
 
-        # ----------------------------------------------------
-        # TOMAR LAS 6 OFERTAS MÁS ALTAS DEL PROVEEDOR
-        # ----------------------------------------------------
+            # ====================================================
+            # IDENTIFICAR AL ADJUDICATARIO
+            # ====================================================
 
-        registros_con_oferta = [
-            registro
-            for registro in registros_empresa
-            if registro.precio_total_oferta is not None
-        ]
+            claves_empresa = {
+                (
+                    registro.numero_proceso,
+                    registro.numero_renglon,
+                    registro.fecha_apertura,
+                )
+                for registro in registros_empresa
+            }
 
-        registros_cotizacion = sorted(
-            registros_con_oferta,
-            key=lambda registro: registro.precio_total_oferta,
-            reverse=True
-        )[:6]
+            adjudicatarios = set()
 
-        # ----------------------------------------------------
-        # COTIZAR SOLAMENTE LA OFERTA MÁS ALTA
-        # ----------------------------------------------------
+            for registro in todos_los_registros:
 
-        registro_cotizacion = (
-            registros_cotizacion[0]
-            if registros_cotizacion
-            else None
-        )
+                clave = (
+                    registro.numero_proceso,
+                    registro.numero_renglon,
+                    registro.fecha_apertura,
+                )
 
-        cotizacion_5 = None
-        cotizacion_10 = None
+                if clave not in claves_empresa:
+                    continue
 
-        if registro_cotizacion:
+                if registro.numero_oc:
 
-            cotizacion_5 = calcular_cotizacion(
-                registro_cotizacion,
-                5,
-                empresa.tipo_destinatario or "empresa",
-                prima_minima_pesos,
-                tc,
+                    empresa_ganadora = (
+                        registro.empresa_proveedor
+                        or registro.empresa_oferente
+                    )
+
+                    if empresa_ganadora:
+                        adjudicatarios.add(empresa_ganadora.nombre)
+
+
+            # ¿Esta empresa fue adjudicada?
+            adjudicado = any(
+                registro.numero_oc
+                for registro in registros_empresa
             )
 
-            cotizacion_10 = calcular_cotizacion(
-                registro_cotizacion,
-                10,
-                empresa.tipo_destinatario or "empresa",
-                prima_minima_pesos,
-                tc,
+            if adjudicado:
+                texto_adjudicado = "SI"
+            else:
+                nombres_adjudicatarios = {
+                    registro.nombre_adjudicatario
+                    for registro in registros_empresa
+                    if getattr(registro, "nombre_adjudicatario", "")
+                }
+
+                texto_adjudicado = (
+                    ", ".join(sorted(nombres_adjudicatarios))
+                    if nombres_adjudicatarios
+                    else "-"
+                )
+                
+
+
+            # Procesos, renglones y fechas de esta empresa
+            claves_empresa = {
+                (
+                    registro.numero_proceso,
+                    registro.numero_renglon,
+                    registro.fecha_apertura,
+                )
+                for registro in registros_empresa
+            }
+
+            tiene_otro_oferente = False
+
+            for registro in todos_los_registros:
+
+                clave = (
+                    registro.numero_proceso,
+                    registro.numero_renglon,
+                    registro.fecha_apertura,
+                )
+
+                if clave not in claves_empresa:
+                    continue
+
+                otras_empresas = []
+
+                if registro.empresa_oferente:
+                    otras_empresas.append(registro.empresa_oferente)
+
+                if registro.empresa_proveedor:
+                    otras_empresas.append(registro.empresa_proveedor)
+
+                if any(
+                    otra.id != empresa.id
+                    for otra in otras_empresas
+                ):
+                    tiene_otro_oferente = True
+                    break
+
+            fila = tabla_envios.add_row().cells
+
+            fila[0].text = f"{numero_proveedor}. {fecha_envio or ''}"
+            fila[1].text = empresa.cuit or ""
+            fila[2].text = empresa.nombre or ""
+
+            fila[3].text = texto_adjudicado
+            if adjudicado:
+                fila[4].text = "NO" if tiene_otro_oferente else "SI"
+            else:
+                fila[4].text = "-"
+            numero_proveedor += 1
+
+            for celda in fila:
+                for parrafo in celda.paragraphs:
+                    for run in parrafo.runs:
+                        run.font.size = Pt(8)
+
+    else:
+
+        # ====================================================
+        # RESUMEN ORIGINAL
+        # ESTE CÓDIGO QUEDA COMO ESTABA
+        # ====================================================
+
+        for empresa in empresas_registro:
+
+            registros_empresa = []
+
+            for empresa_lista, registros_lista in empresas_con_registros:
+
+                if empresa_lista.id == empresa.id:
+                    registros_empresa = registros_lista
+                    break
+
+            registros_con_oferta = [
+                registro
+                for registro in registros_empresa
+                if registro.precio_total_oferta is not None
+            ]
+
+            registros_cotizacion = sorted(
+                registros_con_oferta,
+                key=lambda registro: registro.precio_total_oferta,
+                reverse=True
+            )[:6]
+
+            registro_cotizacion = (
+                registros_cotizacion[0]
+                if registros_cotizacion
+                else None
             )
 
-        # ----------------------------------------------------
-        # NUEVA FILA
-        # ----------------------------------------------------
-        # ----------------------------------------------------
-        # LA PLANILLA USA LA OFERTA MÁS ALTA
-        # ----------------------------------------------------
-
-        cotizacion_5 = None
-        cotizacion_10 = None
-
-        if registro_cotizacion:
-            cotizacion_5 = calcular_cotizacion(
-                registro_cotizacion,
-                5,
-                empresa.tipo_destinatario or "empresa",
-                prima_minima_pesos,
-                tc,
-            )
-
-            cotizacion_10 = calcular_cotizacion(
-                registro_cotizacion,
-                10,
-                empresa.tipo_destinatario or "empresa",
-                prima_minima_pesos,
-                tc,
-            )
-        else:
             cotizacion_5 = None
             cotizacion_10 = None
 
+            if registro_cotizacion:
+                cotizacion_5 = calcular_cotizacion(
+                    registro_cotizacion,
+                    5,
+                    empresa.tipo_destinatario or "empresa",
+                    prima_minima_pesos,
+                    tc,
+                )
 
-        fila = tabla_envios.add_row().cells
+                cotizacion_10 = calcular_cotizacion(
+                    registro_cotizacion,
+                    10,
+                    empresa.tipo_destinatario or "empresa",
+                    prima_minima_pesos,
+                    tc,
+                )
 
+            fila = tabla_envios.add_row().cells
 
-        fila[0].text = (
-            f"{numero_proveedor}. {fecha_envio or ''}"
-        )
+            fila[0].text = f"{numero_proveedor}. {fecha_envio or ''}"
+            fila[1].text = empresa.cuit or ""
 
-        fila[1].text = empresa.cuit or ""
-        
+            nombre_proveedor = empresa.nombre or ""
 
+            if len(nombre_proveedor) > 27:
+                nombre_proveedor = nombre_proveedor[:24] + "..."
 
-        nombre_proveedor = empresa.nombre or ""
+            fila[2].text = nombre_proveedor
+            numero_proveedor += 1
 
-        # Una sola línea: si es muy largo, lo cortamos
-        if len(nombre_proveedor) > 27:
-            nombre_proveedor = nombre_proveedor[:24] + "..."
+            if cotizacion_5:
+                fila[3].text = (
+                    f'{cotizacion_5["moneda"]} '
+                    f'{cotizacion_5["oferta"]:,.2f}'
+                )
+                fila[4].text = (
+                    f'{cotizacion_5["moneda"]} '
+                    f'{cotizacion_5["suma_asegurada"]:,.2f}'
+                )
+                fila[5].text = (
+                    f'{cotizacion_5["moneda"]} '
+                    f'{cotizacion_5["premio_final"]:,.2f}'
+                )
+            else:
+                fila[3].text = "-"
+                fila[4].text = "-"
+                fila[5].text = "-"
 
+            if cotizacion_10:
+                fila[6].text = (
+                    f'{cotizacion_10["moneda"]} '
+                    f'{cotizacion_10["suma_asegurada"]:,.2f}'
+                )
+                fila[7].text = (
+                    f'{cotizacion_10["moneda"]} '
+                    f'{cotizacion_10["premio_final"]:,.2f}'
+                )
+            else:
+                fila[6].text = "-"
+                fila[7].text = "-"
 
-        fila[2].text = nombre_proveedor
-        numero_proveedor += 1
-
-
-        if cotizacion_5:
-
-            fila[3].text = (
-                f'{cotizacion_5["moneda"]} '
-                f'{cotizacion_5["oferta"]:,.2f}'
-            )
-
-            fila[4].text = (
-                f'{cotizacion_5["moneda"]} '
-                f'{cotizacion_5["suma_asegurada"]:,.2f}'
-            )
-
-            fila[5].text = (
-                f'{cotizacion_5["moneda"]} '
-                f'{cotizacion_5["premio_final"]:,.2f}'
-            )
-
-        else:
-
-            fila[3].text = "-"
-            fila[4].text = "-"
-            fila[5].text = "-"
-
-        if cotizacion_10:
-
-            fila[6].text = (
-                f'{cotizacion_10["moneda"]} '
-                f'{cotizacion_10["suma_asegurada"]:,.2f}'
-            )
-
-            fila[7].text = (
-                f'{cotizacion_10["moneda"]} '
-                f'{cotizacion_10["premio_final"]:,.2f}'
-            )
-
-        else:
-
-            fila[6].text = "-"
-            fila[7].text = "-"
-
-        # ----------------------------------------------------
-        # FUENTE
-        # ----------------------------------------------------
-
-        for celda in fila:
-
-            for parrafo in celda.paragraphs:
-
-                for run in parrafo.runs:
-
-                    run.font.size = Pt(7)
+            for celda in fila:
+                for parrafo in celda.paragraphs:
+                    for run in parrafo.runs:
+                        run.font.size = Pt(7)
 
 
 

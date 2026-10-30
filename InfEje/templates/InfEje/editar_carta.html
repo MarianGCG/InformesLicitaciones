@@ -230,15 +230,15 @@
             box-sizing: border-box;
         }
 
+
         .cartas-configuracion {
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr 1.3fr;
+            grid-template-columns: 1.0fr 0.8fr 2.9fr;
             gap: 8px;
             padding: 8px;
             border-bottom: 1px solid #d5dce2;
             align-items: stretch;
         }
-
         .cartas-destinatario,
         .cartas-renovacion,
         .cartas-condiciones {
@@ -568,6 +568,62 @@
             -webkit-text-fill-color: #222 !important;
         }
 
+        .cartas-condiciones {
+            display: grid;
+            grid-template-columns: 180px minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .cartas-condiciones-superior {
+            grid-column: 1;
+            grid-row: 1;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .cartas-check-todos {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+
+        .cartas-condiciones-combos {
+            grid-column: 2;
+            grid-row: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 12px;
+            min-width: 0;
+            align-items: start;
+        }
+
+        .cartas-condiciones-combos .combo-multiple {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .cartas-condiciones-combos .combo-detalle {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 700px) {
+            .cartas-condiciones {
+                grid-template-columns: 1fr;
+            }
+
+            .cartas-condiciones-superior,
+            .cartas-condiciones-combos {
+                grid-column: 1;
+                grid-row: auto;
+            }
+        }  
 
     </style>
 
@@ -674,11 +730,39 @@
     <!-- FILA DE CONFIGURACIÓN COMPACTA -->
     <div class="cartas-configuracion">
 
-
         <div class="cartas-destinatario">
 
+            <div class="cartas-opciones">
+                <label for="agrupacion_destino">
+                    <strong>Clasificar en Excel:</strong>
+                </label>
 
-            
+                <select
+                    id="agrupacion_destino"
+                    name="agrupacion_destino"
+                    style="font-size: 16px; padding: 4px; max-width: 100%;"
+                >
+                    <option
+                        value="demas"
+                        {% if definicion.agrupacion_destino == "demas" or not definicion %}selected{% endif %}
+                    >
+                        Demás
+                    </option>
+
+
+                    {% for item in cartas_definidas %}
+                        <option
+                            value="{{ item.codigo }}"
+                            {% if definicion and definicion.agrupacion_destino == item.codigo %}selected{% endif %}
+                        >
+                            {{ item.nombre }}
+                        </option>
+                    {% endfor %}
+
+
+
+                </select>
+            </div>
 
             <div class="cartas-opciones">
                 <label>
@@ -699,18 +783,14 @@
                     Proveedor debe tener email
                 </label>
 
-
                 <label class="cartas-activa">
                     <input type="checkbox" name="activa"
                         {% if not definicion or definicion.activa %}checked{% endif %}>
                     Activa
                 </label>
-
             </div>
 
         </div>
-
-
 
 
         <div class="cartas-renovacion">
@@ -737,57 +817,84 @@
 
         </div>
 
+
+
         <div class="cartas-condiciones">
 
-            <div class="combo-multiple">
-                <label>INCLUIR</label>
-
-                <details class="combo-detalle">
-                    <summary id="resumenIncluir">Seleccionar cartas</summary>
-                    <div class="combo-opciones">
-                        <label class="opcion-todos">
-                            <input type="checkbox" class="seleccionar-todos" aria-label="Seleccionar todas las cartas">
-                            <strong>Todos</strong>
-                        </label>
-                        {% for opcion in opciones_condicion %}
-                        <label>
-                            <input type="checkbox"
-                                name="condicion_incluir"
-                                value="{{ opcion.codigo }}"
-                                {% if opcion.codigo in incluir_seleccionados %}checked{% endif %}>
-                            {{ opcion.nombre }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                </details>
+            <div class="cartas-condiciones-superior">
+                <label class="cartas-check-todos">
+                    <input
+                        type="checkbox"
+                        id="todosProveedores"
+                        name="todos_proveedores"
+                        {% if definicion and definicion.todos_proveedores %}checked{% endif %}
+                    >
+                    <strong>Todos los proveedores</strong>
+                </label>
             </div>
 
-            <div class="combo-multiple">
-                <label>EXCLUIR</label>
+            <div class="cartas-condiciones-combos">
 
-                <details class="combo-detalle">
-                    <summary id="resumenExcluir">Seleccionar cartas</summary>
-                    <div class="combo-opciones">
-                        <label class="opcion-todos">
-                            <input type="checkbox" class="seleccionar-todos" aria-label="Seleccionar todas las cartas">
-                            <strong>Todos</strong>
-                        </label>
-                        {% for opcion in opciones_condicion %}
-                        <label>
-                            <input type="checkbox"
-                                name="condicion_excluir"
-                                value="{{ opcion.codigo }}"
-                                {% if opcion.codigo in excluir_seleccionados %}checked{% endif %}>
-                            {{ opcion.nombre }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                </details>
+                <div class="combo-multiple">
+                    <label>INCLUIR</label>
+
+                    <details class="combo-detalle">
+                        <summary id="resumenIncluir">Seleccionar cartas</summary>
+                        <div class="combo-opciones">
+                            <label class="opcion-todos">
+                                <input type="checkbox" class="seleccionar-todos" aria-label="Seleccionar todas las cartas">
+                                <strong>Todos</strong>
+                            </label>
+
+                            {% for opcion in opciones_condicion %}
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    name="condicion_incluir"
+                                    value="{{ opcion.codigo }}"
+                                    {% if opcion.codigo in incluir_seleccionados %}checked{% endif %}
+                                >
+                                {{ opcion.nombre }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </div>
+
+                <div class="combo-multiple">
+                    <label>EXCLUIR</label>
+
+                    <details class="combo-detalle">
+                        <summary id="resumenExcluir">Seleccionar cartas</summary>
+                        <div class="combo-opciones">
+                            <label class="opcion-todos">
+                                <input type="checkbox" class="seleccionar-todos" aria-label="Seleccionar todas las cartas">
+                                <strong>Todos</strong>
+                            </label>
+
+                            {% for opcion in opciones_condicion %}
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    name="condicion_excluir"
+                                    value="{{ opcion.codigo }}"
+                                    {% if opcion.codigo in excluir_seleccionados %}checked{% endif %}
+                                >
+                                {{ opcion.nombre }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </div>
+
             </div>
 
             <input type="hidden" name="condiciones_presentes" value="1">
 
         </div>
+
+
+
 
     </div>
 

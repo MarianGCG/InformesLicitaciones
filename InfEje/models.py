@@ -372,13 +372,16 @@ class SeguimientoCartasFlow(models.Model):
         null=True
     )
 
+
+
     def __str__(self):
-        return (
-            f"{self.get_evento_display()} - "
-            f"{self.empresa.nombre}"
+        nombre_evento = (
+            self.carta.nombre
+            if self.carta
+            else self.evento
         )
 
-
+        return f"{nombre_evento} - {self.empresa.nombre}"
 # ============================================================
 # PLANTILLAS DE CARTAS
 # ============================================================
@@ -499,6 +502,12 @@ class CartaDefinicion(models.Model):
 
     es_renovacion = models.BooleanField(default=False)
 
+    agrupacion_destino = models.CharField(
+        max_length=50,
+        default="demas",
+        blank=True,
+    )
+    todos_proveedores = models.BooleanField(default=False)
     fecha_desde = models.DateField(
         blank=True,
         null=True

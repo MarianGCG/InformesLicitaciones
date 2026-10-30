@@ -865,41 +865,86 @@ def consultar(request):
     )
 
 
-
 @require_GET
 def api_vencimientos_carta(request):
-    fecha_desde = request.GET.get("fechaDesdeVencimiento", "")
-    fecha_hasta = request.GET.get("fechaHastaVencimiento", "")
+    carta_id = request.GET.get("cartaId", "")
+
+    if not carta_id:
+        return JsonResponse({
+            "ok": False,
+            "error": "No se recibió el ID de la carta."
+        }, status=400)
+
+    try:
+        definicion = CartaDefinicion.objects.get(pk=carta_id)
+    except CartaDefinicion.DoesNotExist:
+        return JsonResponse({
+            "ok": False,
+            "error": "No se encontró la definición de la carta."
+        }, status=404)
+
+    if not definicion.es_renovacion:
+        return JsonResponse({
+            "ok": False,
+            "error": "La carta seleccionada no es una renovación."
+        }, status=400)
+
+    fecha_desde = definicion.fecha_desde
+    fecha_hasta = definicion.fecha_hasta
 
     if not fecha_desde or not fecha_hasta:
         return JsonResponse({
             "ok": False,
-            "error": "Ingresá las fechas Desde y Hasta."
+            "error": "La carta no tiene configuradas las fechas Desde y Hasta."
         }, status=400)
 
-    if fecha_desde > fecha_hasta:
-        return JsonResponse({
-            "ok": False,
-            "error": "La fecha Desde no puede ser posterior a Hasta."
-        }, status=400)
-
-    procesos = (
+    # 1. Buscar los contratos que vencen en el período.
+    # 1. Buscar los contratos que vencen en el período.
+    registros_vencimiento = (
         RegistroLicitacion.objects
         .filter(
             fecha_fin_contrato__range=(fecha_desde, fecha_hasta)
         )
         .exclude(numero_proceso__isnull=True)
         .exclude(numero_proceso="")
-        .values_list("numero_proceso", flat=True)
-        .distinct()
+        .exclude(numero_renglon__isnull=True)
+        .exclude(numero_renglon="")
+        .exclude(fecha_apertura__isnull=True)
     )
+
+    # 2. Obtener las claves exactas:
+    #    Proceso + Renglón + Fecha de apertura.
+    claves = set(
+        registros_vencimiento.values_list(
+            "numero_proceso",
+            "numero_renglon",
+            "fecha_apertura",
+        ).distinct()
+    )
+
+    # 3. Recuperar todos los movimientos coincidentes,
+    #    sin validar nuevamente la fecha de fin.
+    from django.db.models import Q
+
+    filtro = Q(pk__in=[])
+
+    for proceso, renglon, apertura in claves:
+        filtro |= Q(
+            numero_proceso=proceso,
+            numero_renglon=renglon,
+            fecha_apertura=apertura,
+        )
 
     registros = (
         RegistroLicitacion.objects
-        .filter(numero_proceso__in=procesos)
-        .select_related("empresa_oferente", "empresa_proveedor")
+        .filter(filtro)
+        .select_related(
+            "empresa_oferente",
+            "empresa_proveedor",
+        )
     )
 
+    # 4. Devolver únicamente empresas con movimientos.
     empresas = {}
 
     for registro in registros:
@@ -916,6 +961,12 @@ def api_vencimientos_carta(request):
                 "email": empresa.email or "",
             }
 
+    print("====================================")
+    print("CONTRATOS QUE VENCEN:", registros_vencimiento.count())
+    print("MOVIMIENTOS COINCIDENTES:", registros.count())
+    print("EMPRESAS DEVUELTAS:", len(empresas))
+    print("====================================")
+
     return JsonResponse({
         "ok": True,
         "empresas": sorted(
@@ -923,8 +974,6 @@ def api_vencimientos_carta(request):
             key=lambda empresa: empresa["nombre"].lower()
         )
     })
-
-
 
 
 
@@ -1805,7 +1854,29 @@ def guardar_ficha_empresa(request, empresa_id):
 
 def exportar_word_mails(request):
 
-    carta = request.GET.get("carta", "1")
+    carta_id = request.GET.get("carta")
+
+
+
+    definicion_carta = CartaDefinicion.objects.filter(
+        id=carta_id,
+        activa=True,
+    ).first()
+
+    if not definicion_carta:
+        return HttpResponse(
+            "La carta seleccionada no existe o está inactiva.",
+            status=400,
+        )
+
+    carta = str(definicion_carta.codigo)
+
+
+
+    print("ID RECIBIDO:", carta_id)
+    print("ID DEFINICIÓN:", definicion_carta.id)
+    print("CÓDIGO DE LA CARTA:", definicion_carta.codigo)
+    print("NOMBRE DE LA CARTA:", definicion_carta.nombre)
 
     # ========================================================
     # TOMAR LOS REGISTROS SEGÚN LOS FILTROS DE LA PANTALLA
@@ -1823,27 +1894,34 @@ def exportar_word_mails(request):
     )
 
 
-    if carta == "4":
-        fecha_desde = request.GET.get("fechaDesdeVencimiento", "")
-        fecha_hasta = request.GET.get("fechaHastaVencimiento", "")
 
-        # Validar que las dos fechas estén informadas
+    # ========================================================
+    # RENOVACIONES: BUSCAR CONTRATOS Y SUS PARTICIPANTES
+    # ========================================================
+
+    if definicion_carta and definicion_carta.es_renovacion:
+
+        fecha_desde = definicion_carta.fecha_desde
+        fecha_hasta = definicion_carta.fecha_hasta
+
+        # Validar las fechas configuradas en Editar Carta
         if not fecha_desde or not fecha_hasta:
             return HttpResponse(
-                "Para generar la Carta al Vencimiento, "
-                "tenés que indicar las fechas Desde y Hasta.",
+                "Para generar la carta de renovación, "
+                "tenés que configurar las fechas Desde y Hasta.",
                 status=400,
             )
 
         if fecha_desde > fecha_hasta:
             return HttpResponse(
-                "La fecha Desde no puede ser posterior a la fecha Hasta.",
+                "La fecha Desde no puede ser posterior "
+                "a la fecha Hasta.",
                 status=400,
             )
 
-        # Buscar los procesos que tienen contratos
-        # con vencimiento dentro del período elegido.
-        procesos_vencimiento = (
+        # 1. Encontrar los registros cuyo contrato vence
+        #    dentro del período configurado.
+        registros_vencimiento = (
             RegistroLicitacion.objects
             .filter(
                 fecha_fin_contrato__range=(
@@ -1853,20 +1931,126 @@ def exportar_word_mails(request):
             )
             .exclude(numero_proceso__isnull=True)
             .exclude(numero_proceso="")
-            .values_list("numero_proceso", flat=True)
-            .distinct()
+            .exclude(numero_renglon__isnull=True)
+            .exclude(numero_renglon="")
+            .exclude(fecha_apertura__isnull=True)
+        )
+        print("====================================")
+        print("CARTA:", definicion_carta.nombre)
+        print("ES RENOVACIÓN:", definicion_carta.es_renovacion)
+        print("DESDE:", fecha_desde)
+        print("HASTA:", fecha_hasta)
+        print("CONTRATOS ENCONTRADOS:", registros_vencimiento.count())
+        print("====================================")
+        # 2. Obtener las combinaciones exactas:
+        #    Proceso + Renglón + Fecha de apertura.
+        claves_renovacion = set(
+            registros_vencimiento.values_list(
+                "numero_proceso",
+                "numero_renglon",
+                "fecha_apertura",
+            ).distinct()
         )
 
-        # Recuperar todos los registros de esos procesos,
-        # incluyendo las empresas que participaron y no ganaron.
+        # 3. Buscar todos los movimientos coincidentes,
+        #    SIN filtrar por fecha_fin_contrato.
+        filtro_claves = Q(pk__in=[])
+
+        for proceso, renglon, apertura in claves_renovacion:
+            filtro_claves |= Q(
+                numero_proceso=proceso,
+                numero_renglon=renglon,
+                fecha_apertura=apertura,
+            )
+
         registros = (
             RegistroLicitacion.objects
-            .filter(numero_proceso__in=procesos_vencimiento)
+            .filter(filtro_claves)
             .select_related(
                 "empresa_oferente",
                 "empresa_proveedor",
                 "lote",
             )
+        )
+
+        # ====================================================
+        # GUARDAR EL ADJUDICATARIO DE CADA PROCESO
+        # ANTES DE FILTRAR LAS EMPRESAS SELECCIONADAS
+        # ====================================================
+
+        adjudicatarios_por_clave = {}
+
+        registros_con_oc = registros.exclude(
+            Q(numero_oc__isnull=True) | Q(numero_oc="")
+        )
+
+        for registro in registros_con_oc:
+
+            clave = (
+                registro.numero_proceso,
+                registro.numero_renglon,
+                registro.fecha_apertura,
+            )
+
+            empresa_ganadora = (
+                registro.empresa_proveedor
+                or registro.empresa_oferente
+            )
+
+            if empresa_ganadora:
+                adjudicatarios_por_clave.setdefault(
+                    clave, set()
+                ).add(empresa_ganadora.nombre or "")
+
+
+
+
+
+        print("MOVIMIENTOS RECUPERADOS:", registros.count())
+
+
+        # ====================================================
+        # IDENTIFICAR ADJUDICATARIOS DE CADA PROCESO
+        # ====================================================
+
+        adjudicatarios_por_clave = {}
+
+        registros_con_oc = (
+            registros
+            .exclude(Q(numero_oc__isnull=True) | Q(numero_oc=""))
+            .select_related(
+                "empresa_proveedor",
+                "empresa_oferente",
+            )
+        )
+
+        for registro in registros_con_oc:
+
+            clave = (
+                registro.numero_proceso,
+                registro.numero_renglon,
+                registro.fecha_apertura,
+            )
+
+            empresa_ganadora = (
+                registro.empresa_proveedor
+                or registro.empresa_oferente
+            )
+
+            if empresa_ganadora:
+
+                adjudicatarios_por_clave.setdefault(
+                    clave, set()
+                ).add(empresa_ganadora.nombre or "")
+
+
+
+        print(
+            "EMPRESAS CON MOVIMIENTOS:",
+            registros.values(
+                "empresa_oferente_id",
+                "empresa_proveedor_id",
+            ).distinct().count()
         )
 
     # ========================================================
@@ -2008,11 +2192,56 @@ def exportar_word_mails(request):
                 empresa_proveedor_id__in=empresa_ids
             )
         )
+
+
+
+    # ====================================================
+    # ASIGNAR NOMBRE DEL ADJUDICATARIO A CADA REGISTRO
+    # ====================================================
+
+    if definicion_carta and definicion_carta.es_renovacion:
+
+        for registro in registros:
+
+            clave = (
+                registro.numero_proceso,
+                registro.numero_renglon,
+                registro.fecha_apertura,
+            )
+
+            registro.nombre_adjudicatario = ", ".join(
+                sorted(
+                    adjudicatarios_por_clave.get(clave, set())
+                )
+            )
+
+
+        
     # ========================================================
     # COMPETIDORES POR PROCESO + RENGLÓN
     # ========================================================
 
     competidores_por_clave = {}
+    # Asociar el adjudicatario a cada movimiento,
+    # aunque la empresa ganadora no esté seleccionada.
+
+    if definicion_carta.es_renovacion:
+
+        for registro in registros:
+
+            clave = (
+                registro.numero_proceso,
+                registro.numero_renglon,
+                registro.fecha_apertura,
+            )
+
+            registro.nombre_adjudicatario = ", ".join(
+                sorted(
+                    adjudicatarios_por_clave.get(clave, set())
+                )
+            )
+
+
 
     claves_consulta = set(
         registros
@@ -2141,6 +2370,7 @@ def exportar_word_mails(request):
 
     empresas = {}
 
+
     for registro in registros:
 
         empresas_del_registro = []
@@ -2150,10 +2380,13 @@ def exportar_word_mails(request):
                 registro.empresa_oferente
             )
 
+        # En las renovaciones hay que asociar el movimiento
+        # tanto al oferente como al proveedor.
         if (
             registro.empresa_proveedor
             and (
-                carta == "4"
+                (definicion_carta and definicion_carta.es_renovacion)
+                or carta == "4"
                 or not registro.empresa_oferente
             )
         ):
@@ -2162,6 +2395,11 @@ def exportar_word_mails(request):
             )
 
         for empresa in empresas_del_registro:
+
+            # Si se seleccionaron empresas para el Word,
+            # incluir únicamente esas empresas.
+            if empresa_ids and str(empresa.id) not in empresa_ids:
+                continue
 
             if empresa.id not in empresas:
                 empresas[empresa.id] = {
@@ -2172,7 +2410,6 @@ def exportar_word_mails(request):
             empresas[empresa.id]["registros"].append(
                 registro
             )
-
 
 
     # ========================================================
@@ -2217,17 +2454,17 @@ def exportar_word_mails(request):
     # GENERAR WORD
     # ========================================================
 
-    carta = request.GET.get("carta", "1")
+    # La definición ya fue obtenida al comienzo de la función.
+    # "carta" ya contiene su código.
 
-    if carta not in ("1", "2", "4"):
-        carta = "1"
-
-
-    imprimir_movimientos = (
-        request.GET.get("imprimir_movimientos", "0") == "1"
-    )
-
-
+    if definicion_carta:
+        imprimir_movimientos = definicion_carta.incluir_movimientos
+        incluir_cotizacion = definicion_carta.incluir_cotizacion
+    else:
+        imprimir_movimientos = (
+            request.GET.get("imprimir_movimientos", "0") == "1"
+        )
+        incluir_cotizacion = False
 
 
     fecha_desde = request.GET.get("fechaDesdeVencimiento", "")
@@ -2241,6 +2478,7 @@ def exportar_word_mails(request):
         tc=tc,
         carta=carta,
         imprimir_movimientos=imprimir_movimientos,
+        incluir_cotizacion=incluir_cotizacion,
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
     )
@@ -2287,23 +2525,27 @@ def seguimiento_cartas(request):
     )
 
     # Total de movimientos registrados.
-    total_movimientos = SeguimientoCartasFlow.objects.count()
+    total_movimientos = seguimientos.count()
 
-    # Cantidad de movimientos por cada tipo de evento.
+    # Cantidad de movimientos agrupados por la carta que se muestra
+    # en la tabla. Los registros sin carta se agrupan por evento.
     resumen_eventos = (
-        SeguimientoCartasFlow.objects
-        .values("evento")
+        seguimientos
+        .values("carta__nombre")
         .annotate(cantidad=Count("id"))
-        .order_by("evento")
+        .order_by("carta__nombre")
     )
 
     # Cartas configuradas y activas, ordenadas por nombre.
+
+
+
     cartas_activas = (
         CartaDefinicion.objects
         .filter(activa=True)
+        .prefetch_related("condiciones")
         .order_by("nombre")
     )
-
 
     for carta in cartas_activas:
         print(f"\nCARTA: {carta.nombre} | CÓDIGO: {carta.codigo} | ID: {carta.id}")
@@ -2333,18 +2575,42 @@ def exportar_excel_seguimiento_cartas(request):
     from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
     from django.http import HttpResponse
 
+
     # =========================================================
-    # TODOS LOS EVENTOS
+    # TODOS LOS EVENTOS Y CARTAS CONFIGURADAS
     # =========================================================
 
     seguimientos = (
         SeguimientoCartasFlow.objects
-        .select_related("empresa")
-        .order_by(
-            "empresa__nombre",
-            "id",
-        )
+        .select_related("empresa", "carta")
+        .order_by("empresa__nombre", "id")
     )
+
+    cartas_definidas = list(
+        CartaDefinicion.objects
+        .prefetch_related("condiciones")
+        .order_by("nombre")
+    )
+
+    # Relacionar los códigos de evento con las cartas configuradas.
+    cartas_por_evento = {}
+
+    for carta_def in cartas_definidas:
+        for condicion in carta_def.condiciones.all():
+            if condicion.tipo == "incluir":
+                cartas_por_evento.setdefault(
+                    condicion.codigo_evento,
+                    carta_def
+                )
+
+    def obtener_carta_registro(registro):
+        # Si el movimiento tiene una carta asociada, usarla.
+        if registro.carta_id and registro.carta:
+            return registro.carta
+
+        # Para movimientos anteriores sin carta asociada,
+        # buscar la definición mediante sus condiciones.
+        return cartas_por_evento.get(registro.evento)
 
     # =========================================================
     # AGRUPAR POR PROVEEDOR
@@ -2353,75 +2619,114 @@ def exportar_excel_seguimiento_cartas(request):
     proveedores = {}
 
     for seguimiento in seguimientos:
-
-        empresa_id = seguimiento.empresa_id
-
-        if empresa_id not in proveedores:
-            proveedores[empresa_id] = []
-
-        proveedores[empresa_id].append(
-            seguimiento
-        )
+        proveedores.setdefault(
+            seguimiento.empresa_id, []
+        ).append(seguimiento)
 
     # =========================================================
     # CLASIFICAR PROVEEDORES
     # =========================================================
+    # =========================================================
+    # CLASIFICAR PROVEEDORES SEGÚN LA ÚLTIMA CARTA ENVIADA
+    # =========================================================
 
-    grupo_clicks = []
-    grupo_fin = []
-    grupo_demas = []
+
+    # ============================================================
+    # CLASIFICAR PROVEEDORES SEGÚN LA ÚLTIMA CARTA
+    # ============================================================
+
+    destinos_excel = {
+        (carta.agrupacion_destino or "demas").strip().lower()
+        for carta in cartas_definidas
+    }
+    destinos_excel.add("demas")
+
+    grupos_por_destino = {
+        destino: [] for destino in destinos_excel
+    }
 
     for empresa_id, registros in proveedores.items():
 
-        eventos = {registro.evento for registro in registros}
-
-        tiene_click = (
-            "respuesta1_click" in eventos
-            or "respuesta2_click" in eventos
-        )
-
-        tiene_fin = (
-            "respuesta1_fin" in eventos
-            or "respuesta2_fin" in eventos
-        )
-
-        # Ordenar los movimientos del proveedor
-        # por Fecha de Envío
+        # Conservar todos los movimientos del proveedor
         registros = sorted(
             registros,
             key=lambda r: (
                 r.fecha_envio is None,
                 r.fecha_envio,
-                r.id,
+                r.id
             )
         )
 
-        if tiene_click:
-            grupo_clicks.append(registros)
+        # Buscar el último movimiento enviado que tenga una carta identificada
+        registros_con_fecha = [
+            registro
+            for registro in registros
+            if registro.fecha_envio is not None
+            and obtener_carta_registro(registro) is not None
+        ]
 
-        elif tiene_fin:
-            grupo_fin.append(registros)
+        if registros_con_fecha:
+            ultimo_registro = registros_con_fecha[-1]
+            ultima_carta = obtener_carta_registro(ultimo_registro)
 
+            destino = (
+                ultima_carta.agrupacion_destino or "demas"
+            ).strip().lower()
         else:
-            grupo_demas.append(registros)
+            destino = "demas"
 
+        # Si el destino no existe, enviar a Demás
+        if destino not in grupos_por_destino:
+            destino = "demas"
+
+        # Se guarda el proveedor con TODOS sus movimientos
+        grupos_por_destino[destino].append(registros)
+ 
 
     # =========================================================
     # CREAR EXCEL
     # =========================================================
 
+
+
     wb = Workbook()
 
-    ws_clicks = wb.active
-    ws_clicks.title = "Clicks"
+    # Destinos que se utilizan en el Excel.
+    destinos_excel = {
+        (carta.agrupacion_destino or "demas").strip().lower()
+        for carta in cartas_definidas
+    }
 
-    ws_fin = wb.create_sheet(
-        "Fin"
-    )
+    destinos_excel.add("demas")
 
-    ws_demas = wb.create_sheet(
-        "Demás"
-    )
+    # Relacionar cada destino con su pestaña.
+    hojas_excel = {}
+
+    hoja_inicial = wb.active
+    wb.remove(hoja_inicial)
+
+    for destino in sorted(destinos_excel):
+
+        if destino == "demas":
+            nombre_hoja = "Demás"
+        else:
+            carta_destino = next(
+                (
+                    carta
+                    for carta in cartas_definidas
+                    if carta.codigo == destino
+                ),
+                None
+            )
+
+            if carta_destino:
+                nombre_hoja = carta_destino.nombre[:31]
+            else:
+                nombre_hoja = destino[:31]
+
+        ws = wb.create_sheet(nombre_hoja)
+        hojas_excel[destino] = ws
+
 
     # =========================================================
     # ESTILOS
@@ -2463,61 +2768,60 @@ def exportar_excel_seguimiento_cartas(request):
 
 
         # Resumen solamente para la pestaña Demás
+
+
+        # Resumen solamente para la pestaña Demás
         if resumen:
 
             total_proveedores = len(grupos)
 
-            total_carta1 = sum(
-                1
-                for registros in grupos
-                for registro in registros
-                if registro.evento == "carta1"
-            )
-
-            total_carta2 = sum(
-                1
-                for registros in grupos
-                for registro in registros
-                if registro.evento == "carta2"
-            )
-
             ws["A2"] = "Proveedores"
             ws["B2"] = total_proveedores
 
-            ws["A3"] = "Carta 1"
-            ws["B3"] = total_carta1
+            fila_resumen = 3
 
-            ws["A4"] = "Carta 2"
-            ws["B4"] = total_carta2
+            # Mostrar únicamente las cartas que tienen movimientos,
+            # con sus nombres reales y cantidades.
+            for carta_def in cartas_definidas:
 
-            # Negrita y alineación a la izquierda
-            for fila_resumen in range(2, 5):
-                ws.cell(
-                    row=fila_resumen,
-                    column=1
-                ).font = Font(bold=True)
+                cantidad = sum(
+                    1
+                    for registros in grupos
+                    for registro in registros
+                    if (
+                        (carta_registro := obtener_carta_registro(registro))
+                        is not None
+                        and carta_registro.pk == carta_def.pk
+                    )
+                )
 
-                ws.cell(
-                    row=fila_resumen,
-                    column=2
-                ).font = Font(bold=True)
+                if cantidad:
+                    ws.cell(
+                        row=fila_resumen,
+                        column=1,
+                        value=carta_def.nombre
+                    )
+                    ws.cell(
+                        row=fila_resumen,
+                        column=2,
+                        value=cantidad
+                    )
+                    fila_resumen += 1
 
-                ws.cell(
-                    row=fila_resumen,
-                    column=1
-                ).alignment = Alignment(horizontal="left")
+            for fila_resumen_estilo in range(2, fila_resumen):
+                for columna in (1, 2):
+                    celda = ws.cell(
+                        row=fila_resumen_estilo,
+                        column=columna
+                    )
+                    celda.font = Font(bold=True)
+                    celda.alignment = Alignment(horizontal="left")
 
-                ws.cell(
-                    row=fila_resumen,
-                    column=2
-                ).alignment = Alignment(horizontal="left")
-
-            fila = 6
+            # Dejar una fila vacía antes de los encabezados.
+            fila = fila_resumen + 1
 
         else:
             fila = 3
-
-
 
         encabezados = [
             "Empresa",
@@ -2568,8 +2872,13 @@ def exportar_excel_seguimiento_cartas(request):
                 ws.cell(
                     row=fila,
                     column=2,
-                    value=registro.get_evento_display()
+                    value=(
+                        registro.carta.nombre
+                        if registro.carta
+                        else registro.evento
+                    )
                 )
+
 
                 fecha_envio = registro.fecha_envio
                 fecha_respuesta = registro.fecha_respuesta
@@ -2671,32 +2980,48 @@ def exportar_excel_seguimiento_cartas(request):
             ].width = ancho
 
     # =========================================================
-    # ESCRIBIR LAS 3 PESTAÑAS
+    # ESCRIBIR LAS PESTAÑAS DINÁMICAS
     # =========================================================
-
 
     fecha_informe = date.today().strftime("%d/%m/%Y")
 
-    escribir_pestana(
-        ws_clicks,
-        grupo_clicks,
-        f"LICITACIONES - PROVEEDORES - CLICK al {fecha_informe}"
-    )
 
-    escribir_pestana(
-        ws_fin,
-        grupo_fin,
-        f"LICITACIONES - PROVEEDORES - FIN al {fecha_informe}"
-    )
+    for destino, ws in hojas_excel.items():
 
+        grupos = grupos_por_destino.get(destino, [])
 
-    escribir_pestana(
-        ws_demas,
-        grupo_demas,
-        f"LICITACIONES - PROVEEDORES - al {fecha_informe}",
-        resumen=True
-    )
+        if destino == "demas":
+            titulo = (
+                f"LICITACIONES - PROVEEDORES - al {fecha_informe}"
+            )
+            resumen = True
+        else:
 
+            carta_destino = next(
+                (
+                    carta for carta in cartas_definidas
+                    if (carta.codigo or "").strip().lower() == destino
+                ),
+                None
+            )
+            nombre_destino = (
+                carta_destino.nombre
+                if carta_destino
+                else destino
+            )
+
+            titulo = (
+                f"LICITACIONES - PROVEEDORES - "
+                f"{nombre_destino} al {fecha_informe}"
+            )
+            resumen = False
+
+        escribir_pestana(
+            ws,
+            grupos,
+            titulo,
+            resumen=resumen
+        )
 
 
     # =========================================================
@@ -2732,17 +3057,25 @@ def exportar_excel_seguimiento_cartas(request):
 def aplicar_cartas_enviadas(request):
 
     try:
+        print("========== APLICAR CARTAS ENVIADAS ==========")
         datos = json.loads(request.body)
         envios = datos.get("envios", [])
 
+
+
+
         carta_valor = datos.get("carta")
+
         carta_obj = None
 
         if carta_valor:
-            # Primero buscamos por código, que es lo que envía el selector.
-            carta_obj = CartaDefinicion.objects.filter(
-                codigo=carta_valor
-            ).first()
+            try:
+                carta_obj = CartaDefinicion.objects.filter(
+                    id=int(carta_valor)
+                ).first()
+            except (ValueError, TypeError):
+                carta_obj = None
+
 
             # Si no existe ese código, el selector puede haber enviado el ID.
             if carta_obj is None and str(carta_valor).isdigit():
@@ -2789,7 +3122,7 @@ def aplicar_cartas_enviadas(request):
                 continue
             print("CARTA RECIBIDA:", carta_valor)
             print("CARTA ENCONTRADA:", carta_obj)
-
+            print("APLICANDO EVENTO:", empresa.id, evento, fecha)
             SeguimientoCartasFlow.objects.create(
                 empresa=empresa,
                 carta=carta_obj,
@@ -2885,7 +3218,7 @@ def guardar_seguimiento_carta(request):
                     ).date()
                 except (ValueError, TypeError):
                     fecha_envio = None
-
+            print("APLICANDO EVENTO:", empresa.id, evento, fecha)
             SeguimientoCartasFlow.objects.create(
                 empresa=empresa,
                 evento=evento,
@@ -3031,6 +3364,7 @@ def editar_carta(request):
                 pk=definicion_id,
                 codigo=codigo_carta
             ).first()
+
 
     # Si una definición anterior no tenía código, asignarle uno.
     if definicion and not definicion.codigo:
@@ -3229,8 +3563,18 @@ def editar_carta(request):
                         request.POST.get("requiere_email") == "on"
                     )
 
+                    if request.method == "POST" and definicion:
+                        definicion.todos_proveedores = (
+                            request.POST.get("todos_proveedores") == "on"
+                        )
+
                     definicion.es_renovacion = (
                         request.POST.get("es_renovacion") == "on"
+                    )
+
+
+                    definicion.agrupacion_destino = (
+                        request.POST.get("agrupacion_destino", "demas")
                     )
 
                     definicion.fecha_desde = fecha_desde
@@ -3242,6 +3586,11 @@ def editar_carta(request):
                         if "activa" in request.POST
                         else es_nueva
                     )
+
+
+
+
+
 
                     definicion.save()
 
@@ -3364,24 +3713,19 @@ def editar_carta(request):
     # OPCIONES PARA LOS COMBOS INCLUIR Y EXCLUIR
     # ------------------------------------------------------------
 
+    opciones_condicion = list(
+        CartaDefinicion.objects
+        .filter(activa=True)
+        .order_by("nombre")
+        .values_list("id", "nombre")
+    )
+
     opciones_condicion = [
-        {"codigo": "1", "nombre": "Carta 1. Presentación"},
-        {"codigo": "2", "nombre": "Carta 2. Simulación"},
-        {"codigo": "3", "nombre": "Carta 3. Invitación"},
-        {"codigo": "R1", "nombre": "Renov 01"},
-        {"codigo": "R2", "nombre": "Renov 02"},
-        {"codigo": "R3", "nombre": "Renov 03"},
-        {"codigo": "R4", "nombre": "Renov 04"},
-        {"codigo": "R5", "nombre": "Renov 05"},
-        {"codigo": "R6", "nombre": "Renov 06"},
-        {"codigo": "R7", "nombre": "Renov 07"},
-        {"codigo": "R8", "nombre": "Renov 08"},
-        {"codigo": "R9", "nombre": "Renov 09"},
-        {"codigo": "R10", "nombre": "Renov 10"},
-        {"codigo": "R11", "nombre": "Renov 11"},
-        {"codigo": "R12", "nombre": "Renov 12"},
-        {"codigo": "Fin", "nombre": "Fin"},
-        {"codigo": "Click", "nombre": "Click"},
+        {
+            "codigo": str(carta_id),
+            "nombre": nombre,
+        }
+        for carta_id, nombre in opciones_condicion
     ]
 
     incluir_seleccionados = set()
@@ -3791,20 +4135,32 @@ def configurar_cartas(request):
     
 from django.http import JsonResponse
 
-
 def api_cartas_activas(request):
     cartas = (
         CartaDefinicion.objects
         .filter(activa=True)
+        .prefetch_related("condiciones")
         .order_by("nombre")
-        .values("id", "codigo", "nombre")
     )
-
+    for carta in cartas:
+        print(
+            "ID:", carta.id,
+            "| Código:", carta.codigo,
+            "| Nombre:", carta.nombre
+        )
     return JsonResponse({
         "cartas": [
             {
-                "valor": carta["codigo"] or str(carta["id"]),
-                "nombre": carta["nombre"],
+                "valor": str(carta.id),
+                "nombre": carta.nombre,
+                "todos_proveedores": carta.todos_proveedores,
+                "condiciones": [
+                    {
+                        "tipo": condicion.tipo,
+                        "codigo_evento": condicion.codigo_evento,
+                    }
+                    for condicion in carta.condiciones.all()
+                ],
             }
             for carta in cartas
         ]
