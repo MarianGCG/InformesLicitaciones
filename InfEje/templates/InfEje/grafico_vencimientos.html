@@ -355,17 +355,90 @@ function mostrarDetalle(indice) {
         const comprador = document.createElement('td');
         comprador.textContent = registro.comprador;
 
+
+
         const proveedor = document.createElement('td');
+
         proveedor.textContent = registro.proveedor;
 
+        proveedor.style.cursor = 'pointer';
+        proveedor.title = 'Doble clic para filtrar esta empresa';
 
+        proveedor.addEventListener('dblclick', function() {
+
+            const paginaPrincipal = window.parent.document;
+
+            const campoEmpresa = paginaPrincipal.getElementById(
+                'empresaBusqueda'
+            );
+
+            const resultados = paginaPrincipal.getElementById(
+                'empresaResultados'
+            );
+
+            if (!campoEmpresa || !resultados) return;
+
+            // Escribir el nombre para que funcione el autocompletado.
+            campoEmpresa.value = registro.proveedor;
+
+            campoEmpresa.dispatchEvent(
+                new Event('input', { bubbles: true })
+            );
+
+            // Buscar la empresa exacta entre las opciones encontradas.
+            const opciones = resultados.querySelectorAll(
+                '.empresa-opcion'
+            );
+
+            const opcionEmpresa = Array.from(opciones).find(
+                function(opcion) {
+                    const nombre = opcion.textContent
+                        .trim()
+                        .split(' — CUIT ')[0]
+                        .trim()
+                        .toLowerCase();
+
+                    return nombre === registro.proveedor
+                        .trim()
+                        .toLowerCase();
+                }
+            );
+
+            if (opcionEmpresa) {
+                opcionEmpresa.click();
+            }
+
+        });
         const adjudicado = document.createElement('td');
         adjudicado.textContent = registro.adjudicado;
 
 
         const proceso = document.createElement('td');
+
         proceso.textContent = registro.proceso;
 
+        proceso.style.cursor = 'pointer';
+        proceso.title = 'Doble clic para buscar este proceso';
+
+        proceso.addEventListener('dblclick', function() {
+
+            const paginaPrincipal = window.parent.document;
+
+            const campoProceso = paginaPrincipal.querySelector(
+                'input[name="proceso"]'
+            );
+
+            if (!campoProceso) return;
+
+            campoProceso.value = registro.proceso;
+
+            const formulario = campoProceso.closest('form');
+
+            if (formulario) {
+                formulario.submit();
+            }
+
+        });
         const renglon = document.createElement('td');
         renglon.textContent = registro.renglon;
 
