@@ -1332,7 +1332,31 @@
             margin: 0;
         }
 
+        .zona-botones {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
 
+        .botones-filtros-superior,
+        .grupo-botones-derecha {
+            margin-top: 0;
+            padding-top: 0;
+        }
+
+
+        .grupo-botones-derecha {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .grupo-botones-derecha .botones-filtros {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
     </style>
     <style>
 
@@ -1400,7 +1424,6 @@
     }
 
 
-
     </style>
 
 </head>
@@ -1413,7 +1436,7 @@
         display:none;
         position:fixed;
         inset:0;
-        background:rgba(0,0,0,.35);
+        background:rgba(253, 253, 253, 0.35);
         z-index:20000;
         align-items:center;
         justify-content:center;
@@ -1840,59 +1863,50 @@
 
 
                 <!-- BOTONES -->
+                <!-- BOTONES -->
                 <div class="zona-botones">
 
+                    <div class="botones-filtros botones-filtros-superior">
+                        <button
+                            type="submit"
+                            class="boton"
+                            style="background:#198754;"
+                        >
+                            BUSCAR
+                        </button>
+                    </div>
 
-                <div class="botones-filtros botones-filtros-superior">
-                    <button
-                        type="submit"
-                        class="boton"
-                        style="background:#198754;"
-                    >
-                        BUSCAR
-                    </button>
+                    <div class="grupo-botones-derecha">
+
+                        <div class="botones-filtros botones-filtros-inferior">
+                            <a
+                                href="#"
+                                id="btnExportarPDF"
+                                class="boton-pdf"
+                                style="background:#0d6efd;"
+                            >
+                                Exportar PDF
+                            </a>
+
+                            <button
+                                type="button"
+                                id="btnPDFEmpresas"
+                                class="boton-pdf"
+                                style="background:#0d6efd;"
+                            >
+                                Exportar PDF por EMPRESA
+                            </button>
+                        </div>
+
+                    </div>
+
                 </div>
-
-                <div class="botones-filtros botones-filtros-inferior">
-                    <a
-                        href="#"
-                        id="btnExportarPDF"
-                        class="boton-pdf"
-                        style="background:boton azul;"
-                    >
-                        Exportar PDF
-                    </a>
-
-                    <button
-                        type="button"
-                        id="btnPDFEmpresas"
-                        class="boton-pdf"
-                        style="background:boton azul;"
-                    >
-                        Exportar PDF por EMPRESA
-                    </button>
-                </div>
-
-
-
-
-                </div>
-                </div>
-
-
-                
+               
             </div>
-
-
-
-
-
 
         </form>
 
     </div>
-        
-
 
     {% if empresa_seleccionada %}
 
@@ -2067,14 +2081,24 @@
     {% endif %}
 
 
-
     <div class="vistas-tabs">
+
         <button type="button" class="vista-tab activa" data-vista="resultados">
             RESULTADOS
         </button>
+
         <button type="button" class="vista-tab" data-vista="totales">
             TOTALES POR EMPRESA
         </button>
+
+        <button type="button" class="vista-tab" data-vista="vencimientos">
+            GRÁFICO VENCIMIENTOS
+        </button>
+
+        <button type="button" class="vista-tab" data-vista="seguimiento">
+            GRÁFICO SEGUIMIENTO
+        </button>
+
     </div>
 
     <div id="vista-resultados" class="vista-panel activa">
@@ -2406,77 +2430,88 @@
 
         </div>
 
-    </div>  <!-- Cierra .resultados -->
+        </div><!-- Cierra .resultados -->
 
-</div>  <!-- Cierra #vista-resultados -->
+    </div>  <!-- Cierra #vista-resultados -->
 
-    <div id="vista-totales" class="vista-panel">
+        <div id="vista-totales" class="vista-panel">
 
-        <div class="totales-panel">
+            <div class="totales-panel">
 
-            <div class="titulo-resultados">
-                <h2>Totales de ofertas por empresa</h2>
-                <div>{{ totales_empresas|length }} empresas</div>
-            </div>
+                <div class="titulo-resultados">
+                    <h2>Totales de ofertas por empresa</h2>
+                    <div>{{ totales_empresas|length }} empresas</div>
+                </div>
 
-            <div class="totales-nota">
-                Para cada Empresa + Proceso + Renglón se considera el registro del archivo con fecha más reciente.
-                El filtro Con OC / Sin OC no modifica esta tabla. Se excluyen del cálculo los Procesos + Renglones que ya poseen OC en la base.
-            </div>
+                <div class="totales-nota">
+                    Para cada Empresa + Proceso + Renglón se considera el registro del archivo con fecha más reciente.
+                    El filtro Con OC / Sin OC no modifica esta tabla. Se excluyen del cálculo los Procesos + Renglones que ya poseen OC en la base.
+                </div>
 
-            <div class="tabla-contenedor">
-                <table class="totales-tabla">
-                    <thead>
-                        <tr>
-                            <th>Empresa</th>
-                            <th>CUIT</th>
-                            <th class="numero">Procesos distintos</th>
-                            <th class="numero">Procesos / Renglones</th>
-                            <th class="numero">Total Ofertas</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for total in totales_empresas %}
+                <div class="tabla-contenedor">
+                    <table class="totales-tabla">
+                        <thead>
                             <tr>
-                                <td class="empresa" title="Doble clic para filtrar esta empresa">{{ total.empresa }}</td>
-                                <td>{{total.cuit }}</td>
-                                <td class="numero">{{ total.procesos_distintos }}</td>
-                                <td class="numero">{{ total.procesos_renglones }}</td>
-                                <td class="numero"><span class="formato-importe">{{ total.total_ofertas|floatformat:2 }}</span></td>
-                                
+                                <th>Empresa</th>
+                                <th>CUIT</th>
+                                <th class="numero">Procesos distintos</th>
+                                <th class="numero">Procesos / Renglones</th>
+                                <th class="numero">Total Ofertas</th>
                             </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="4">
-                                    <div class="sin-resultados">
-                                        No hay datos para calcular los totales con los filtros seleccionados.
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
+                        </thead>
+                        <tbody>
+                            {% for total in totales_empresas %}
+                                <tr>
+                                    <td class="empresa" title="Doble clic para filtrar esta empresa">{{ total.empresa }}</td>
+                                    <td>{{total.cuit }}</td>
+                                    <td class="numero">{{ total.procesos_distintos }}</td>
+                                    <td class="numero">{{ total.procesos_renglones }}</td>
+                                    <td class="numero"><span class="formato-importe">{{ total.total_ofertas|floatformat:2 }}</span></td>
+                                    
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="sin-resultados">
+                                            No hay datos para calcular los totales con los filtros seleccionados.
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
 
-                        {% if totales_empresas %}
-                            <tr class="total-final">
-                                <td>TOTAL</td>
-                                <td></td>
-                                <td class="numero">{{ total_procesos_distintos }}</td>
-                                <td class="numero">{{ total_procesos_renglones }}</td>
-                                <td class="numero"><span class="formato-importe">{{ total_ofertas|floatformat:2 }}</span></td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                            {% if totales_empresas %}
+                                <tr class="total-final">
+                                    <td>TOTAL</td>
+                                    <td></td>
+                                    <td class="numero">{{ total_procesos_distintos }}</td>
+                                    <td class="numero">{{ total_procesos_renglones }}</td>
+                                    <td class="numero"><span class="formato-importe">{{ total_ofertas|floatformat:2 }}</span></td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+             
             </div>
+        </div>  <!-- Cierra #vista-totales -->
+        <!-- ================================================= -->
+        <!-- PESTAÑA: GRÁFICO VENCIMIENTOS -->
+        <!-- ================================================= -->
 
-        </div>
+        <div id="vista-vencimientos" class="vista-panel">
+
+            <iframe
+                src="{% url 'grafico_vencimientos' %}{% if empresa_seleccionada %}?empresa={{ empresa_seleccionada.id }}{% endif %}"
+                style="width:100%; height:850px; border:none; background:white;"
+                title="Gráfico de vencimientos"
+            ></iframe>
+
+        </div> <!-- Cierra #vista-vencimientos -->
+
+
 
     </div>
-
-</div>
-
-
-
-
 
 </div>
 
@@ -3939,19 +3974,19 @@ document.getElementById("btnCSVdoppler")?.addEventListener(
     });
 </script>
 
-
 <script>
 
     // =========================================================
-    // PESTAÑAS: RESULTADOS / TOTALES POR EMPRESA
+    // PESTAÑAS: RESULTADOS / TOTALES / GRÁFICOS
     // =========================================================
 
     const botonesVistas = document.querySelectorAll(".vista-tab");
-    const panelResultados = document.getElementById("vista-resultados");
-    const panelTotales = document.getElementById("vista-totales");
+    const panelesVistas = document.querySelectorAll(".vista-panel");
 
     botonesVistas.forEach(function (boton) {
+
         boton.addEventListener("click", function () {
+
             const vista = boton.dataset.vista;
 
             botonesVistas.forEach(function (otro) {
@@ -3960,19 +3995,19 @@ document.getElementById("btnCSVdoppler")?.addEventListener(
 
             boton.classList.add("activa");
 
-            panelResultados.classList.toggle(
-                "activa",
-                vista === "resultados"
-            );
+            panelesVistas.forEach(function (panel) {
+                panel.classList.toggle(
+                    "activa",
+                    panel.id === "vista-" + vista
+                );
+            });
 
-            panelTotales.classList.toggle(
-                "activa",
-                vista === "totales"
-            );
         });
+
     });
 
 </script>
+
 <script>
     document.addEventListener("click", function (event) {
 

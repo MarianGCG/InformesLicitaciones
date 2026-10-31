@@ -152,4 +152,10 @@ urlpatterns = [
         name="api_cartas_activas",
     ),
 
+    path(
+        "grafico-vencimientos/",
+        views.grafico_vencimientos,
+        name="grafico_vencimientos",
+    ),
+
 ]
