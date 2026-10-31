@@ -35,7 +35,7 @@ from django.http import HttpResponse, JsonResponse
 
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-
+from collections import defaultdict
 from django.db.models import Q, Count
 from .exportar_pdf import (
     construir_pdf,
@@ -47,6 +47,228 @@ from .importadores import (
     importar_emails_excel,
 )
 from .exportar_word import generar_word_mails
+
+
+
+# ============================================================
+# GRÁFICO DE VENCIMIENTOS DE CONTRATOS
+# ============================================================
+
+def grafico_vencimientos(request):
+
+    # --------------------------------------------------------
+    # 1. OBTENER REGISTROS ADJUDICADOS CON FECHA DE VENCIMIENTO
+    # --------------------------------------------------------
+
+    registros = (
+        RegistroLicitacion.objects
+        .filter(
+            fecha_fin_contrato__isnull=False
+        )
+        .exclude(
+            numero_oc__isnull=True
+        )
+        .exclude(
+            numero_oc=""
+        )
+        .exclude(numero_proceso__isnull=True)
+        .exclude(numero_proceso="")
+        .exclude(numero_renglon__isnull=True)
+        .exclude(numero_renglon="")
+        .exclude(fecha_apertura__isnull=True)
+        .select_related(
+            "empresa_oferente",
+            "empresa_proveedor",
+        )
+        .order_by("fecha_fin_contrato", "id")
+    )
+
+    # --------------------------------------------------------
+    # 2. UNA SOLA FILA ADJUDICADA POR PROCESO + RENGLÓN
+    #    + FECHA DE APERTURA
+    # --------------------------------------------------------
+
+    registros_unicos = {}
+
+    for registro in registros:
+
+        clave = (
+            registro.numero_proceso,
+            registro.numero_renglon,
+            registro.fecha_apertura,
+        )
+
+        if clave not in registros_unicos:
+            registros_unicos[clave] = registro
+
+    # --------------------------------------------------------
+    # 3. BUSCAR TODOS LOS REGISTROS DE ESOS PROCESOS
+    #    INCLUYENDO LOS QUE NO TIENEN OC NI FECHA DE FIN
+    # --------------------------------------------------------
+
+    procesos = {
+        clave[0]
+        for clave in registros_unicos.keys()
+    }
+
+    todos_los_registros = (
+        RegistroLicitacion.objects
+        .filter(
+            numero_proceso__in=procesos
+        )
+        .exclude(numero_renglon__isnull=True)
+        .exclude(numero_renglon="")
+        .exclude(fecha_apertura__isnull=True)
+        .select_related(
+            "empresa_oferente",
+            "empresa_proveedor",
+        )
+    )
+
+    registros_por_clave = {}
+
+    for registro in todos_los_registros:
+
+        clave = (
+            registro.numero_proceso,
+            registro.numero_renglon,
+            registro.fecha_apertura,
+        )
+
+        if clave not in registros_unicos:
+            continue
+
+        registros_por_clave.setdefault(
+            clave, []
+        ).append(registro)
+
+    # --------------------------------------------------------
+    # 4. AGRUPAR POR MES DE VENCIMIENTO
+    # --------------------------------------------------------
+
+    vencimientos = defaultdict(list)
+
+    empresa_seleccionada = request.GET.get("empresa", "")
+
+    for clave, registro_adjudicado in registros_unicos.items():
+
+        participantes = registros_por_clave.get(
+            clave, []
+        )
+
+        # ----------------------------------------------------
+        # REUNIR TODAS LAS EMPRESAS PARTICIPANTES
+        # ----------------------------------------------------
+
+        empresas = {}
+
+        for participante in participantes:
+
+            for empresa in (
+                participante.empresa_oferente,
+                participante.empresa_proveedor,
+            ):
+
+                if empresa:
+                    empresas[empresa.id] = empresa
+
+        # ----------------------------------------------------
+        # FILTRO POR EMPRESA:
+        # INCLUYE ADJUDICADOS Y NO ADJUDICADOS
+        # ----------------------------------------------------
+
+        if empresa_seleccionada:
+
+            if str(empresa_seleccionada) not in [
+                str(empresa_id)
+                for empresa_id in empresas.keys()
+            ]:
+                continue
+
+ 
+
+        # ----------------------------------------------------
+        # FECHA DE VENCIMIENTO: SIEMPRE LA DEL ADJUDICADO
+        # ----------------------------------------------------
+
+        fecha = registro_adjudicado.fecha_fin_contrato
+
+        periodo = fecha.strftime("%Y-%m")
+
+        # Empresa adjudicada
+        empresa_adjudicada = (
+            registro_adjudicado.empresa_proveedor
+            or registro_adjudicado.empresa_oferente
+        )
+
+        # Una fila por cada empresa participante
+        for empresa in sorted(
+            empresas.values(),
+            key=lambda e: e.nombre
+        ):
+
+            adjudicado = "-"
+
+            if empresa_adjudicada:
+
+                if empresa.id == empresa_adjudicada.id:
+                    adjudicado = "SI"
+                else:
+                    adjudicado = empresa_adjudicada.nombre
+
+            vencimientos[periodo].append({
+
+                "comprador": registro_adjudicado.comprador or "",
+
+                "proceso": registro_adjudicado.numero_proceso,
+
+                "renglon": registro_adjudicado.numero_renglon,
+
+                "fecha_fin": fecha.strftime("%d/%m/%Y"),
+
+                "proveedor": empresa.nombre,
+
+                "adjudicado": adjudicado,
+
+            })
+
+
+
+
+    # --------------------------------------------------------
+    # 5. PREPARAR DATOS PARA EL GRÁFICO
+    # --------------------------------------------------------
+
+    periodos = sorted(vencimientos.keys())
+
+    etiquetas = [
+        datetime.strptime(
+            periodo,
+            "%Y-%m"
+        ).strftime("%m/%Y")
+        for periodo in periodos
+    ]
+
+    cantidades = [
+        len(vencimientos[periodo])
+        for periodo in periodos
+    ]
+
+    return render(
+        request,
+        "InfEje/grafico_vencimientos.html",
+        {
+            "etiquetas": json.dumps(etiquetas),
+
+            "cantidades": json.dumps(cantidades),
+
+            "detalles": json.dumps([
+                vencimientos[periodo]
+                for periodo in periodos
+            ], ensure_ascii=False),
+
+        }
+    )
 
 def consultar(request):
 

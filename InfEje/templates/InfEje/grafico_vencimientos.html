@@ -1,0 +1,463 @@
+
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="es">
+
+<h2 style="margin-bottom:15px;">
+    VENCIMIENTOS DE CONTRATOS
+</h2>
+
+<style>
+
+
+
+.barra-superior {
+    display:flex;
+    align-items:center;
+    gap:15px;
+    margin-bottom:15px;
+}
+
+.contenedor-principal {
+    display: grid;
+    grid-template-columns: 55% 45%;
+    gap: 12px;
+    width: 100%;
+    align-items: start;
+    box-sizing: border-box;
+}
+
+.contenedor-grafico {
+    background: white;
+    padding: 10px;
+    height: 430px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.panel-detalle {
+    min-width: 0;
+    max-height: 430px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.tabla-vencimientos {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    background: white;
+    font-size: 15px;
+}
+
+.tabla-vencimientos th,
+.tabla-vencimientos td {
+    padding: 5px 4px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    overflow-wrap: anywhere;
+    font-size: 15px;
+}
+
+.tabla-vencimientos th:nth-child(1),
+.tabla-vencimientos td:nth-child(1) {
+    width: 34%;
+}
+
+.tabla-vencimientos th:nth-child(2),
+.tabla-vencimientos td:nth-child(2) {
+    width: 34%;
+}
+
+.tabla-vencimientos th:nth-child(3),
+.tabla-vencimientos td:nth-child(3) {
+    width: 17%;
+}
+
+.tabla-vencimientos th:nth-child(4),
+.tabla-vencimientos td:nth-child(4) {
+    width: 16%;
+}
+
+.tabla-vencimientos th:nth-child(5),
+.tabla-vencimientos td:nth-child(5) {
+    width: 7%;
+}
+
+.tabla-vencimientos th:nth-child(6),
+.tabla-vencimientos td:nth-child(6) {
+    width: 10%;
+}
+
+
+
+
+.tabla-vencimientos th {
+    background: #174a7c;
+    color: white;
+}
+
+.tabla-vencimientos tr:hover {
+    background: #f2f6fa;
+}
+
+@media (max-width: 900px) {
+    .contenedor-principal {
+        grid-template-columns: 1fr;
+    }
+
+    .contenedor-grafico {
+        height: 350px;
+    }
+
+    .panel-detalle {
+        max-height: 400px;
+    }
+}
+
+#tituloDetalle {
+    font-size: 17px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 10px;
+}
+
+.tabla-vencimientos th.col-ordenable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.tabla-vencimientos th.col-ordenable::after {
+    content: " ↕";
+    font-size: 13px;
+    color: #dce8f5;
+}
+
+.tabla-vencimientos th.col-ordenable.asc::after {
+    content: " ▲";
+}
+
+.tabla-vencimientos th.col-ordenable.desc::after {
+    content: " ▼";
+}
+
+</style>
+
+
+
+<div class="contenedor-principal">
+
+    <!-- GRÁFICO A LA IZQUIERDA -->
+    <div class="contenedor-grafico">
+        <canvas id="graficoVencimientos"></canvas>
+    </div>
+
+    <!-- VENCIMIENTOS A LA DERECHA -->
+    <div class="panel-detalle">
+
+        <h3 id="tituloDetalle">
+            Seleccioná una barra para ver los vencimientos
+        </h3>
+
+        <table class="tabla-vencimientos" id="tablaVencimientos">
+
+
+
+            <thead>
+                <tr>
+                    <th class="col-ordenable" data-col="0">Comprador / Organismo</th>
+                    <th class="col-ordenable" data-col="1">Proveedor / Oferente</th>
+                    <th class="col-ordenable" data-col="2">Adjudicado?</th>
+                    <th class="col-ordenable" data-col="3">Proceso</th>
+                    <th class="col-ordenable" data-col="4">Renglón</th>
+                    <th class="col-ordenable" data-col="5">Fecha fin contrato</th>
+                </tr>
+            </thead>
+            <tbody id="detalleVencimientos">
+
+                <tr>
+                    <td colspan="6" style="text-align:center;">
+                        Hacé clic sobre un mes del gráfico.
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+<script>
+
+const etiquetas = {{ etiquetas|safe }};
+const cantidades = {{ cantidades|safe }};
+const detalles = {{ detalles|safe }};
+
+
+Chart.register(ChartDataLabels);
+
+
+const ctx = document.getElementById(
+    'graficoVencimientos'
+);
+
+
+new Chart(ctx, {
+
+    type: 'bar',
+
+    data: {
+
+        labels: etiquetas,
+
+        datasets: [{
+
+            label: 'Renglones',
+
+            data: cantidades,
+
+            backgroundColor: '#198754',
+
+            borderColor: '#146c43',
+
+            borderWidth: 1,
+
+            borderRadius: 4,
+
+            barThickness: 32,
+            maxBarThickness: 32
+        }]
+
+    },
+
+    options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        layout: {
+            padding: {
+                top: 25
+            }
+        },
+
+        plugins: {
+            legend: {
+                display: false,
+                labels: {
+                    font: {
+                        weight: 'bold',
+                        size: 17
+                    }
+                }
+            },
+
+
+            datalabels: {
+
+                anchor: 'end',
+
+                align: 'top',
+
+                color: '#333',
+
+                font: {
+                    weight: 'bold',
+                    size: 17
+                },
+
+                formatter: function(value) {
+                    return value > 0 ? value : '';
+                }
+
+            }
+
+        },
+
+        scales: {
+            x: {
+                ticks: {
+                    font: {
+                        size: 17,
+                        weight: 'bold'
+                    }
+                }
+            },
+            y: {
+
+                beginAtZero: true,
+
+                ticks: {
+                    precision: 0
+                }
+
+            }
+
+        },
+
+        onClick: function(event, elements) {
+
+            if (!elements.length) {
+                return;
+            }
+
+            const indice = elements[0].index;
+
+            mostrarDetalle(indice);
+
+        }
+
+    }
+
+});
+
+function mostrarDetalle(indice) {
+
+    const periodo = etiquetas[indice];
+
+    const registros = detalles[indice];
+
+    const titulo = document.getElementById(
+        'tituloDetalle'
+    );
+
+    const tbody = document.getElementById(
+        'detalleVencimientos'
+    );
+
+    titulo.innerText =
+        'Vencimientos de ' + periodo +
+        ' (' + registros.length + ' renglones)';
+
+
+    tbody.innerHTML = '';
+
+
+    registros.forEach(function(registro) {
+
+        const fila = document.createElement('tr');
+
+        const comprador = document.createElement('td');
+        comprador.textContent = registro.comprador;
+
+        const proveedor = document.createElement('td');
+        proveedor.textContent = registro.proveedor;
+
+
+        const adjudicado = document.createElement('td');
+        adjudicado.textContent = registro.adjudicado;
+
+
+        const proceso = document.createElement('td');
+        proceso.textContent = registro.proceso;
+
+        const renglon = document.createElement('td');
+        renglon.textContent = registro.renglon;
+
+        const fecha = document.createElement('td');
+        fecha.textContent = registro.fecha_fin;
+
+
+        fila.appendChild(comprador);
+        fila.appendChild(proveedor);
+        fila.appendChild(adjudicado);
+        fila.appendChild(proceso);
+        fila.appendChild(renglon);
+        fila.appendChild(fecha);
+
+        tbody.appendChild(fila);
+
+    });
+
+}
+// ==================================================
+// ORDENAR TABLA DE VENCIMIENTOS
+// ==================================================
+
+document.querySelectorAll(
+    '.tabla-vencimientos th.col-ordenable'
+).forEach(function(th) {
+
+    th.addEventListener('click', function() {
+
+        const columna = parseInt(th.dataset.col);
+        const tbody = document.getElementById('detalleVencimientos');
+
+        const ascendente = !th.classList.contains('asc');
+
+        // Quitar flechas de las demás columnas
+        document.querySelectorAll(
+            '.tabla-vencimientos th.col-ordenable'
+        ).forEach(function(otro) {
+            otro.classList.remove('asc', 'desc');
+        });
+
+        th.classList.add(ascendente ? 'asc' : 'desc');
+
+        const filas = Array.from(tbody.querySelectorAll('tr'));
+
+        filas.sort(function(a, b) {
+
+            const textoA = a.cells[columna].textContent.trim();
+            const textoB = b.cells[columna].textContent.trim();
+
+            let comparacion;
+
+            // Renglón: orden numérico
+            if (columna === 4) {
+                comparacion = Number(textoA) - Number(textoB);
+            }
+
+            // Fecha: orden cronológico
+            else if (columna === 5) {
+
+                const partesA = textoA.split('/');
+                const partesB = textoB.split('/');
+
+                const fechaA = new Date(
+                    partesA[2], partesA[1] - 1, partesA[0]
+                );
+
+                const fechaB = new Date(
+                    partesB[2], partesB[1] - 1, partesB[0]
+                );
+
+                comparacion = fechaA - fechaB;
+            }
+
+            // Textos
+            else {
+                comparacion = textoA.localeCompare(
+                    textoB,
+                    'es',
+                    { sensitivity: 'base', numeric: true }
+                );
+            }
+
+            return ascendente ? comparacion : -comparacion;
+
+        });
+
+        filas.forEach(function(fila) {
+            tbody.appendChild(fila);
+        });
+
+    });
+
+});
+</script>
