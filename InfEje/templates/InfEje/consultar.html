@@ -2372,7 +2372,8 @@
 
                             <td
                                 class="descripcion"
-                                title="{{ registro.descripcion_renglon|default:'-' }}"
+                                data-url="{{ registro.url|default:''|escape }}"
+                                title="Doble clic para abrir la fuente de datos"
                             >
                                 {{ registro.descripcion_renglon|default:"-" }}
                             </td>
@@ -5393,7 +5394,23 @@ const formularioFicha = campoNovedades
 
 
 </script>
+<script>
+document.querySelectorAll('td.descripcion').forEach(function(celda) {
 
+    celda.style.cursor = celda.dataset.url ? 'pointer' : 'default';
+
+    celda.addEventListener('dblclick', function() {
+
+        const url = celda.dataset.url;
+
+        if (!url) return;
+
+        window.open(url, '_blank', 'noopener,noreferrer');
+
+    });
+
+});
+</script>
 </body>
 
 </html>
