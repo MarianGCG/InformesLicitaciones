@@ -4387,3 +4387,70 @@ def api_cartas_activas(request):
             for carta in cartas
         ]
     })
+
+# ============================================================
+# ACTUALIZAR FECHAS DE CONTRATO POR ORDEN DE COMPRA
+# ============================================================
+# ============================================================
+# ACTUALIZAR FECHAS DE CONTRATO POR ORDEN DE COMPRA
+# ============================================================
+
+@require_POST
+def actualizar_fechas_oc(request):
+
+    numero_oc = request.POST.get("numero_oc", "").strip()
+
+    fecha_inicio = parse_date(
+        request.POST.get("fecha_inicio", "")
+    )
+
+    fecha_fin = parse_date(
+        request.POST.get("fecha_fin", "")
+    )
+
+    # --------------------------------------------------------
+    # VALIDACIONES
+    # --------------------------------------------------------
+
+    if not numero_oc:
+        return JsonResponse({
+            "success": False,
+            "mensaje": "No se recibió el número de Orden de Compra."
+        })
+
+    if not fecha_inicio or not fecha_fin:
+        return JsonResponse({
+            "success": False,
+            "mensaje": "Debés ingresar ambas fechas."
+        })
+
+    if fecha_fin < fecha_inicio:
+        return JsonResponse({
+            "success": False,
+            "mensaje": "La fecha de finalización no puede ser anterior a la de inicio."
+        })
+
+    # --------------------------------------------------------
+    # BUSCAR Y ACTUALIZAR TODOS LOS REGISTROS DE ESA OC
+    # --------------------------------------------------------
+
+    registros = RegistroLicitacion.objects.filter(
+        numero_oc=numero_oc
+    )
+
+    cantidad = registros.update(
+        fecha_inicio_contrato=fecha_inicio,
+        fecha_fin_contrato=fecha_fin
+    )
+
+    if cantidad == 0:
+        return JsonResponse({
+            "success": False,
+            "mensaje": "No se encontraron registros para esa Orden de Compra."
+        })
+
+    return JsonResponse({
+        "success": True,
+        "mensaje": f"Se actualizaron las fechas de {cantidad} registros.",
+        "cantidad": cantidad
+    })

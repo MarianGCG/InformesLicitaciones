@@ -2333,7 +2333,13 @@
                                 {% endif %}
                             </td>
 
-                            <td>
+                            <td
+                                class="fecha-fin-contrato"
+                                data-numero-oc="{{ registro.numero_oc|default:''|escape }}"
+                                data-fecha-inicio="{{ registro.fecha_inicio_contrato|date:'Y-m-d' }}"
+                                data-fecha-fin="{{ registro.fecha_fin_contrato|date:'Y-m-d' }}"
+                                title="Doble clic para modificar las fechas del contrato de esta OC"
+                            >
                                 {% if registro.fecha_fin_contrato %}
                                     {{ registro.fecha_fin_contrato|date:"d/m/Y" }}
                                 {% else %}
@@ -2842,6 +2848,167 @@
             });
         }
     );
+
+
+    // ============================================================
+    // ACTUALIZAR FECHAS DE CONTRATO POR ORDEN DE COMPRA
+    // ============================================================
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const modal = document.getElementById("modalActualizarFechasOC");
+        const form = document.getElementById("formActualizarFechasOC");
+
+        const inputNumeroOC = document.getElementById("modalInputNumeroOC");
+        const numeroOCTexto = document.getElementById("modalNumeroOC");
+
+        const fechaInicio = document.getElementById("modalFechaInicio");
+        const fechaFin = document.getElementById("modalFechaFin");
+
+        const btnCancelar = document.getElementById("btnCancelarFechasOC");
+
+        // --------------------------------------------------------
+        // ABRIR EL MODAL DESPUÉS DE APLICAR EL FILTRO DE OC
+        // --------------------------------------------------------
+
+        const pendiente = sessionStorage.getItem("actualizarFechasOC");
+
+        if (pendiente) {
+
+            const datos = JSON.parse(pendiente);
+
+            sessionStorage.removeItem("actualizarFechasOC");
+
+            inputNumeroOC.value = datos.numeroOC;
+            numeroOCTexto.textContent = datos.numeroOC;
+
+            fechaInicio.value = datos.fechaInicio || "";
+            fechaFin.value = datos.fechaFin || "";
+
+            modal.style.display = "flex";
+        }
+
+        // --------------------------------------------------------
+        // DOBLE CLIC SOBRE LA FECHA DE FINALIZACIÓN
+        // --------------------------------------------------------
+
+        document.querySelectorAll("td.fecha-fin-contrato").forEach(
+            function (celda) {
+
+                celda.addEventListener("dblclick", function () {
+
+                    const numeroOC = celda.dataset.numeroOc;
+
+                    if (!numeroOC) {
+                        alert("Este registro no tiene una Orden de Compra asignada.");
+                        return;
+                    }
+
+                    // Guardamos los datos antes de recargar la página.
+                    sessionStorage.setItem(
+                        "actualizarFechasOC",
+                        JSON.stringify({
+                            numeroOC: numeroOC,
+                            fechaInicio: celda.dataset.fechaInicio,
+                            fechaFin: celda.dataset.fechaFin
+                        })
+                    );
+
+                    // Aplicamos el filtro por OC.
+                    const filtroOC = document.querySelector(
+                        'select[name="oc"]'
+                    );
+
+                    if (!filtroOC) {
+                        alert("No se encontró el filtro de Orden de Compra.");
+                        sessionStorage.removeItem("actualizarFechasOC");
+                        return;
+                    }
+
+                    let opcion = Array.from(filtroOC.options).find(
+                        function (option) {
+                            return option.value === numeroOC;
+                        }
+                    );
+
+                    if (!opcion) {
+                        opcion = new Option(numeroOC, numeroOC);
+                        filtroOC.appendChild(opcion);
+                    }
+
+                    filtroOC.value = numeroOC;
+
+                    const formulario = document.querySelector(".filtros form");
+
+                    if (formulario) {
+                        formulario.submit();
+                    } else {
+                        sessionStorage.removeItem("actualizarFechasOC");
+                        alert("No se encontró el formulario de filtros.");
+                    }
+
+                });
+
+            }
+        );
+
+        // --------------------------------------------------------
+        // CERRAR EL MODAL
+        // --------------------------------------------------------
+
+        btnCancelar.addEventListener("click", function () {
+            modal.style.display = "none";
+        });
+
+        // --------------------------------------------------------
+        // GUARDAR LAS FECHAS
+        // --------------------------------------------------------
+
+        form.addEventListener("submit", function (event) {
+
+            event.preventDefault();
+
+            if (fechaFin.value < fechaInicio.value) {
+                alert("La fecha de finalización no puede ser anterior a la de inicio.");
+                return;
+            }
+
+            const datos = new FormData(form);
+
+            fetch(form.action, {
+                method: "POST",
+                body: datos,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+
+            .then(function (response) {
+                return response.json();
+            })
+
+            .then(function (data) {
+
+                alert(data.mensaje);
+
+                if (data.success) {
+                    modal.style.display = "none";
+                    window.location.reload();
+                }
+
+            })
+
+            .catch(function (error) {
+
+                console.error("Error al actualizar fechas:", error);
+
+                alert("Ocurrió un error al guardar las fechas.");
+
+            });
+
+        });
+
+    });
 
 
     // =========================================================
@@ -3685,7 +3852,114 @@ document.getElementById("btnCSVdoppler")?.addEventListener(
 );
 
 </script>
+<!-- =========================================================
+     MODAL PARA ACTUALIZAR FECHAS DE CONTRATO POR OC
+========================================================== -->
 
+<div
+    id="modalActualizarFechasOC"
+    style="
+        display:none;
+        position:fixed;
+        z-index:10000;
+        inset:0;
+        background:rgba(0,0,0,0.55);
+        align-items:center;
+        justify-content:flex-end;
+        padding-right: 500px;
+
+    "
+>
+
+    <div
+        style="
+            background:white;
+            padding:25px;
+            border-radius:10px;
+            width:360px;
+            max-width:90%;
+            box-shadow:0 5px 20px rgba(0,0,0,0.3);
+        "
+    >
+
+        <h3 style="margin-top:0;">
+            Actualizar fechas del contrato
+        </h3>
+
+        <p>
+            Orden de Compra:
+            <strong id="modalNumeroOC"></strong>
+        </p>
+
+        <form
+            id="formActualizarFechasOC"
+            method="post"
+            action="{% url 'actualizar_fechas_oc' %}"
+        >
+
+            {% csrf_token %}
+
+            <input
+                type="hidden"
+                name="numero_oc"
+                id="modalInputNumeroOC"
+            >
+
+            <div style="margin-bottom:15px;">
+
+                <label for="modalFechaInicio">
+                    Fecha de inicio
+                </label>
+
+                <input
+                    type="date"
+                    name="fecha_inicio"
+                    id="modalFechaInicio"
+                    required
+                    style="display:block;width:100%;padding:8px;"
+                >
+
+            </div>
+
+            <div style="margin-bottom:20px;">
+
+                <label for="modalFechaFin">
+                    Fecha de finalización
+                </label>
+
+                <input
+                    type="date"
+                    name="fecha_fin"
+                    id="modalFechaFin"
+                    required
+                    style="display:block;width:100%;padding:8px;"
+                >
+
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+
+                <button
+                    type="button"
+                    id="btnCancelarFechasOC"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    style="background:#198754;color:white;padding:8px 15px;border:0;border-radius:5px;"
+                >
+                    Guardar fechas
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
 
 <form
     id="formEliminarLote"

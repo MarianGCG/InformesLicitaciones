@@ -157,5 +157,9 @@ urlpatterns = [
         views.grafico_vencimientos,
         name="grafico_vencimientos",
     ),
-
+    path(
+        "api/actualizar-fechas-oc/",
+        views.actualizar_fechas_oc,
+        name="actualizar_fechas_oc",
+    ),
 ]
