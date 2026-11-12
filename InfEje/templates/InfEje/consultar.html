@@ -2450,11 +2450,12 @@
                     <div>{{ totales_empresas|length }} empresas</div>
                 </div>
 
+
                 <div class="totales-nota">
                     Para cada Empresa + Proceso + Renglón se considera el registro del archivo con fecha más reciente.
-                    El filtro Con OC / Sin OC no modifica esta tabla. Se excluyen del cálculo los Procesos + Renglones que ya poseen OC en la base.
+                    Se incluyen únicamente ofertas de Procesos + Renglones NO adjudicados (sin Orden de Compra).
+                    Las ofertas de procesos ya adjudicados a cualquier proveedor quedan excluidas del cálculo.
                 </div>
-
                 <div class="tabla-contenedor">
                     <table class="totales-tabla">
                         <thead>

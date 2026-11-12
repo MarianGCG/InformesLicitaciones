@@ -475,7 +475,11 @@ def consultar(request):
 
     ids_adjudicados_otra_empresa = []
 
+
+
+
     # Detectamos qué procesos/renglones tienen alguna adjudicación.
+    # Solo necesitamos guardar las claves, no los CUIT de cada empresa.
     adjudicaciones = (
         RegistroLicitacion.objects
         .exclude(
@@ -486,40 +490,26 @@ def consultar(request):
         .exclude(numero_proceso="")
         .exclude(numero_renglon__isnull=True)
         .exclude(numero_renglon="")
+        .filter(
+            (
+                Q(cuit_oferente__isnull=False) &
+                ~Q(cuit_oferente="")
+            ) |
+            (
+                Q(cuit_proveedor__isnull=False) &
+                ~Q(cuit_proveedor="")
+            )
+        )
         .values_list(
             "numero_proceso",
             "numero_renglon",
-            "cuit_oferente",
-            "cuit_proveedor",
         )
+        .distinct()
     )
 
-    empresas_con_oc = {}
+    empresas_con_oc = set(adjudicaciones)
 
-    for (
-        numero_proceso,
-        numero_renglon,
-        cuit_oferente,
-        cuit_proveedor,
-    ) in adjudicaciones:
 
-        clave = (
-            numero_proceso,
-            numero_renglon,
-        )
-
-        cuit_empresa = (
-            cuit_oferente
-            or cuit_proveedor
-        )
-
-        if not cuit_empresa:
-            continue
-
-        empresas_con_oc.setdefault(
-            clave,
-            set()
-        ).add(cuit_empresa)
 
 
     # Revisamos solamente los registros que ya quedaron
@@ -556,15 +546,8 @@ def consultar(request):
             numero_renglon,
         )
 
-        empresas_adjudicadas = empresas_con_oc.get(
-            clave,
-            set()
-        )
-
-        if not empresas_adjudicadas:
+        if clave not in empresas_con_oc:
             continue
-
-
 
 
 
@@ -735,6 +718,7 @@ def consultar(request):
             "numero_proceso",
             "numero_renglon",
         )
+        .distinct()
     )
 
     # Evaluamos solamente los registros que resultan de los filtros
@@ -985,59 +969,7 @@ def consultar(request):
             )
         )
             
-    # ========================================================
-    # ASIGNAR COMPETIDORES A CADA REGISTRO
-    # ========================================================
-
-    for registro in registros:
-
-        clave = (
-            registro.numero_proceso,
-            registro.numero_renglon,
-        )
-
-        empresas_competidoras = (
-            competidores_por_clave.get(
-                clave,
-                {}
-            )
-        )
-
-        # ====================================================
-        # EMPRESA DE LA FILA ACTUAL
-        # ====================================================
-
-        cuit_actual = None
-
-        if registro.empresa_oferente:
-
-            cuit_actual = (
-                registro.empresa_oferente.cuit
-            )
-
-        elif registro.empresa_proveedor:
-
-            cuit_actual = (
-                registro.empresa_proveedor.cuit
-            )
-
-        # ====================================================
-        # EXCLUIR LA EMPRESA DE LA FILA
-        # ====================================================
-
-        nombres = [
-            nombre
-            for cuit, nombre
-            in empresas_competidoras.items()
-            if cuit != cuit_actual
-        ]
-
-        registro.competidores = " ; ".join(
-            sorted(
-                nombres,
-                key=str.lower
-            )
-        )
+  
     # ========================================================
     # TOTAL DE OFERTAS DE LA TABLA RESULTADOS
     # ========================================================
