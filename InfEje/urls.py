@@ -157,9 +157,20 @@ urlpatterns = [
         views.grafico_vencimientos,
         name="grafico_vencimientos",
     ),
+
+    path(
+        "totales-por-empresa/",
+        views.totales_por_empresa,
+        name="totales_por_empresa",
+    ),
+
     path(
         "api/actualizar-fechas-oc/",
         views.actualizar_fechas_oc,
         name="actualizar_fechas_oc",
     ),
+
+
+
+
 ]

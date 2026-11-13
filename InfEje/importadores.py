@@ -187,7 +187,7 @@ def obtener_empresa(cuit, nombre, archivo_inicial=None):
 def importar_excel(archivo, nombre_archivo):
 
     # --------------------------------------------------------
-    # Evitar duplicar un lote
+    # EVITAR DUPLICAR UN LOTE
     # --------------------------------------------------------
 
     if Lote.objects.filter(
@@ -199,7 +199,7 @@ def importar_excel(archivo, nombre_archivo):
         )
 
     # --------------------------------------------------------
-    # Leer cuarta pestaña
+    # LEER CUARTA PESTAÑA
     # --------------------------------------------------------
 
     df = pd.read_excel(
@@ -209,7 +209,7 @@ def importar_excel(archivo, nombre_archivo):
     )
 
     # --------------------------------------------------------
-    # Limpiar nombres de columnas
+    # LIMPIAR NOMBRES DE COLUMNAS
     # --------------------------------------------------------
 
     df.columns = [
@@ -218,7 +218,35 @@ def importar_excel(archivo, nombre_archivo):
     ]
 
     # --------------------------------------------------------
-    # Crear lote
+    # VALIDAR ENCABEZADOS ANTES DE IMPORTAR
+    # --------------------------------------------------------
+
+    columnas_requeridas = (
+        set(MAPEO_COLUMNAS.keys()) - {"Regla"}
+    )
+
+    faltantes = columnas_requeridas - set(df.columns)
+
+    if faltantes:
+        raise ValueError(
+            "No se puede importar el archivo. "
+            "Faltan estas columnas: "
+            + ", ".join(sorted(faltantes))
+        )
+
+    if df.empty:
+        raise ValueError(
+            "La cuarta hoja del Excel no contiene registros."
+        )
+
+    print("====================================")
+    print("VALIDACIÓN DE IMPORTACIÓN")
+    print("Columnas verificadas:", len(columnas_requeridas))
+    print("Filas encontradas:", len(df))
+    print("====================================")
+
+    # --------------------------------------------------------
+    # CREAR LOTE
     # --------------------------------------------------------
 
     lote = Lote.objects.create(
@@ -227,11 +255,37 @@ def importar_excel(archivo, nombre_archivo):
     )
 
     registros = []
-
     empresas_creadas = 0
 
     # --------------------------------------------------------
-    # Procesar filas
+    # CACHE DE EMPRESAS
+    # Evita consultar varias veces el mismo CUIT
+    # --------------------------------------------------------
+
+    empresas_cache = {}
+
+    def obtener_empresa_cache(cuit, nombre, archivo):
+
+        cuit = limpiar_cuit(cuit)
+
+        if not cuit:
+            return None, False
+
+        if cuit in empresas_cache:
+            return empresas_cache[cuit], False
+
+        empresa, creada = obtener_empresa(
+            cuit,
+            nombre,
+            archivo
+        )
+
+        empresas_cache[cuit] = empresa
+
+        return empresa, creada
+
+    # --------------------------------------------------------
+    # PROCESAR FILAS
     # --------------------------------------------------------
 
     for _, fila in df.iterrows():
@@ -244,8 +298,6 @@ def importar_excel(archivo, nombre_archivo):
                 continue
 
             valor = fila[columna_excel]
-
-
 
             if campo_modelo in (
                 "cuit_oferente",
@@ -276,17 +328,13 @@ def importar_excel(archivo, nombre_archivo):
 
                 valor = valor_o_none(valor)
 
-
-
-
-
             datos[campo_modelo] = valor
 
         # ----------------------------------------------------
         # EMPRESA OFERENTE
         # ----------------------------------------------------
 
-        empresa_oferente, creada = obtener_empresa(
+        empresa_oferente, creada = obtener_empresa_cache(
             datos.get("cuit_oferente"),
             datos.get("oferente"),
             nombre_archivo,
@@ -303,7 +351,7 @@ def importar_excel(archivo, nombre_archivo):
         # EMPRESA PROVEEDOR
         # ----------------------------------------------------
 
-        empresa_proveedor, creada = obtener_empresa(
+        empresa_proveedor, creada = obtener_empresa_cache(
             datos.get("cuit_proveedor"),
             datos.get("proveedor"),
             nombre_archivo,
@@ -317,7 +365,7 @@ def importar_excel(archivo, nombre_archivo):
                 empresas_creadas += 1
 
         # ----------------------------------------------------
-        # LOTE
+        # ASIGNAR LOTE
         # ----------------------------------------------------
 
         datos["lote"] = lote
@@ -327,7 +375,7 @@ def importar_excel(archivo, nombre_archivo):
         )
 
     # --------------------------------------------------------
-    # Guardar registros
+    # GUARDAR REGISTROS EN BLOQUE
     # --------------------------------------------------------
 
     RegistroLicitacion.objects.bulk_create(
@@ -335,11 +383,19 @@ def importar_excel(archivo, nombre_archivo):
         batch_size=1000
     )
 
+    print("====================================")
+    print("IMPORTACIÓN FINALIZADA")
+    print("Registros:", len(registros))
+    print("Empresas nuevas:", empresas_creadas)
+    print("CUIT únicos procesados:", len(empresas_cache))
+    print("====================================")
+
     return (
         lote,
         len(registros),
         empresas_creadas,
     )
+
 
 
 # ============================================================

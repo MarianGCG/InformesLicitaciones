@@ -1093,10 +1093,10 @@
         }
 
 
-
         .boton-quitar-fila {
             width: 20px;
             height: 20px;
+            min-width: 20px;
             margin-left: 8px;
             padding: 0;
             border: 1px solid #adb5bd;
@@ -1104,8 +1104,14 @@
             background: white;
             cursor: pointer;
             vertical-align: middle;
-            position: relative;
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
         }
+
+
 
         .boton-quitar-fila::before {
             content: "×";
@@ -1357,6 +1363,12 @@
             flex-direction: column;
             gap: 5px;
         }
+
+        td.empresa {
+            position: relative;
+            padding-right: 34px !important;
+        }
+
     </style>
     <style>
 
@@ -2095,9 +2107,11 @@
             GRÁFICO VENCIMIENTOS
         </button>
 
+        <!-- =================================================
         <button type="button" class="vista-tab" data-vista="seguimiento">
             GRÁFICO SEGUIMIENTO
         </button>
+        ================================================== -->
 
     </div>
 
@@ -2441,67 +2455,16 @@
 
     </div>  <!-- Cierra #vista-resultados -->
 
-        <div id="vista-totales" class="vista-panel">
+        <div id="vista-totales"
+            class="vista-panel"
+            data-url="{% url 'totales_por_empresa' %}">
 
-            <div class="totales-panel">
-
-                <div class="titulo-resultados">
-                    <h2>Totales de ofertas por empresa</h2>
-                    <div>{{ totales_empresas|length }} empresas</div>
+            <div id="totales-contenido">
+                <div class="sin-resultados">
+                    Hacé clic en esta pestaña para calcular los totales por empresa.
                 </div>
-
-
-                <div class="totales-nota">
-                    Para cada Empresa + Proceso + Renglón se considera el registro del archivo con fecha más reciente.
-                    Se incluyen únicamente ofertas de Procesos + Renglones NO adjudicados (sin Orden de Compra).
-                    Las ofertas de procesos ya adjudicados a cualquier proveedor quedan excluidas del cálculo.
-                </div>
-                <div class="tabla-contenedor">
-                    <table class="totales-tabla">
-                        <thead>
-                            <tr>
-                                <th>Empresa</th>
-                                <th>CUIT</th>
-                                <th class="numero">Procesos distintos</th>
-                                <th class="numero">Procesos / Renglones</th>
-                                <th class="numero">Total Ofertas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for total in totales_empresas %}
-                                <tr>
-                                    <td class="empresa" title="Doble clic para filtrar esta empresa">{{ total.empresa }}</td>
-                                    <td>{{total.cuit }}</td>
-                                    <td class="numero">{{ total.procesos_distintos }}</td>
-                                    <td class="numero">{{ total.procesos_renglones }}</td>
-                                    <td class="numero"><span class="formato-importe">{{ total.total_ofertas|floatformat:2 }}</span></td>
-                                    
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="4">
-                                        <div class="sin-resultados">
-                                            No hay datos para calcular los totales con los filtros seleccionados.
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-
-                            {% if totales_empresas %}
-                                <tr class="total-final">
-                                    <td>TOTAL</td>
-                                    <td></td>
-                                    <td class="numero">{{ total_procesos_distintos }}</td>
-                                    <td class="numero">{{ total_procesos_renglones }}</td>
-                                    <td class="numero"><span class="formato-importe">{{ total_ofertas|floatformat:2 }}</span></td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-
-             
             </div>
+
         </div>  <!-- Cierra #vista-totales -->
         <!-- ================================================= -->
         <!-- PESTAÑA: GRÁFICO VENCIMIENTOS -->
@@ -3091,49 +3054,51 @@
     // DOBLE CLICK EN EMPRESA -> FILTRAR AUTOMÁTICAMENTE
     // =========================================================
 
-    document.querySelectorAll("td.empresa").forEach(
-        function (celda) {
 
-            celda.title =
-                "Doble clic para filtrar esta empresa";
+    // =========================================================
+    // DOBLE CLICK EN EMPRESA -> FILTRAR AUTOMÁTICAMENTE
+    // Funciona también con tablas cargadas dinámicamente
+    // =========================================================
 
-            celda.addEventListener("dblclick", function () {
+    document.addEventListener("dblclick", function (evento) {
 
-                const nombreEmpresa =
-                    celda.textContent.trim();
-
-                if (!nombreEmpresa || nombreEmpresa === "-") {
-                    return;
-                }
-
-                const empresa = empresas.find(
-                    function (e) {
-                        return e.nombre.trim().toLowerCase() ===
-                            nombreEmpresa.toLowerCase();
-                    }
-                );
-
-                if (empresa) {
-                    inputEmpresa.value =
-                        `${empresa.nombre} — CUIT ${empresa.cuit}`;
-                    empresaId.value = empresa.id;
-                } else {
-                    inputEmpresa.value = nombreEmpresa;
-                    empresaId.value = "";
-                }
-
-                empresaResultados.innerHTML = "";
-                empresaResultados.style.display = "none";
-
-                const formulario =
-                    document.querySelector(".filtros form");
-
-                if (formulario) {
-                    formulario.submit();
-                }
-            });
+        const celda = evento.target.closest("td.empresa");
+        if (!celda) {
+            return;
         }
-    );
+
+        evento.preventDefault();
+
+        const nombreEmpresa = celda.textContent.trim();
+
+        if (!nombreEmpresa || nombreEmpresa === "-") {
+            return;
+        }
+
+        const empresa = empresas.find(function (e) {
+            return e.nombre.trim().toLowerCase() ===
+                nombreEmpresa.toLowerCase();
+        });
+
+        if (empresa) {
+            inputEmpresa.value =
+                `${empresa.nombre} — CUIT ${empresa.cuit}`;
+            empresaId.value = empresa.id;
+        } else {
+            inputEmpresa.value = nombreEmpresa;
+            empresaId.value = "";
+        }
+
+        empresaResultados.innerHTML = "";
+        empresaResultados.style.display = "none";
+
+        const formulario = document.querySelector(".filtros form");
+
+        if (formulario) {
+            formulario.submit();
+        }
+
+    });
 
 
     // =========================================================
@@ -4250,14 +4215,16 @@ document.getElementById("btnCSVdoppler")?.addEventListener(
     });
 </script>
 
-<script>
 
+<script>
     // =========================================================
     // PESTAÑAS: RESULTADOS / TOTALES / GRÁFICOS
     // =========================================================
 
     const botonesVistas = document.querySelectorAll(".vista-tab");
     const panelesVistas = document.querySelectorAll(".vista-panel");
+
+    let totalesCargados = false;
 
     botonesVistas.forEach(function (boton) {
 
@@ -4278,10 +4245,62 @@ document.getElementById("btnCSVdoppler")?.addEventListener(
                 );
             });
 
+            // Cargar Totales solamente la primera vez
+            if (vista === "totales" && !totalesCargados) {
+
+                const panel = document.getElementById("vista-totales");
+                const contenido = document.getElementById("totales-contenido");
+
+                const url = new URL(panel.dataset.url, window.location.origin);
+                const parametros = new URLSearchParams(window.location.search);
+
+                // Los Totales no utilizan el filtro de OC
+                parametros.delete("oc");
+
+                url.search = parametros.toString();
+
+                contenido.innerHTML = "Calculando totales por empresa...";
+
+                fetch(url)
+                    .then(function (respuesta) {
+                        if (!respuesta.ok) {
+                            throw new Error("Error al calcular los totales.");
+                        }
+                        return respuesta.text();
+                    })
+                    .then(function (html) {
+
+                        contenido.innerHTML = html;
+                        totalesCargados = true;
+
+                        // Formatear importes
+                        contenido.querySelectorAll(".formato-importe").forEach(function(elemento) {
+
+                            const numero = Number(
+                                elemento.textContent.trim().replace(",", ".")
+                            );
+
+                            if (Number.isFinite(numero)) {
+                                elemento.textContent = numero.toLocaleString("es-AR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                });
+                            }
+                        });
+
+                    })
+                    .catch(function (error) {
+
+                        contenido.innerHTML =
+                            '<div class="sin-resultados">No se pudieron cargar los totales. Volvé a intentar.</div>';
+
+                        console.error(error);
+                    });
+            }
+
         });
 
     });
-
 </script>
 
 <script>
@@ -5477,20 +5496,8 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <script>
-document.querySelectorAll(
-    "#vista-totales .formato-importe"
-).forEach(function(elemento) {
-    const numero = Number(
-        elemento.textContent.trim().replace(",", ".")
-    );
 
-    if (Number.isFinite(numero)) {
-        elemento.textContent = numero.toLocaleString("es-AR", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    }
-});
+
 
 
 
