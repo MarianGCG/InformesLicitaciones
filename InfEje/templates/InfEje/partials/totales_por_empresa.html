@@ -2,46 +2,78 @@
 <div class="totales-panel">
 
     <div class="titulo-resultados">
-        <h2>Totales de ofertas por empresa</h2>
+        <h2>Totales licitados y Órdenes de Compra por empresa</h2>
         <div>{{ totales_empresas|length }} empresas</div>
     </div>
 
-    <div class="totales-nota">
-        Para cada Empresa + Proceso + Renglón se considera el registro del archivo con fecha más reciente.
-        Se incluyen únicamente ofertas de Procesos + Renglones NO adjudicados (sin Orden de Compra).
-        Las ofertas de procesos ya adjudicados a cualquier proveedor quedan excluidas del cálculo.
-    </div>
+
 
     <div class="tabla-contenedor">
+
         <table class="totales-tabla">
+
             <thead>
                 <tr>
-                    <th>Empresa</th>
-                    <th>CUIT</th>
-                    <th class="numero">Procesos distintos</th>
-                    <th class="numero">Procesos / Renglones</th>
-                    <th class="numero">Total Ofertas</th>
+                    <th rowspan="2">Empresa</th>
+                    <th rowspan="2">CUIT</th>
+
+                    <th rowspan="2" class="col-procesos">Procesos<br>distintos</th>
+                    <th rowspan="2" class="col-renglones">Procesos<br>Renglones</th>
+                    {% for anio in anios_totales %}
+                        <th colspan="2" class="numero">{{ anio }}</th>
+                    {% endfor %}
+                </tr>
+
+                <tr>
+                    {% for anio in anios_totales %}
+                        <th class="numero">Total licitado</th>
+                        <th class="numero">Total O/C</th>
+                    {% endfor %}
                 </tr>
             </thead>
 
             <tbody>
+
                 {% for total in totales_empresas %}
                     <tr>
-                        <td class="empresa" title="Doble clic para filtrar esta empresa">
+
+                        <td class="empresa"
+                            title="Doble clic para filtrar esta empresa">
                             {{ total.empresa }}
                         </td>
+
                         <td>{{ total.cuit }}</td>
-                        <td class="numero">{{ total.procesos_distintos }}</td>
-                        <td class="numero">{{ total.procesos_renglones }}</td>
-                        <td class="numero">
-                            <span class="formato-importe">{{ total.total_ofertas|floatformat:2 }}</span>
+
+                        <td class="numero col-procesos">
+                            {{ total.procesos_distintos }}
                         </td>
+
+                        <td class="numero col-renglones">
+                            {{ total.procesos_renglones }}
+                        </td>
+
+                        {% for anual in total.totales_anuales %}
+                            <td class="numero">
+                                <span class="formato-importe">
+                                    {{ anual.licitado|floatformat:2 }}
+                                </span>
+                            </td>
+
+                            <td class="numero">
+                                <span class="formato-importe">
+                                    {{ anual.oc|floatformat:2 }}
+                                </span>
+                            </td>
+                        {% endfor %}
+
                     </tr>
+
                 {% empty %}
                     <tr>
-                        <td colspan="5">
+                        <td colspan="4">
                             <div class="sin-resultados">
-                                No hay datos para calcular los totales con los filtros seleccionados.
+                                No hay datos para calcular los totales
+                                con los filtros seleccionados.
                             </div>
                         </td>
                     </tr>
@@ -49,17 +81,38 @@
 
                 {% if totales_empresas %}
                     <tr class="total-final">
+
                         <td>TOTAL</td>
                         <td></td>
-                        <td class="numero">{{ total_procesos_distintos }}</td>
-                        <td class="numero">{{ total_procesos_renglones }}</td>
+
                         <td class="numero">
-                            <span class="formato-importe">{{ total_ofertas|floatformat:2 }}</span>
+                            {{ total_procesos_distintos }}
                         </td>
+
+                        <td class="numero">
+                            {{ total_procesos_renglones }}
+                        </td>
+
+                        {% for anual in totales_generales_anuales %}
+                            <td class="numero">
+                                <span class="formato-importe">
+                                    {{ anual.licitado|floatformat:2 }}
+                                </span>
+                            </td>
+
+                            <td class="numero">
+                                <span class="formato-importe">
+                                    {{ anual.oc|floatformat:2 }}
+                                </span>
+                            </td>
+                        {% endfor %}
+
                     </tr>
                 {% endif %}
-            </tbody>
-        </table>
-    </div>
 
+            </tbody>
+
+        </table>
+
+    </div>
 </div>

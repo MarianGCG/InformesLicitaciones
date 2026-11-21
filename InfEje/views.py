@@ -270,6 +270,8 @@ def grafico_vencimientos(request):
         }
     )
 
+
+
 def consultar(request):
 
     # ========================================================
@@ -676,24 +678,27 @@ def consultar(request):
     # ========================================================
     # TOTALES POR EMPRESA
     #
-    # Esta estructura alimenta la segunda pestaña de la pantalla.
-    # Usa los mismos filtros de entrada que la tabla Resultados.
+    # TOTAL LICITADO:
+    # Se conserva EXACTAMENTE la lógica anterior:
+    # - Para Empresa + Proceso + Renglón duplicados en distintos
+    #   lotes, conservar el lote más reciente cuya fecha sea <= hoy.
+    # - Si Proceso + Renglón tiene OC en cualquier registro de la base,
+    #   excluir toda esa combinación del Total licitado.
     #
-    # REGLAS: 
-    # 1) Para Empresa + Proceso + Renglón duplicados en distintos
-    #    lotes, conservar el lote cuyo nombre tenga la fecha más
-    #    reciente <= hoy.
-    # 2) Si Proceso + Renglón tiene OC en cualquier registro de la
-    #    base, excluir toda esa combinación del cálculo, sin
-    #    importar qué proveedor tenga el OC.
-    # 3) Luego agrupar por empresa y calcular procesos distintos,
-    #    procesos/renglones y suma de ofertas.
+    # TOTAL O/C:
+    # - Se calcula por separado, tomando registros con numero_oc.
+    # - Se identifica la empresa adjudicataria (empresa_proveedor,
+    #   con fallback a empresa_oferente).
+    # - Si una misma OC aparece en distintos lotes, se conserva
+    #   solamente el registro del lote más reciente según el mismo
+    #   criterio de fecha utilizado para Total licitado.
+    # - Ambos importes se agrupan por año de fecha_apertura.
     # ========================================================
 
     hoy = datetime.now().date()
 
     def fecha_del_nombre_lote(nombre):
-        match = re.search(r"(\d{4}-\d{2}-\d{2})", nombre or "")
+        match = re.search(r"(\\d{4}-\\d{2}-\\d{2})", nombre or "")
         if not match:
             return None
         try:
@@ -704,10 +709,26 @@ def consultar(request):
         except ValueError:
             return None
 
+    def peso_registro(registro):
+        fecha_archivo = fecha_del_nombre_lote(
+            registro.lote.nombre_archivo
+        )
+
+        fecha_valida = (
+            fecha_archivo
+            if fecha_archivo and fecha_archivo <= hoy
+            else None
+        )
+
+        return (
+            fecha_valida is not None,
+            fecha_valida or datetime.min.date(),
+            registro.lote.fecha_carga,
+            registro.id,
+        )
+
     # Todas las claves Proceso + Renglón que tienen OC en la base.
-    # Esto es deliberadamente independiente de los filtros de Empresa,
-    # Lote y OC: la regla dice que un OC de cualquier proveedor excluye
-    # esa combinación completa del resumen.
+    # Esta regla global se mantiene sin cambios para Total licitado.
     claves_con_oc = set(
         RegistroLicitacion.objects
         .exclude(numero_proceso__isnull=True)
@@ -725,10 +746,8 @@ def consultar(request):
         .distinct()
     )
 
-    # Evaluamos solamente los registros que resultan de los filtros
-    # compartidos (Lote, Empresa, Estado y Proceso).
-    # El filtro Con OC / Sin OC NO participa de esta pestaña.
-    # La tabla Resultados no se modifica.
+    # Se usan los filtros compartidos (Lote, Empresa, Estado y Proceso).
+    # El filtro Con OC / Sin OC no participa de esta pestaña.
     registros_para_totales = list(
         registros_para_totales
         .select_related(
@@ -738,9 +757,10 @@ def consultar(request):
         )
     )
 
-    # Para cada Empresa + Proceso + Renglón elegimos un único registro.
-    # La prioridad es la fecha del archivo más reciente <= hoy.
-    # Si hay empate, usamos fecha de carga e id como desempate.
+    # --------------------------------------------------------
+    # 1) TOTAL LICITADO
+    # --------------------------------------------------------
+    # Esta selección replica la lógica que ya estaba funcionando.
     seleccionados_por_clave = {}
 
     for registro in registros_para_totales:
@@ -753,6 +773,8 @@ def consultar(request):
             registro.numero_renglon,
         )
 
+        # Se excluye del Total licitado cualquier proceso/renglón
+        # que tenga una OC en cualquier registro de la base.
         if clave_proceso in claves_con_oc:
             continue
 
@@ -766,18 +788,6 @@ def consultar(request):
         if not empresa_registro:
             continue
 
-        fecha_archivo = fecha_del_nombre_lote(
-            registro.lote.nombre_archivo
-        )
-
-        # Si el archivo no tiene fecha YYYY-MM-DD o es futuro,
-        # no puede ganar como lote vigente.
-        fecha_valida = (
-            fecha_archivo
-            if fecha_archivo and fecha_archivo <= hoy
-            else None
-        )
-
         clave = (
             empresa_registro.cuit,
             registro.numero_proceso,
@@ -785,30 +795,44 @@ def consultar(request):
         )
 
         candidato = (
-            fecha_valida,
-            registro.lote.fecha_carga,
-            registro.id,
+            peso_registro(registro),
             registro,
         )
 
         anterior = seleccionados_por_clave.get(clave)
 
-        def peso(item):
-            fecha, fecha_carga, registro_id, _ = item
-            return (
-                fecha is not None,
-                fecha or datetime.min.date(),
-                fecha_carga,
-                registro_id,
-            )
-
-        if anterior is None or peso(candidato) > peso(anterior):
+        if anterior is None or candidato[0] > anterior[0]:
             seleccionados_por_clave[clave] = candidato
 
-    # Agrupar los registros únicos por empresa.
+    # Acumulador común por empresa.
     acumulado_empresas = {}
 
-    for _, _, _, registro in seleccionados_por_clave.values():
+    def obtener_datos_empresa(empresa):
+        cuit = empresa.cuit
+
+        if cuit not in acumulado_empresas:
+            acumulado_empresas[cuit] = {
+                "empresa": empresa.nombre,
+                "cuit": cuit,
+                "procesos": set(),
+                "procesos_renglones": 0,
+                "total_ofertas": Decimal("0"),
+                "total_oc": Decimal("0"),
+                "anuales": {},
+            }
+
+        return acumulado_empresas[cuit]
+
+    def obtener_anual(datos, anio):
+        if anio not in datos["anuales"]:
+            datos["anuales"][anio] = {
+                "licitado": Decimal("0"),
+                "oc": Decimal("0"),
+            }
+
+        return datos["anuales"][anio]
+
+    for _, registro in seleccionados_por_clave.values():
 
         if registro.empresa_oferente:
             empresa_registro = registro.empresa_oferente
@@ -817,42 +841,131 @@ def consultar(request):
         else:
             continue
 
-        cuit = empresa_registro.cuit
+        datos = obtener_datos_empresa(empresa_registro)
 
-        if cuit not in acumulado_empresas:
-            acumulado_empresas[cuit] = {
-                "empresa": empresa_registro.nombre,
-                "cuit": cuit,
-                "procesos": set(),
-                "procesos_renglones": 0,
-                "total_ofertas": Decimal("0"),
-            }
-
-        datos = acumulado_empresas[cuit]
-
-        datos["procesos"].add(
-            registro.numero_proceso
-        )
-
+        datos["procesos"].add(registro.numero_proceso)
         datos["procesos_renglones"] += 1
 
         if registro.precio_total_oferta is not None:
-            datos["total_ofertas"] += (
-                registro.precio_total_oferta
+            datos["total_ofertas"] += registro.precio_total_oferta
+
+            if registro.fecha_apertura:
+                anual = obtener_anual(
+                    datos,
+                    registro.fecha_apertura.year
+                )
+                anual["licitado"] += registro.precio_total_oferta
+
+    # --------------------------------------------------------
+    # 2) TOTAL O/C
+    # --------------------------------------------------------
+    # Una misma OC puede aparecer repetida en distintos lotes.
+    # La clave incluye empresa, proceso, renglón y número de OC,
+    # para no sumar dos veces la misma orden.
+    ocs_seleccionadas = {}
+
+    for registro in registros_para_totales:
+
+        if not registro.numero_oc:
+            continue
+
+        if not registro.numero_proceso or not registro.numero_renglon:
+            continue
+
+        # La empresa adjudicataria es el proveedor.
+        # Se deja el oferente como respaldo por si el vínculo de
+        # empresa_proveedor no está cargado en algún registro.
+        empresa_oc = None
+
+        if registro.empresa_proveedor:
+            empresa_oc = registro.empresa_proveedor
+        elif registro.empresa_oferente:
+            empresa_oc = registro.empresa_oferente
+
+        if not empresa_oc:
+            continue
+
+        clave_oc = (
+            empresa_oc.cuit,
+            registro.numero_proceso,
+            registro.numero_renglon,
+            registro.numero_oc,
+        )
+
+        candidato = (
+            peso_registro(registro),
+            registro,
+        )
+
+        anterior = ocs_seleccionadas.get(clave_oc)
+
+        if anterior is None or candidato[0] > anterior[0]:
+            ocs_seleccionadas[clave_oc] = candidato
+
+    for _, registro in ocs_seleccionadas.values():
+
+        if registro.empresa_proveedor:
+            empresa_oc = registro.empresa_proveedor
+        elif registro.empresa_oferente:
+            empresa_oc = registro.empresa_oferente
+        else:
+            continue
+
+        datos = obtener_datos_empresa(empresa_oc)
+
+        if (
+            registro.precio_total_compra is not None
+            and registro.fecha_apertura
+        ):
+            datos["total_oc"] += registro.precio_total_compra
+
+            anual = obtener_anual(
+                datos,
+                registro.fecha_apertura.year
             )
+            anual["oc"] += registro.precio_total_compra
+
+    # --------------------------------------------------------
+    # 3) PREPARAR DATOS PARA LA TABLA
+    # --------------------------------------------------------
+    anios = sorted({
+        anio
+        for datos in acumulado_empresas.values()
+        for anio in datos["anuales"].keys()
+    })
 
     totales_empresas = []
 
     for datos in acumulado_empresas.values():
+
+        anuales_lista = []
+
+        for anio in anios:
+            anual = datos["anuales"].get(
+                anio,
+                {
+                    "licitado": Decimal("0"),
+                    "oc": Decimal("0"),
+                }
+            )
+
+            anuales_lista.append({
+                "anio": anio,
+                "licitado": anual["licitado"],
+                "oc": anual["oc"],
+            })
+
         totales_empresas.append({
             "empresa": datos["empresa"],
             "cuit": datos["cuit"],
             "procesos_distintos": len(datos["procesos"]),
             "procesos_renglones": datos["procesos_renglones"],
             "total_ofertas": datos["total_ofertas"],
+            "total_oc": datos["total_oc"],
+            "anuales_lista": anuales_lista,
         })
 
-    # Ordenar por Total Ofertas: mayor a menor.
+    # Ordenar por Total licitado: mayor a menor.
     # En caso de empate, ordenar por empresa.
     totales_empresas.sort(
         key=lambda x: (-x["total_ofertas"], x["empresa"].lower())
@@ -876,6 +989,46 @@ def consultar(request):
         ),
         Decimal("0")
     )
+
+    total_oc = sum(
+        (
+            datos["total_oc"]
+            for datos in acumulado_empresas.values()
+        ),
+        Decimal("0")
+    )
+
+    # Totales generales por año para la fila TOTAL de la tabla.
+    anios_totales = []
+
+    for anio in anios:
+        total_licitado_anio = sum(
+            (
+                datos["anuales"].get(
+                    anio,
+                    {"licitado": Decimal("0"), "oc": Decimal("0")}
+                )["licitado"]
+                for datos in acumulado_empresas.values()
+            ),
+            Decimal("0")
+        )
+
+        total_oc_anio = sum(
+            (
+                datos["anuales"].get(
+                    anio,
+                    {"licitado": Decimal("0"), "oc": Decimal("0")}
+                )["oc"]
+                for datos in acumulado_empresas.values()
+            ),
+            Decimal("0")
+        )
+
+        anios_totales.append({
+            "anio": anio,
+            "licitado": total_licitado_anio,
+            "oc": total_oc_anio,
+        })
 
     # ========================================================
     # ORDEN DE LOS RESULTADOS
@@ -988,6 +1141,16 @@ def consultar(request):
         Decimal("0")
     )
 
+
+    total_oc_resultados = sum(
+        (
+            registro.precio_total_compra
+            for registro in registros
+            if registro.numero_oc
+            and registro.precio_total_compra is not None
+        ),
+        Decimal("0")
+    )
     # ========================================================
     # CONTEXTO
     # ========================================================
@@ -1013,7 +1176,10 @@ def consultar(request):
         "total_procesos_distintos": total_procesos_distintos,
         "total_procesos_renglones": total_procesos_renglones,
         "total_ofertas": total_ofertas,
+        "total_oc": total_oc,
+        "anios_totales": anios_totales,
         "total_ofertas_resultados": total_ofertas_resultados,
+        "total_oc_resultados": total_oc_resultados,
     }
 
     return render(
@@ -1021,6 +1187,8 @@ def consultar(request):
         "InfEje/consultar.html",
         contexto
     )
+
+
 
 
 @require_GET
@@ -1081,9 +1249,45 @@ def totales_por_empresa(request):
         if not match:
             return None
         try:
-            return datetime.strptime(match.group(1), "%Y-%m-%d").date()
+            return datetime.strptime(
+                match.group(1), "%Y-%m-%d"
+            ).date()
         except ValueError:
             return None
+
+    def peso_registro(registro):
+        fecha_archivo = fecha_del_nombre_lote(
+            registro.lote.nombre_archivo
+        )
+
+        fecha_valida = (
+            fecha_archivo
+            if fecha_archivo and fecha_archivo <= hoy
+            else None
+        )
+
+        return (
+            fecha_valida is not None,
+            fecha_valida or datetime.min.date(),
+            registro.lote.fecha_carga,
+            registro.id,
+        )
+
+    # ----------------------------------------------------
+    # REGISTROS CON LOS FILTROS COMPARTIDOS
+    # ----------------------------------------------------
+
+    registros_para_totales = list(
+        registros_para_totales.select_related(
+            "lote",
+            "empresa_oferente",
+            "empresa_proveedor",
+        )
+    )
+
+    # ----------------------------------------------------
+    # CLAVES PROCESO + RENGLÓN QUE TIENEN OC EN TODA LA BASE
+    # ----------------------------------------------------
 
     claves_con_oc = set(
         RegistroLicitacion.objects
@@ -1096,11 +1300,14 @@ def totales_por_empresa(request):
         .distinct()
     )
 
-    registros_para_totales = list(
-        registros_para_totales.select_related(
-            "lote", "empresa_oferente", "empresa_proveedor"
-        )
-    )
+    # ----------------------------------------------------
+    # 1. TOTAL LICITADO
+    #
+    # SE CONSERVA LA LÓGICA ORIGINAL:
+    # - Excluye procesos/renglones que tengan OC en la base.
+    # - Selecciona el lote más reciente por empresa,
+    #   proceso y renglón.
+    # ----------------------------------------------------
 
     seleccionados_por_clave = {}
 
@@ -1109,30 +1316,21 @@ def totales_por_empresa(request):
         if not registro.numero_proceso or not registro.numero_renglon:
             continue
 
-        clave_proceso = (registro.numero_proceso, registro.numero_renglon)
+        clave_proceso = (
+            registro.numero_proceso,
+            registro.numero_renglon,
+        )
 
         if clave_proceso in claves_con_oc:
             continue
 
-        empresa_registro = None
-
-        if registro.empresa_oferente:
-            empresa_registro = registro.empresa_oferente
-        elif registro.empresa_proveedor:
-            empresa_registro = registro.empresa_proveedor
+        empresa_registro = (
+            registro.empresa_oferente
+            or registro.empresa_proveedor
+        )
 
         if not empresa_registro:
             continue
-
-        fecha_archivo = fecha_del_nombre_lote(
-            registro.lote.nombre_archivo
-        )
-
-        fecha_valida = (
-            fecha_archivo
-            if fecha_archivo and fecha_archivo <= hoy
-            else None
-        )
 
         clave = (
             empresa_registro.cuit,
@@ -1140,50 +1338,49 @@ def totales_por_empresa(request):
             registro.numero_renglon,
         )
 
-        candidato = (
-            fecha_valida,
-            registro.lote.fecha_carga,
-            registro.id,
-            registro,
-        )
-
         anterior = seleccionados_por_clave.get(clave)
 
-        def peso(item):
-            fecha, fecha_carga, registro_id, _ = item
-            return (
-                fecha is not None,
-                fecha or datetime.min.date(),
-                fecha_carga,
-                registro_id,
-            )
-
-        if anterior is None or peso(candidato) > peso(anterior):
-            seleccionados_por_clave[clave] = candidato
+        if anterior is None or peso_registro(registro) > peso_registro(anterior):
+            seleccionados_por_clave[clave] = registro
 
     acumulado_empresas = {}
 
-    for _, _, _, registro in seleccionados_por_clave.values():
-
-        if registro.empresa_oferente:
-            empresa_registro = registro.empresa_oferente
-        elif registro.empresa_proveedor:
-            empresa_registro = registro.empresa_proveedor
-        else:
-            continue
-
-        cuit = empresa_registro.cuit
+    def obtener_datos_empresa(empresa):
+        cuit = empresa.cuit
 
         if cuit not in acumulado_empresas:
             acumulado_empresas[cuit] = {
-                "empresa": empresa_registro.nombre,
+                "empresa": empresa.nombre,
                 "cuit": cuit,
                 "procesos": set(),
                 "procesos_renglones": 0,
                 "total_ofertas": Decimal("0"),
+                "total_oc": Decimal("0"),
+                "anuales": {},
             }
 
-        datos = acumulado_empresas[cuit]
+        return acumulado_empresas[cuit]
+
+    def obtener_anual(datos, anio):
+        if anio not in datos["anuales"]:
+            datos["anuales"][anio] = {
+                "licitado": Decimal("0"),
+                "oc": Decimal("0"),
+            }
+
+        return datos["anuales"][anio]
+
+    for registro in seleccionados_por_clave.values():
+
+        empresa_registro = (
+            registro.empresa_oferente
+            or registro.empresa_proveedor
+        )
+
+        if not empresa_registro:
+            continue
+
+        datos = obtener_datos_empresa(empresa_registro)
 
         datos["procesos"].add(registro.numero_proceso)
         datos["procesos_renglones"] += 1
@@ -1191,19 +1388,112 @@ def totales_por_empresa(request):
         if registro.precio_total_oferta is not None:
             datos["total_ofertas"] += registro.precio_total_oferta
 
+            if registro.fecha_apertura:
+                anual = obtener_anual(
+                    datos,
+                    registro.fecha_apertura.year,
+                )
+                anual["licitado"] += registro.precio_total_oferta
+
+    # ----------------------------------------------------
+    # 2. TOTAL O/C
+    #
+    # Se calcula independientemente del Total licitado.
+    # Se toma la empresa adjudicataria (empresa_proveedor).
+    # Se evita repetir la misma OC por proceso/renglón
+    # cuando aparece en distintos lotes.
+    # ----------------------------------------------------
+
+    registros_oc = [
+        registro
+        for registro in registros_para_totales
+        if registro.numero_oc
+        and registro.numero_proceso
+        and registro.numero_renglon
+        and registro.empresa_proveedor
+    ]
+
+    seleccionados_oc = {}
+
+    for registro in registros_oc:
+
+        empresa = registro.empresa_proveedor
+
+        clave_oc = (
+            empresa.cuit,
+            registro.numero_proceso,
+            registro.numero_renglon,
+            registro.numero_oc,
+        )
+
+        anterior = seleccionados_oc.get(clave_oc)
+
+        if anterior is None or peso_registro(registro) > peso_registro(anterior):
+            seleccionados_oc[clave_oc] = registro
+
+    for registro in seleccionados_oc.values():
+
+        empresa = registro.empresa_proveedor
+        datos = obtener_datos_empresa(empresa)
+
+        if (
+            registro.precio_total_compra is not None
+            and registro.fecha_apertura
+        ):
+            anual = obtener_anual(
+                datos,
+                registro.fecha_apertura.year,
+            )
+
+            anual["oc"] += registro.precio_total_compra
+            datos["total_oc"] += registro.precio_total_compra
+
+    # ----------------------------------------------------
+    # 3. PREPARAR AÑOS Y TOTALES PARA LA TABLA
+    # ----------------------------------------------------
+
+    anios_totales = sorted({
+        anio
+        for datos in acumulado_empresas.values()
+        for anio in datos["anuales"]
+    })
+
     totales_empresas = []
 
     for datos in acumulado_empresas.values():
+
+        totales_anuales = []
+
+        for anio in anios_totales:
+            anual = datos["anuales"].get(anio, {})
+
+            totales_anuales.append({
+                "anio": anio,
+                "licitado": anual.get(
+                    "licitado", Decimal("0")
+                ),
+                "oc": anual.get(
+                    "oc", Decimal("0")
+                ),
+            })
+
         totales_empresas.append({
             "empresa": datos["empresa"],
             "cuit": datos["cuit"],
             "procesos_distintos": len(datos["procesos"]),
             "procesos_renglones": datos["procesos_renglones"],
             "total_ofertas": datos["total_ofertas"],
+            "total_licitado": datos["total_ofertas"],
+            "total_oc": datos["total_oc"],
+            "totales_anuales": totales_anuales,
         })
 
+    # Ordenar por Total licitado: mayor a menor.
     totales_empresas.sort(
-        key=lambda x: (-x["total_ofertas"], x["empresa"].lower())
+        key=lambda x: (
+            -x["total_licitado"],
+            x["empresa"].lower(),
+        )
     )
 
     total_procesos_distintos = len({
@@ -1218,9 +1508,50 @@ def totales_por_empresa(request):
     )
 
     total_ofertas = sum(
-        (datos["total_ofertas"] for datos in acumulado_empresas.values()),
-        Decimal("0")
+        (
+            datos["total_ofertas"]
+            for datos in acumulado_empresas.values()
+        ),
+        Decimal("0"),
     )
+
+    total_oc = sum(
+        (
+            datos["total_oc"]
+            for datos in acumulado_empresas.values()
+        ),
+        Decimal("0"),
+    )
+
+    totales_generales_anuales = []
+
+    for anio in anios_totales:
+
+        total_licitado_anio = sum(
+            (
+                datos["anuales"].get(
+                    anio, {}
+                ).get("licitado", Decimal("0"))
+                for datos in acumulado_empresas.values()
+            ),
+            Decimal("0"),
+        )
+
+        total_oc_anio = sum(
+            (
+                datos["anuales"].get(
+                    anio, {}
+                ).get("oc", Decimal("0"))
+                for datos in acumulado_empresas.values()
+            ),
+            Decimal("0"),
+        )
+
+        totales_generales_anuales.append({
+            "anio": anio,
+            "licitado": total_licitado_anio,
+            "oc": total_oc_anio,
+        })
 
     return render(
         request,
@@ -1230,8 +1561,13 @@ def totales_por_empresa(request):
             "total_procesos_distintos": total_procesos_distintos,
             "total_procesos_renglones": total_procesos_renglones,
             "total_ofertas": total_ofertas,
+            "total_oc": total_oc,
+            "anios_totales": anios_totales,
+            "totales_generales_anuales": totales_generales_anuales,
         }
     )
+
+
 
 
 @require_GET
@@ -4601,3 +4937,105 @@ def actualizar_fechas_oc(request):
         "mensaje": f"Se actualizaron las fechas de {cantidad} registros.",
         "cantidad": cantidad
     })
+
+
+
+def calcular_totales_oc_por_empresa(registros_queryset):
+
+    hoy = datetime.now().date()
+
+    def fecha_del_nombre_lote(nombre):
+        match = re.search(r"(\d{4}-\d{2}-\d{2})", nombre or "")
+        if not match:
+            return None
+        try:
+            return datetime.strptime(match.group(1), "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    registros_oc = (
+        registros_queryset
+        .exclude(Q(numero_oc__isnull=True) | Q(numero_oc=""))
+        .exclude(fecha_apertura__isnull=True)
+        .select_related(
+            "lote",
+            "empresa_oferente",
+            "empresa_proveedor",
+        )
+    )
+
+    seleccionados = {}
+
+    for registro in registros_oc:
+
+        empresa = (
+            registro.empresa_proveedor
+            or registro.empresa_oferente
+        )
+
+        if not empresa:
+            continue
+
+        clave = (
+            empresa.cuit,
+            registro.numero_proceso,
+            registro.numero_renglon,
+            registro.numero_oc,
+        )
+
+        fecha_archivo = fecha_del_nombre_lote(
+            registro.lote.nombre_archivo
+        )
+
+        fecha_valida = (
+            fecha_archivo
+            if fecha_archivo and fecha_archivo <= hoy
+            else None
+        )
+
+        candidato = (
+            fecha_valida,
+            registro.lote.fecha_carga,
+            registro.id,
+            registro,
+        )
+
+        anterior = seleccionados.get(clave)
+
+        def peso(item):
+            fecha, fecha_carga, registro_id, _ = item
+            return (
+                fecha is not None,
+                fecha or datetime.min.date(),
+                fecha_carga,
+                registro_id,
+            )
+
+        if anterior is None or peso(candidato) > peso(anterior):
+            seleccionados[clave] = candidato
+
+    acumulados = {}
+
+    for _, _, _, registro in seleccionados.values():
+
+        empresa = (
+            registro.empresa_proveedor
+            or registro.empresa_oferente
+        )
+
+        anio = registro.fecha_apertura.year
+
+        clave = empresa.cuit
+
+        if clave not in acumulados:
+            acumulados[clave] = {}
+
+        if anio not in acumulados[clave]:
+            acumulados[clave][anio] = Decimal("0")
+
+        if registro.precio_total_compra is not None:
+            acumulados[clave][anio] += registro.precio_total_compra
+
+    return acumulados
+
+

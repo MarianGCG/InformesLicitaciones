@@ -270,7 +270,7 @@
 
         .importe {
             font-weight: 800;
-            text-align: right;
+            text-align: right !important;
             white-space: nowrap;
         }
         .descripcion {
@@ -1170,48 +1170,142 @@
             padding: 0 !important;
         }
 
+
         /* =====================================================
-        AJUSTE TOTALES POR EMPRESA
+        TABLA TOTALES POR EMPRESA - CONFIGURACION UNIFICADA
         ===================================================== */
-        /* =====================================================
-        TABLA TOTALES POR EMPRESA
-        ===================================================== */
+
+        .tabla-contenedor {
+            width: fit-content;
+            max-width: 100%;
+            overflow-x: auto;
+        }
 
         .totales-tabla {
-            width: 1100px !important;
-            min-width: 1100px !important;
-            max-width: 1100px !important;
-            table-layout: fixed !important;
+            width: auto !important;
+            min-width: 0 !important;
+            table-layout: auto !important;
+            border-collapse: collapse;
         }
 
-        .totales-tabla th:nth-child(1),
-        .totales-tabla td:nth-child(1) {
-            width: 300px !important;
+        /* Espaciado */
+        .totales-tabla th,
+        .totales-tabla td {
+            padding: 7px 9px !important;
+            white-space: nowrap;
         }
 
+        /* Empresa */
+        .totales-tabla th:first-child,
+        .totales-tabla td:first-child {
+            min-width: 240px;
+        }
+
+        /* CUIT */
         .totales-tabla th:nth-child(2),
         .totales-tabla td:nth-child(2) {
-            width: 150px !important;
+            min-width: 105px;
         }
 
-        .totales-tabla th:nth-child(3),
-        .totales-tabla td:nth-child(3) {
-            width: 180px !important;
+        /* Procesos distintos */
+        .totales-tabla .col-procesos {
+            width: 85px !important;
+            min-width: 85px !important;
+            max-width: 85px !important;
+            white-space: normal !important;
+            text-align: center;
         }
 
-        .totales-tabla th:nth-child(4),
-        .totales-tabla td:nth-child(4) {
-            width: 200px !important;
+        /* Procesos / Renglones */
+        .totales-tabla .col-renglones {
+            width: 105px !important;
+            min-width: 105px !important;
+            max-width: 105px !important;
+            white-space: normal !important;
+            text-align: center;
         }
 
-        .totales-tabla th:nth-child(5),
-        .totales-tabla td:nth-child(5) {
-            width: 180px !important;
+        /* Columnas de importes: mismo ancho para todos los años */
+        .totales-tabla thead tr:nth-child(2) th,
+        .totales-tabla tbody td:nth-child(n+5) {
+            width: 115px !important;
+            min-width: 115px !important;
+            max-width: 115px !important;
+            box-sizing: border-box;
+            text-align: right;
+        }
+
+        /* Encabezados agrupados de los años */
+        .totales-tabla thead tr:first-child th[colspan="2"] {
+            width: 230px !important;
+            min-width: 230px !important;
+            max-width: 230px !important;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        /* Separadores verticales entre años */
+        .totales-tabla th[colspan="2"],
+        .totales-tabla thead tr:nth-child(2) th:nth-child(1),
+        .totales-tabla tbody td:nth-child(5),
+        .totales-tabla tbody td:nth-child(7),
+        .totales-tabla tbody td:nth-child(9) {
+            border-left: 2px solid #8b969f !important;
+        }
+
+        /* Importes completos */
+        .totales-tabla .formato-importe {
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
         }
 
 
 
-        .pestanas-principales {
+        /* =====================================================
+        AJUSTES FINALES: SEPARADORES Y ENCABEZADOS
+        ===================================================== */
+
+        /* Separar visualmente cada año */
+        .totales-tabla {
+            border-collapse: separate !important;
+            border-spacing: 0;
+        }
+
+        /* Línea antes de cada grupo anual */
+        .totales-tabla thead tr:first-child th[colspan="2"] {
+            border-left: 2px solid #8b969f !important;
+        }
+
+        /* Línea en los encabezados de las dos columnas de cada año */
+        .totales-tabla thead tr:nth-child(2) th:nth-child(1),
+        .totales-tabla thead tr:nth-child(2) th:nth-child(3),
+        .totales-tabla thead tr:nth-child(2) th:nth-child(5) {
+            border-left: 2px solid #8b969f !important;
+        }
+
+        /* Línea en el cuerpo de la tabla */
+        .totales-tabla tbody td:nth-child(5),
+        .totales-tabla tbody td:nth-child(7),
+        .totales-tabla tbody td:nth-child(9) {
+            border-left: 2px solid #8b969f !important;
+        }
+
+        /* Evitar que se corte Total licitado / Total O/C */
+        .totales-tabla thead tr:nth-child(2) th {
+            width: 125px !important;
+            min-width: 125px !important;
+            max-width: 125px !important;
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+        }
+
+
+        /* =====================================================
+        FIN  TABLA TOTALES POR EMPRESA - CONFIGURACION UNIFICADA
+        ===================================================== */
+                .pestanas-principales {
             display: flex;
             gap: 6px;
             margin: 0 0 16px;
@@ -1435,7 +1529,19 @@
         background: #ffffff !important;
     }
 
+    /* Columna T/Cpra */
+    td:nth-child(14) {
+        text-align: right;
+        min-width: 120px;
+        width: 120px;
+    }
 
+    /* Columna Moneda */
+    td:nth-child(15),
+    th:nth-child(15) {
+        min-width: 65px;
+        width: 65px;
+    }
     </style>
 
 </head>
@@ -2200,20 +2306,18 @@
                         <th>Inicio</th>
                         <th>Fin</th>
                         <th>Estado</th>
-                        <th
-                            id="thOferta"
+                        <th id="thOferta"
                             style="cursor: pointer;"
-                            title="Ordenar por Oferta"
-                        >
-                            Oferta
-                            <span
-                                id="flechaOferta"
-                                style="
-                                    font-size: 11px;
-                                    margin-left: 4px;
-                                "
-                            >▼</span>
+                            title="Ordenar por Oferta">
+                            t/oferta
                         </th>
+
+                        <th id="thTotalOC"
+                            style="cursor: pointer;"
+                            title="Ordenar por Total O/C">
+                            t/cpra
+                        </th>
+
                         <th>Mon</th>
                         <th>Descripción</th>
 
@@ -2378,10 +2482,24 @@
                                 class="importe"
                                 data-importe="{{ registro.precio_total_oferta|default:'' }}"
                             >
-                                {{ registro.precio_total_oferta|default:"-" }}
+
+                                {% if registro.precio_total_oferta is not None %}
+                                    {{ registro.precio_total_oferta|floatformat:"2g" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+
                             </td>
 
+                            <!-- COMPRA -->
+                            <td class="importe">
+                                {% if registro.numero_oc and registro.precio_total_compra is not None %}
 
+                                    {{ registro.precio_total_compra|floatformat:"2g" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
 
                             <!-- MONEDA -->
                             <td>
@@ -2405,7 +2523,7 @@
                     {% empty %}
 
                         <tr>
-                            <td colspan="10">
+                            <td colspan="11">
 
                                 <div class="sin-resultados">
 
@@ -2440,8 +2558,8 @@
                             <td></td>
                             <td></td>
                             <td></td>
-                            <td class="importe"><strong>{{ total_ofertas_resultados|floatformat:2 }}</strong></td>
-                            <td></td>
+                            <td class="importe"><strong>{{ total_ofertas_resultados|floatformat:"2g" }}</strong></td>
+                            <td class="importe"><strong>{{ total_oc_resultados|floatformat:"2g"  }}</strong></td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -5155,6 +5273,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return !texto || texto === "-";
     }
 
+
     function convertirNumero(texto) {
         const limpio = texto
             .replace(/\s/g, "")
@@ -5166,6 +5285,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         return Number(limpio);
     }
+
 
     function convertirFecha(texto) {
         const partes = texto.split("/");
@@ -5181,12 +5301,15 @@ document.addEventListener("DOMContentLoaded", function () {
         return new Date(anio, mes - 1, dia).getTime();
     }
 
-    function comparar(a, b, tipo, descendente) {
+    function comparar(a, b, tipo, descendente, guionEsVacio = true) {
 
-        if (esVacio(a) && esVacio(b)) return 0;
-        if (esVacio(a)) return 1;
-        if (esVacio(b)) return -1;
 
+        const vacioA = !a || (guionEsVacio && a === "-");
+        const vacioB = !b || (guionEsVacio && b === "-");
+
+        if (vacioA && vacioB) return 0;
+        if (vacioA) return 1;
+        if (vacioB) return -1;
         let resultado = 0;
 
         if (tipo === "numero") {
@@ -5274,8 +5397,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Primer clic: Oferta descendente; las demás ascendente.
             if (!(titulo in ordenColumnas)) {
+
                 ordenColumnas[titulo] =
-                    titulo === "oferta" ? "desc" : "asc";
+                    (titulo === "t/oferta" || titulo === "t/cpra")
+                        ? "desc"
+                        : "asc";
+
             } else {
                 ordenColumnas[titulo] =
                     ordenColumnas[titulo] === "asc"
@@ -5289,7 +5416,11 @@ document.addEventListener("DOMContentLoaded", function () {
             let tipo = "texto";
 
             if (
-                titulo === "oferta" ||
+
+
+                titulo === "t/oferta" ||
+                titulo === "t/cpra" ||
+
                 titulo === "r" ||
                 titulo.includes("renglón")
             ) {
@@ -5320,7 +5451,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     textoA,
                     textoB,
                     tipo,
-                    descendente
+                    descendente,
+                    titulo !== "mon"
                 );
             });
 
@@ -5378,6 +5510,17 @@ document.addEventListener("DOMContentLoaded", function () {
         tbody.insertBefore(filaTotalInicial, tbody.firstChild);
     }
 
+    function obtenerNumeroCelda(celda) {
+        const valorOriginal = celda.dataset.importe;
+
+        if (valorOriginal !== undefined && valorOriginal !== "") {
+            return Number(valorOriginal.replace(",", "."));
+        }
+
+        return convertirNumero(obtenerTexto(celda));
+    }
+
+
     function obtenerTexto(celda) {
         return celda ? celda.textContent.trim() : "";
     }
@@ -5386,17 +5529,6 @@ document.addEventListener("DOMContentLoaded", function () {
         return !texto || texto === "-";
     }
 
-    function convertirNumero(texto) {
-        const limpio = texto
-            .replace(/\s/g, "")
-            .replace(/[^\d,.-]/g, "")
-            .replace(/\./g, "")
-            .replace(",", ".");
-
-        if (!limpio || limpio === "-") return NaN;
-
-        return Number(limpio);
-    }
 
     encabezados.forEach(function (th, indice) {
 
@@ -5448,10 +5580,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 let resultado;
 
-                if (indice >= 2) {
-                    const numeroA = convertirNumero(a);
-                    const numeroB = convertirNumero(b);
 
+                if (
+                    titulo.includes("oferta") ||
+                    titulo.includes("cpra") ||
+                    titulo === "r" ||
+                    titulo.includes("renglón")
+                ) {
+
+
+
+
+
+
+                    const numeroA = obtenerNumeroCelda(filaA.cells[indice]);
+                    const numeroB = obtenerNumeroCelda(filaB.cells[indice]);
                     if (Number.isNaN(numeroA)) return 1;
                     if (Number.isNaN(numeroB)) return -1;
 
