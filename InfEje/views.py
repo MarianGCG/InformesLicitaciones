@@ -762,28 +762,14 @@ def consultar(request):
     # --------------------------------------------------------
     # Esta selección replica la lógica que ya estaba funcionando.
     seleccionados_por_clave = {}
-
     for registro in registros_para_totales:
 
         if not registro.numero_proceso or not registro.numero_renglon:
             continue
 
-        clave_proceso = (
-            registro.numero_proceso,
-            registro.numero_renglon,
-        )
-
-        # Se excluye del Total licitado cualquier proceso/renglón
-        # que tenga una OC en cualquier registro de la base.
-        if clave_proceso in claves_con_oc:
-            continue
-
-        empresa_registro = None
-
-        if registro.empresa_oferente:
-            empresa_registro = registro.empresa_oferente
-        elif registro.empresa_proveedor:
-            empresa_registro = registro.empresa_proveedor
+        # La oferta se imputa siempre al oferente,
+        # aunque el renglón tenga una OC adjudicada.
+        empresa_registro = registro.empresa_oferente
 
         if not empresa_registro:
             continue
@@ -1285,63 +1271,15 @@ def totales_por_empresa(request):
         )
     )
 
-    # ----------------------------------------------------
-    # CLAVES PROCESO + RENGLÓN QUE TIENEN OC EN TODA LA BASE
-    # ----------------------------------------------------
 
-    claves_con_oc = set(
-        RegistroLicitacion.objects
-        .exclude(numero_proceso__isnull=True)
-        .exclude(numero_proceso="")
-        .exclude(numero_renglon__isnull=True)
-        .exclude(numero_renglon="")
-        .exclude(Q(numero_oc__isnull=True) | Q(numero_oc=""))
-        .values_list("numero_proceso", "numero_renglon")
-        .distinct()
-    )
 
     # ----------------------------------------------------
     # 1. TOTAL LICITADO
-    #
-    # SE CONSERVA LA LÓGICA ORIGINAL:
-    # - Excluye procesos/renglones que tengan OC en la base.
-    # - Selecciona el lote más reciente por empresa,
-    #   proceso y renglón.
+    # Sumar todas las ofertas, incluso si tienen OC.
+    # No eliminar filas por duplicación entre lotes.
     # ----------------------------------------------------
 
     seleccionados_por_clave = {}
-
-    for registro in registros_para_totales:
-
-        if not registro.numero_proceso or not registro.numero_renglon:
-            continue
-
-        clave_proceso = (
-            registro.numero_proceso,
-            registro.numero_renglon,
-        )
-
-        if clave_proceso in claves_con_oc:
-            continue
-
-        empresa_registro = (
-            registro.empresa_oferente
-            or registro.empresa_proveedor
-        )
-
-        if not empresa_registro:
-            continue
-
-        clave = (
-            empresa_registro.cuit,
-            registro.numero_proceso,
-            registro.numero_renglon,
-        )
-
-        anterior = seleccionados_por_clave.get(clave)
-
-        if anterior is None or peso_registro(registro) > peso_registro(anterior):
-            seleccionados_por_clave[clave] = registro
 
     acumulado_empresas = {}
 
@@ -1370,30 +1308,63 @@ def totales_por_empresa(request):
 
         return datos["anuales"][anio]
 
-    for registro in seleccionados_por_clave.values():
+    # Primero conservamos la lógica actual para contar
+    # procesos y renglones sin duplicarlos.
+    for registro in registros_para_totales:
 
-        empresa_registro = (
-            registro.empresa_oferente
-            or registro.empresa_proveedor
-        )
-
-        if not empresa_registro:
+        if not registro.numero_proceso or not registro.numero_renglon:
             continue
 
-        datos = obtener_datos_empresa(empresa_registro)
+        empresa = registro.empresa_oferente or registro.empresa_proveedor
 
+        if not empresa:
+            continue
+
+        clave = (
+            empresa.cuit,
+            registro.numero_proceso,
+            registro.numero_renglon,
+        )
+
+        anterior = seleccionados_por_clave.get(clave)
+
+        if anterior is None or peso_registro(registro) > peso_registro(anterior):
+            seleccionados_por_clave[clave] = registro
+
+    for registro in seleccionados_por_clave.values():
+
+        empresa = registro.empresa_oferente or registro.empresa_proveedor
+
+        if not empresa:
+            continue
+
+        datos = obtener_datos_empresa(empresa)
         datos["procesos"].add(registro.numero_proceso)
         datos["procesos_renglones"] += 1
 
-        if registro.precio_total_oferta is not None:
-            datos["total_ofertas"] += registro.precio_total_oferta
+    # Ahora sumamos TODAS las ofertas, independientemente de la OC.
+    for registro in registros_para_totales:
 
-            if registro.fecha_apertura:
-                anual = obtener_anual(
-                    datos,
-                    registro.fecha_apertura.year,
-                )
-                anual["licitado"] += registro.precio_total_oferta
+        if registro.precio_total_oferta is None:
+            continue
+
+        empresa = registro.empresa_oferente
+
+        if not empresa:
+            continue
+
+        datos = obtener_datos_empresa(empresa)
+        datos["total_ofertas"] += registro.precio_total_oferta
+
+        if registro.fecha_apertura:
+            anual = obtener_anual(
+                datos,
+                registro.fecha_apertura.year,
+            )
+            anual["licitado"] += registro.precio_total_oferta
+
+
+
 
     # ----------------------------------------------------
     # 2. TOTAL O/C

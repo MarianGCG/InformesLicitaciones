@@ -6,7 +6,25 @@
         <div>{{ totales_empresas|length }} empresas</div>
     </div>
 
+    <div class="selector-anios">
+        <details id="selectorAnios">
+            <summary id="resumenAnios">Seleccionar años</summary>
 
+            <div class="selector-anios-opciones">
+                {% for anio in anios_totales %}
+                    <label>
+                        <input
+                            type="checkbox"
+                            class="check-anio"
+                            value="{{ anio }}"
+                            data-indice="{{ forloop.counter0 }}"
+                        >
+                        {{ anio }}
+                    </label>
+                {% endfor %}
+            </div>
+        </details>
+    </div>
 
     <div class="tabla-contenedor">
 
@@ -19,16 +37,32 @@
 
                     <th rowspan="2" class="col-procesos">Procesos<br>distintos</th>
                     <th rowspan="2" class="col-renglones">Procesos<br>Renglones</th>
+
+
                     {% for anio in anios_totales %}
-                        <th colspan="2" class="numero">{{ anio }}</th>
+                        <th colspan="2"
+                            class="numero"
+                            data-indice="{{ forloop.counter0 }}">
+                            {{ anio }}
+                        </th>
                     {% endfor %}
+
+
                 </tr>
 
                 <tr>
+
+
                     {% for anio in anios_totales %}
-                        <th class="numero">Total licitado</th>
-                        <th class="numero">Total O/C</th>
+                        <th class="numero" data-indice="{{ forloop.counter0 }}">
+                            Total licitado
+                        </th>
+                        <th class="numero" data-indice="{{ forloop.counter0 }}">
+                            Total O/C
+                        </th>
                     {% endfor %}
+
+
                 </tr>
             </thead>
 
@@ -53,13 +87,12 @@
                         </td>
 
                         {% for anual in total.totales_anuales %}
-                            <td class="numero">
+                            <td class="numero" data-indice="{{ forloop.counter0 }}">
                                 <span class="formato-importe">
                                     {{ anual.licitado|floatformat:2 }}
                                 </span>
                             </td>
-
-                            <td class="numero">
+                            <td class="numero" data-indice="{{ forloop.counter0 }}">
                                 <span class="formato-importe">
                                     {{ anual.oc|floatformat:2 }}
                                 </span>

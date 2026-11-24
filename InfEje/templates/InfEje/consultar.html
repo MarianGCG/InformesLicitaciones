@@ -1542,6 +1542,65 @@
         min-width: 65px;
         width: 65px;
     }
+
+    </style>
+
+    <style>
+    .selector-anios {
+        display: inline-block;
+        margin: 8px 0;
+    }
+
+    .selector-anios details {
+        position: relative;
+    }
+
+    .selector-anios summary {
+        cursor: pointer;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #fff;
+        font-size: 13px;
+        min-width: 130px;
+    }
+
+    .selector-anios-opciones {
+        position: absolute;
+        z-index: 100;
+        top: 100%;
+        left: 0;
+        min-width: 130px;
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 5px;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    }
+
+    .selector-anios-opciones label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 5px;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+
+    .selector-anios-opciones input[type="checkbox"] {
+        width: 13px !important;
+        height: 13px !important;
+        min-width: 13px !important;
+        min-height: 13px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        flex: 0 0 13px;
+        accent-color: #087cf0;
+    }
     </style>
 
 </head>
@@ -4390,6 +4449,7 @@ document.getElementById("btnCSVdoppler")?.addEventListener(
 
                         contenido.innerHTML = html;
                         totalesCargados = true;
+                        inicializarSelectorAnios();
 
                         // Formatear importes
                         contenido.querySelectorAll(".formato-importe").forEach(function(elemento) {
@@ -5835,6 +5895,74 @@ document.querySelectorAll('td.descripcion').forEach(function(celda) {
     });
 
 });
+
+function inicializarSelectorAnios() {
+
+    const selector = document.getElementById("selectorAnios");
+
+    if (!selector) return;
+
+    const checks = selector.querySelectorAll(".check-anio");
+    const resumen = document.getElementById("resumenAnios");
+    const tabla = document.querySelector(".totales-tabla");
+
+    if (!tabla || !checks.length) return;
+
+    // Marcar por defecto los tres años más recientes.
+    checks.forEach(function(check, indice) {
+        check.checked = indice >= checks.length - 3;
+    });
+
+    function actualizarColumnas() {
+
+        const seleccionados = [];
+
+        checks.forEach(function(check) {
+            if (check.checked) {
+                seleccionados.push(check.dataset.indice);
+            }
+        });
+
+        // Mostrar u ocultar todas las celdas correspondientes.
+        tabla.querySelectorAll("[data-indice]").forEach(function(celda) {
+
+            celda.style.display =
+                seleccionados.includes(celda.dataset.indice)
+                    ? ""
+                    : "none";
+
+        });
+
+        // Actualizar el texto del combo.
+        const anios = Array.from(checks)
+            .filter(check => check.checked)
+            .map(check => check.value);
+
+        resumen.textContent = anios.length
+            ? "Años: " + anios.join(", ")
+            : "Seleccionar años";
+    }
+
+    checks.forEach(function(check) {
+        check.addEventListener("change", actualizarColumnas);
+    });    
+
+    // Cerrar solamente cuando se hace clic fuera del combo.
+    document.addEventListener("click", function(event) {
+
+        if (!selector.contains(event.target)) {
+            selector.removeAttribute("open");
+        }
+
+    });
+    // Aplicar la selección inicial.
+    actualizarColumnas();
+}
+
+
+
+
+
 </script>
 </body>
 
