@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import SeguimientoCartasFlow
+
+
 from django.db.models import (
     Q,
     Case,
@@ -7,7 +9,11 @@ from django.db.models import (
     Value,
     IntegerField,
     CharField,
+    Sum,
 )
+
+from django.core.paginator import Paginator
+
 from django.db import transaction
 from django.utils.dateparse import parse_date
 import json
@@ -1050,93 +1056,106 @@ def consultar(request):
                 IntegerField(),
             ),
         )
-        .order_by(
+
+
+            .order_by(
             "empresa_orden",
             "-tiene_oc",
             "comprador",
             "numero_proceso",
             "renglon_orden",
+            "id",
         )
+
+
     )
     # ========================================================
-    # ASIGNAR COMPETIDORES A CADA REGISTRO
+    # TOTALES GENERALES DE RESULTADOS
+    # Se calculan sobre TODOS los registros filtrados.
     # ========================================================
 
-    for registro in registros:
+    total_ofertas_resultados = (
+        registros.aggregate(
+            total=Sum("precio_total_oferta")
+        )["total"] or Decimal("0")
+    )
+
+    total_oc_resultados = (
+        registros
+        .filter(numero_oc__isnull=False)
+        .exclude(numero_oc="")
+        .aggregate(
+            total=Sum("precio_total_compra")
+        )["total"] or Decimal("0")
+    )
+
+
+    # ========================================================
+    # PAGINACIÓN CONDICIONAL
+    #
+    # Todas las empresas: 200 registros por página.
+    # Empresa específica: mostrar todos sus registros.
+    # ========================================================
+
+    if empresa_seleccionada:
+
+        paginador = None
+        pagina_actual = None
+        registros_pagina = registros
+        total_registros = registros.count()
+
+    else:
+
+        paginador = Paginator(registros, 200)
+
+        pagina_actual = paginador.get_page(
+            request.GET.get("page")
+        )
+
+        registros_pagina = pagina_actual.object_list
+        total_registros = paginador.count
+
+
+    # ========================================================
+    # ASIGNAR COMPETIDORES SOLAMENTE A LOS REGISTROS VISIBLES
+    # ========================================================
+
+    for registro in registros_pagina:
 
         clave = (
             registro.numero_proceso,
             registro.numero_renglon,
         )
 
-        empresas_competidoras = (
-            competidores_por_clave.get(
-                clave,
-                {}
-            )
+        empresas_competidoras = competidores_por_clave.get(
+            clave,
+            {}
         )
-
-        # ----------------------------------------------------
-        # Identificar la empresa de esta fila
-        # ----------------------------------------------------
 
         cuit_actual = None
 
         if registro.empresa_oferente:
-
-            cuit_actual = (
-                registro.empresa_oferente.cuit
-            )
+            cuit_actual = registro.empresa_oferente.cuit
 
         elif registro.empresa_proveedor:
-
-            cuit_actual = (
-                registro.empresa_proveedor.cuit
-            )
-
-        # ----------------------------------------------------
-        # Excluir a la propia empresa
-        # ----------------------------------------------------
+            cuit_actual = registro.empresa_proveedor.cuit
 
         nombres = [
             nombre
-            for cuit, nombre
-            in empresas_competidoras.items()
+            for cuit, nombre in empresas_competidoras.items()
             if cuit != cuit_actual
         ]
 
         registro.competidores = " ; ".join(
-            sorted(
-                nombres,
-                key=str.lower
-            )
+            sorted(nombres, key=str.lower)
         )
-            
-  
-    # ========================================================
-    # TOTAL DE OFERTAS DE LA TABLA RESULTADOS
-    # ========================================================
-    # Suma solamente los registros que actualmente se muestran
-    # en la primera pestaana, respetando todos sus filtros.
-    total_ofertas_resultados = sum(
-        (
-            registro.precio_total_oferta
-            for registro in registros
-            if registro.precio_total_oferta is not None
-        ),
-        Decimal("0")
-    )
 
+    # Conservar los filtros al cambiar de página.
+    parametros = request.GET.copy()
+    parametros.pop("page", None)
 
-    total_oc_resultados = sum(
-        (
-            registro.precio_total_compra
-            for registro in registros
-            if registro.numero_oc
-            and registro.precio_total_compra is not None
-        ),
-        Decimal("0")
-    )
+    query_string = parametros.urlencode()
+
     # ========================================================
     # CONTEXTO
     # ========================================================
@@ -1149,7 +1168,13 @@ def consultar(request):
         "archivos_iniciales_seleccionados": archivos_iniciales_seleccionados,
         "todas_archivos": todas_archivos,
         "estados": estados,
-        "registros": registros,
+
+
+        "registros": registros_pagina,
+        "pagina_actual": pagina_actual,
+        "total_registros": total_registros,
+        "query_string": query_string,
+
         "lotes_seleccionados": lotes_seleccionados,
         "empresa_seleccionada": empresa_seleccionada,
         "estado_seleccionado": estado,
@@ -1168,6 +1193,22 @@ def consultar(request):
         "total_oc_resultados": total_oc_resultados,
     }
 
+
+    # ========================================================
+    # RESPUESTA AJAX: DEVOLVER SOLAMENTE LAS FILAS
+    # ========================================================
+
+    if (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        and request.GET.get("cargar_bloque") == "1"
+    ):
+        return render(
+            request,
+            "InfEje/partials/filas_resultados.html",
+            contexto
+        )
+
+        
     return render(
         request,
         "InfEje/consultar.html",

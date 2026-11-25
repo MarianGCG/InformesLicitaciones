@@ -1182,29 +1182,33 @@
         }
 
         .totales-tabla {
-            width: auto !important;
+            width: max-content !important;
             min-width: 0 !important;
-            table-layout: auto !important;
-            border-collapse: collapse;
+            table-layout: fixed !important;
+            border-collapse: separate !important;
+            border-spacing: 0;
         }
 
-        /* Espaciado */
+        /* Espaciado general */
         .totales-tabla th,
         .totales-tabla td {
-            padding: 7px 9px !important;
+            padding: 5px 6px !important;
             white-space: nowrap;
+            box-sizing: border-box;
         }
 
         /* Empresa */
         .totales-tabla th:first-child,
         .totales-tabla td:first-child {
-            min-width: 240px;
+            width: 240px !important;
+            min-width: 240px !important;
         }
 
         /* CUIT */
         .totales-tabla th:nth-child(2),
         .totales-tabla td:nth-child(2) {
-            min-width: 105px;
+            width: 105px !important;
+            min-width: 105px !important;
         }
 
         /* Procesos distintos */
@@ -1212,8 +1216,8 @@
             width: 85px !important;
             min-width: 85px !important;
             max-width: 85px !important;
-            white-space: normal !important;
             text-align: center;
+            white-space: normal !important;
         }
 
         /* Procesos / Renglones */
@@ -1221,91 +1225,56 @@
             width: 105px !important;
             min-width: 105px !important;
             max-width: 105px !important;
-            white-space: normal !important;
             text-align: center;
+            white-space: normal !important;
         }
+
 
         /* Columnas de importes: mismo ancho para todos los años */
         .totales-tabla thead tr:nth-child(2) th,
         .totales-tabla tbody td:nth-child(n+5) {
-            width: 115px !important;
-            min-width: 115px !important;
-            max-width: 115px !important;
+            width: 135px !important;
+            min-width: 135px !important;
+            max-width: 135px !important;
+            padding: 6px 8px !important;
             box-sizing: border-box;
             text-align: right;
+            white-space: nowrap !important;
         }
 
-        /* Encabezados agrupados de los años */
+
+        /* Encabezados agrupados de cada año */
         .totales-tabla thead tr:first-child th[colspan="2"] {
-            width: 230px !important;
-            min-width: 230px !important;
-            max-width: 230px !important;
+            width: 270px !important;
+            min-width: 270px !important;
+            max-width: 270px !important;
             box-sizing: border-box;
             text-align: center;
         }
 
-        /* Separadores verticales entre años */
-        .totales-tabla th[colspan="2"],
-        .totales-tabla thead tr:nth-child(2) th:nth-child(1),
-        .totales-tabla tbody td:nth-child(5),
-        .totales-tabla tbody td:nth-child(7),
-        .totales-tabla tbody td:nth-child(9) {
-            border-left: 2px solid #8b969f !important;
-        }
-
-        /* Importes completos */
+        /* Mostrar los importes completos */
         .totales-tabla .formato-importe {
-            white-space: nowrap;
-            overflow: visible;
-            text-overflow: clip;
-        }
-
-
-
-        /* =====================================================
-        AJUSTES FINALES: SEPARADORES Y ENCABEZADOS
-        ===================================================== */
-
-        /* Separar visualmente cada año */
-        .totales-tabla {
-            border-collapse: separate !important;
-            border-spacing: 0;
-        }
-
-        /* Línea antes de cada grupo anual */
-        .totales-tabla thead tr:first-child th[colspan="2"] {
-            border-left: 2px solid #8b969f !important;
-        }
-
-        /* Línea en los encabezados de las dos columnas de cada año */
-        .totales-tabla thead tr:nth-child(2) th:nth-child(1),
-        .totales-tabla thead tr:nth-child(2) th:nth-child(3),
-        .totales-tabla thead tr:nth-child(2) th:nth-child(5) {
-            border-left: 2px solid #8b969f !important;
-        }
-
-        /* Línea en el cuerpo de la tabla */
-        .totales-tabla tbody td:nth-child(5),
-        .totales-tabla tbody td:nth-child(7),
-        .totales-tabla tbody td:nth-child(9) {
-            border-left: 2px solid #8b969f !important;
-        }
-
-        /* Evitar que se corte Total licitado / Total O/C */
-        .totales-tabla thead tr:nth-child(2) th {
-            width: 125px !important;
-            min-width: 125px !important;
-            max-width: 125px !important;
-            white-space: normal !important;
+            white-space: nowrap !important;
             overflow: visible !important;
             text-overflow: clip !important;
         }
 
 
+
         /* =====================================================
-        FIN  TABLA TOTALES POR EMPRESA - CONFIGURACION UNIFICADA
+        SEPARADORES VERTICALES - TABLA TOTALES POR EMPRESA
         ===================================================== */
-                .pestanas-principales {
+
+        /* Quitar todos los bordes izquierdos */
+        .totales-tabla .inicio-anio {
+            border-left:  1px solid #8b969f !important;
+        }
+
+
+        /* =====================================================
+        FIN SEPARADORES VERTICALES UNIFORMES ENTRE AÑOS
+        ===================================================== */        
+        .pestanas-principales {
             display: flex;
             gap: 6px;
             margin: 0 0 16px;
@@ -1502,6 +1471,11 @@
         background: #ffffff;
     }
 
+    /* Reducir solamente la altura de las filas */
+    #vista-resultados .tabla-contenedor tbody td {
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+    }
 
     /* Fondo gris detrás de las pestañas y los resultados */
     .vista-panel {
@@ -1529,6 +1503,8 @@
         background: #ffffff !important;
     }
 
+
+    
     /* Columna T/Cpra */
     td:nth-child(14) {
         text-align: right;
@@ -1601,7 +1577,37 @@
         flex: 0 0 13px;
         accent-color: #087cf0;
     }
+
+    .resumen-totales-anuales {
+        display: flex;
+        gap: 18px;
+        margin: 10px 0;
+        flex-wrap: wrap;
+    }
+
+    .resumen-total {
+        background: #f1f5f3;
+        border-left: 3px solid #198754;
+        border-radius: 5px;
+        padding: 8px 14px;
+        min-width: 190px;
+    }
+
+    .resumen-total span {
+        display: block;
+        font-size: 12px;
+        color: #555;
+        margin-bottom: 3px;
+    }
+
+    .resumen-total strong {
+        font-size: 18px;
+        color: #146c43;
+    }
+
+
     </style>
+
 
 </head>
 
@@ -2284,17 +2290,65 @@
 
     <div class="resultados">
 
+        <div class="titulo-resultados" style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:15px;
+            flex-wrap:nowrap;
+            margin-bottom:8px;
+        ">
+
+            <!-- IZQUIERDA -->
+            <div style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
+                <h2 style="margin:0;">Resultados</h2>
+                <span id="cantidadRegistros">{{ total_registros }} registros</span>
+            </div>
+
+            <!-- CENTRO: CARGA PROGRESIVA -->
+            <div style="
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                gap:10px;
+                white-space:nowrap;
+                flex:1;
+            ">
+
+                {% if empresa_seleccionada %}
+
+                    <strong>Todos los registros de la empresa</strong>
+
+                {% else %}
+
+                    <strong id="estadoCarga">
+                        Mostrando {{ registros|length }} de {{ total_registros }}
+                    </strong>
+
+                {% endif %}
+
+            </div>
 
 
-        <div class="titulo-resultados">
-
-            <h2>Resultados</h2>
-
-            <div id="cantidadRegistros">
-                {{ registros|length }} registros
+            <!-- DERECHA -->
+            <div style="
+                display:flex;
+                align-items:center;
+                gap:18px;
+                white-space:nowrap;
+            ">
+                <strong>
+                    Total licitaciones: {{ total_ofertas_resultados|floatformat:"2g" }}
+                </strong>
+                <strong>
+                    Total O/C: {{ total_oc_resultados|floatformat:"2g" }}
+                </strong>
             </div>
 
         </div>
+
+
+
 
 
         <div class="tabla-contenedor">
@@ -2385,207 +2439,14 @@
                 </thead>
 
 
+                <tbody id="tbodyResultados">
 
-                <tbody>
-
-                    {% for registro in registros %}
-
-                        <tr class="fila-resultado">
-
-                            <!-- EMPRESA -->
-
-                            <td
-                                class="empresa"
-                                title="{% if registro.empresa_oferente %}{{ registro.empresa_oferente.nombre }}{% elif registro.empresa_proveedor %}{{ registro.empresa_proveedor.nombre }}{% else %}-{% endif %}"
-                            >
-                                {% if registro.empresa_oferente %}
-                                    {{ registro.empresa_oferente.nombre }}
-                                {% elif registro.empresa_proveedor %}
-                                    {{ registro.empresa_proveedor.nombre }}
-                                {% else %}
-                                    -
-                                {% endif %}
-
-                                {% if empresa_seleccionada %}
-                                    <button
-                                        type="button"
-                                        class="boton-quitar-fila"
-                                        title="Quitar esta fila de la vista"
-                                        aria-label="Quitar esta fila"
-                                    ></button>
-                                {% endif %}
-
-                            </td>
-
-                            <td
-                                class="columna-telefono"
-                                style="display:none;"
-                            >
-                                {% if registro.empresa_oferente %}
-                                    {{ registro.empresa_oferente.telefono|default:"-" }}
-
-                                {% elif registro.empresa_proveedor %}
-                                    {{ registro.empresa_proveedor.telefono|default:"-" }}
-
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                            <td
-                                class="columna-email"
-                                style="display:none;"
-                            >
-                                {% if registro.empresa_oferente %}
-                                    {{ registro.empresa_oferente.email|default:"-" }}
-
-                                {% elif registro.empresa_proveedor %}
-                                    {{ registro.empresa_proveedor.email|default:"-" }}
-
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-
-
-
-
-                            <td class="orden-compra">
-                                {% if registro.id in ids_adjudicados_otra_empresa %}
-                                    Ya asignado
-                                {% elif registro.numero_oc %}
-                                    {{ registro.numero_oc }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-
-
-                            <td
-                                class="comprador"
-                                title="{{ registro.comprador|default:'-' }}"
-                            >
-                                {{ registro.comprador|default:"-" }}
-                            </td>
-
-                            <td
-                                class="proceso"
-                                title="Doble clic para buscar este proceso"
-                            >
-                                {{ registro.numero_proceso|default:"-" }}
-                            </td>
-
-                            <!-- RENGLÓN -->
-
-                            <td>
-                                {{ registro.numero_renglon|default:"-" }}
-                            </td>
-
-
-                            <!-- COMPETIDORES -->
-
-                            <td
-                                class="columna-competidores"
-                                style="display:none;"
-                                title="{{ registro.competidores|default:'-' }}"
-                            >
-                                {{ registro.competidores|default:"-" }}
-                            </td>
-
-
-                            <td>
-                                {% if registro.fecha_apertura %}
-                                    {{ registro.fecha_apertura|date:"d/m/Y" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-
-
-
-                            <td>
-                                {% if registro.fecha_inicio_contrato %}
-                                    {{ registro.fecha_inicio_contrato|date:"d/m/Y" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-
-                            <td
-                                class="fecha-fin-contrato"
-                                data-numero-oc="{{ registro.numero_oc|default:''|escape }}"
-                                data-fecha-inicio="{{ registro.fecha_inicio_contrato|date:'Y-m-d' }}"
-                                data-fecha-fin="{{ registro.fecha_fin_contrato|date:'Y-m-d' }}"
-                                title="Doble clic para modificar las fechas del contrato de esta OC"
-                            >
-                                {% if registro.fecha_fin_contrato %}
-                                    {{ registro.fecha_fin_contrato|date:"d/m/Y" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-
-
-                            <!-- ESTADO -->
-                            <td
-                                class="estado"
-                                title="{{ registro.estado|default:'-' }}"
-                            >
-                                {{ registro.estado|default:"-" }}
-                            </td>
-
-
-
-                            <!-- OFERTA -->
-
-                            <td
-                                class="importe"
-                                data-importe="{{ registro.precio_total_oferta|default:'' }}"
-                            >
-
-                                {% if registro.precio_total_oferta is not None %}
-                                    {{ registro.precio_total_oferta|floatformat:"2g" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-
-                            </td>
-
-                            <!-- COMPRA -->
-                            <td class="importe">
-                                {% if registro.numero_oc and registro.precio_total_compra is not None %}
-
-                                    {{ registro.precio_total_compra|floatformat:"2g" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-
-                            <!-- MONEDA -->
-                            <td>
-                                {{ registro.moneda_oferta|default:"-" }}
-                            </td>
-
-                            <!-- DESCRIPCIÓN -->
-
-                            <td
-                                class="descripcion"
-                                data-url="{{ registro.url|default:''|escape }}"
-                                title="Doble clic para abrir la fuente de datos"
-                            >
-                                {{ registro.descripcion_renglon|default:"-" }}
-                            </td>
-
-
-
-                        </tr>
-
-                    {% empty %}
-
+                    {% if registros %}
+                        {% include "InfEje/partials/filas_resultados.html" %}
+                    {% else %}
                         <tr>
                             <td colspan="11">
-
                                 <div class="sin-resultados">
-
                                     {% if request.GET %}
                                         No se encontraron registros
                                         con los filtros seleccionados.
@@ -2593,40 +2454,34 @@
                                         Utilice los filtros para consultar
                                         las licitaciones.
                                     {% endif %}
-
                                 </div>
                             </td>
                         </tr>
-
-                    {% endfor %}
+                    {% endif %}
 
                 </tbody>
 
-                {% if registros %}
-                    <tfoot>
-                        <tr class="total-final">
-                            <td><strong>TOTAL OFERTAS</strong></td>
-                            <td class="columna-telefono" style="display:none;"></td>
-                            <td class="columna-email" style="display:none;"></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td class="columna-competidores" style="display:none;"></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td class="importe"><strong>{{ total_ofertas_resultados|floatformat:"2g" }}</strong></td>
-                            <td class="importe"><strong>{{ total_oc_resultados|floatformat:"2g"  }}</strong></td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                {% endif %}
+
 
             </table>
 
         </div>
+
+        {% if not empresa_seleccionada and pagina_actual.has_next %}
+            <div
+                id="indicadorCarga"
+                data-pagina="{{ pagina_actual.next_page_number }}"
+                data-total="{{ total_registros }}"
+                style="
+                    text-align:center;
+                    padding:15px;
+                    color:#666;
+                "
+            >
+                Cargando más registros...
+            </div>
+        {% endif %}
+
 
         </div><!-- Cierra .resultados -->
 
@@ -5896,6 +5751,7 @@ document.querySelectorAll('td.descripcion').forEach(function(celda) {
 
 });
 
+
 function inicializarSelectorAnios() {
 
     const selector = document.getElementById("selectorAnios");
@@ -5924,6 +5780,7 @@ function inicializarSelectorAnios() {
         });
 
         // Mostrar u ocultar todas las celdas correspondientes.
+        // Incluye también las celdas de la fila TOTAL.
         tabla.querySelectorAll("[data-indice]").forEach(function(celda) {
 
             celda.style.display =
@@ -5945,7 +5802,7 @@ function inicializarSelectorAnios() {
 
     checks.forEach(function(check) {
         check.addEventListener("change", actualizarColumnas);
-    });    
+    });
 
     // Cerrar solamente cuando se hace clic fuera del combo.
     document.addEventListener("click", function(event) {
@@ -5955,6 +5812,7 @@ function inicializarSelectorAnios() {
         }
 
     });
+
     // Aplicar la selección inicial.
     actualizarColumnas();
 }
@@ -5962,7 +5820,114 @@ function inicializarSelectorAnios() {
 
 
 
+</script>
+<script>
+/* =========================================================
+   CARGA PROGRESIVA DE RESULTADOS - BLOQUES DE 200
+========================================================= */
 
+document.addEventListener("DOMContentLoaded", function () {
+
+    const indicador = document.getElementById("indicadorCarga");
+    const tbody = document.getElementById("tbodyResultados");
+    const estado = document.getElementById("estadoCarga");
+
+    // Si no hay indicador, no hay más páginas o es una empresa específica.
+    if (!indicador || !tbody) return;
+
+    let pagina = Number(indicador.dataset.pagina);
+    const total = Number(indicador.dataset.total);
+    let cargando = false;
+
+    async function cargarSiguienteBloque() {
+
+        if (cargando || !indicador.isConnected) return;
+
+        cargando = true;
+        indicador.textContent = "Cargando más registros...";
+
+        try {
+
+            const parametros = new URLSearchParams(
+                window.location.search
+            );
+
+            parametros.set("page", pagina);
+            parametros.set("cargar_bloque", "1");
+
+            const respuesta = await fetch(
+                window.location.pathname + "?" + parametros.toString(),
+                {
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                }
+            );
+
+            if (!respuesta.ok) {
+                throw new Error("No se pudieron cargar los registros.");
+            }
+
+            const html = await respuesta.text();
+
+            const temporal = document.createElement("tbody");
+            temporal.innerHTML = html;
+
+            const nuevasFilas = temporal.querySelectorAll(
+                "tr.fila-resultado"
+            );
+
+            if (!nuevasFilas.length) {
+                indicador.remove();
+                return;
+            }
+
+            nuevasFilas.forEach(function (fila) {
+                tbody.appendChild(fila);
+            });
+
+            pagina++;
+
+            const cantidadActual = tbody.querySelectorAll(
+                "tr.fila-resultado"
+            ).length;
+
+            if (estado) {
+                estado.textContent =
+                    "Mostrando " + cantidadActual + " de " + total;
+            }
+
+            if (cantidadActual >= total) {
+                indicador.remove();
+            } else {
+                indicador.textContent = "Seguir bajando para cargar más...";
+            }
+
+        } catch (error) {
+
+            console.error(error);
+            indicador.textContent = "Error al cargar. Recargá la página.";
+
+        } finally {
+
+            cargando = false;
+
+        }
+    }
+
+    const observador = new IntersectionObserver(function (entradas) {
+
+        if (entradas[0].isIntersecting) {
+            cargarSiguienteBloque();
+        }
+
+    }, {
+        rootMargin: "300px"
+    });
+
+    observador.observe(indicador);
+
+});
 </script>
 </body>
 

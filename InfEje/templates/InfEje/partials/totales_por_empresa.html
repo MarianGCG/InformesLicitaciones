@@ -1,4 +1,5 @@
 
+
 <div class="totales-panel">
 
     <div class="titulo-resultados">
@@ -6,6 +7,7 @@
         <div>{{ totales_empresas|length }} empresas</div>
     </div>
 
+    <!-- SELECTOR DE AÑOS -->
     <div class="selector-anios">
         <details id="selectorAnios">
             <summary id="resumenAnios">Seleccionar años</summary>
@@ -26,57 +28,163 @@
         </details>
     </div>
 
+    <!-- TABLA DE TOTALES -->
     <div class="tabla-contenedor">
 
         <table class="totales-tabla">
 
             <thead>
+
+                <!-- PRIMERA FILA DE ENCABEZADOS -->
                 <tr>
                     <th rowspan="2">Empresa</th>
                     <th rowspan="2">CUIT</th>
 
-                    <th rowspan="2" class="col-procesos">Procesos<br>distintos</th>
-                    <th rowspan="2" class="col-renglones">Procesos<br>Renglones</th>
+                    <th rowspan="2" class="col-procesos">
+                        Procesos<br>distintos
+                    </th>
 
+                    <th rowspan="2" class="col-renglones">
+                        Procesos<br>Renglones
+                    </th>
 
+                    <!-- ACUMULADO HISTÓRICO -->
+                    <th colspan="2" class="numero">
+                        Todos los años
+                    </th>
+
+                    <!-- GRUPOS ANUALES -->
                     {% for anio in anios_totales %}
-                        <th colspan="2"
+                        <th
+                            colspan="2"
                             class="numero"
-                            data-indice="{{ forloop.counter0 }}">
+                            data-indice="{{ forloop.counter0 }}"
+                        >
                             {{ anio }}
                         </th>
                     {% endfor %}
-
-
                 </tr>
 
+                <!-- SEGUNDA FILA DE ENCABEZADOS -->
                 <tr>
 
+                    <!-- COLUMNAS FIJAS -->
+                    <th class="numero">
+                        Total licitado
+                    </th>
 
+                    <th class="numero">
+                        Total O/C
+                    </th>
+
+                    <!-- COLUMNAS DE CADA AÑO -->
                     {% for anio in anios_totales %}
-                        <th class="numero" data-indice="{{ forloop.counter0 }}">
+
+                        <th
+                            class="numero inicio-anio"
+                            data-indice="{{ forloop.counter0 }}"
+                        >
                             Total licitado
                         </th>
-                        <th class="numero" data-indice="{{ forloop.counter0 }}">
+
+                        <th
+                            class="numero fin-anio"
+                            data-indice="{{ forloop.counter0 }}"
+                        >
                             Total O/C
                         </th>
+
                     {% endfor %}
 
-
                 </tr>
+
             </thead>
 
             <tbody>
 
+                <!-- =========================================
+                     TOTAL GENERAL
+                ========================================== -->
+                {% if totales_empresas %}
+
+                    <tr class="total-final">
+
+                        <td>
+                            <strong>TOTAL</strong>
+                        </td>
+
+                        <td></td>
+
+                        <td class="numero col-procesos">
+                            <strong>
+                                {{ total_procesos_distintos }}
+                            </strong>
+                        </td>
+
+                        <td class="numero col-renglones">
+                            <strong>
+                                {{ total_procesos_renglones }}
+                            </strong>
+                        </td>
+
+                        <!-- TODOS LOS AÑOS -->
+                        <td class="numero">
+                            <strong class="formato-importe">
+                                {{ total_ofertas|floatformat:2 }}
+                            </strong>
+                        </td>
+
+                        <td class="numero">
+                            <strong class="formato-importe">
+                                {{ total_oc|floatformat:2 }}
+                            </strong>
+                        </td>
+
+                        <!-- TOTALES POR AÑO -->
+                        {% for anual in totales_generales_anuales %}
+
+                            <td
+                                class="numero inicio-anio"
+                                data-indice="{{ forloop.counter0 }}"
+                            >
+                                <strong class="formato-importe">
+                                    {{ anual.licitado|floatformat:2 }}
+                                </strong>
+                            </td>
+
+                            <td
+                                class="numero fin-anio"
+                                data-indice="{{ forloop.counter0 }}"
+                            >
+                                <strong class="formato-importe">
+                                    {{ anual.oc|floatformat:2 }}
+                                </strong>
+                            </td>
+
+                        {% endfor %}
+
+                    </tr>
+
+                {% endif %}
+
+
+                <!-- =========================================
+                     DETALLE POR EMPRESA
+                ========================================== -->
                 {% for total in totales_empresas %}
+
                     <tr>
 
-                        <td class="empresa"
-                            title="Doble clic para filtrar esta empresa">
+                        <td
+                            class="empresa"
+                            title="Doble clic para filtrar esta empresa"
+                        >
                             {{ total.empresa }}
                         </td>
 
-                        <td>{{ total.cuit }}</td>
+                        <td>
+                            {{ total.cuit }}
+                        </td>
 
                         <td class="numero col-procesos">
                             {{ total.procesos_distintos }}
@@ -86,66 +194,61 @@
                             {{ total.procesos_renglones }}
                         </td>
 
+                        <!-- ACUMULADOS DE TODOS LOS AÑOS -->
+                        <td class="numero">
+                            <span class="formato-importe">
+                                {{ total.total_licitado|floatformat:2 }}
+                            </span>
+                        </td>
+
+                        <td class="numero">
+                            <span class="formato-importe">
+                                {{ total.total_oc|floatformat:2 }}
+                            </span>
+                        </td>
+
+                        <!-- DETALLE ANUAL -->
                         {% for anual in total.totales_anuales %}
-                            <td class="numero" data-indice="{{ forloop.counter0 }}">
+
+                            <td
+                                class="numero inicio-anio"
+                                data-indice="{{ forloop.counter0 }}"
+                            >
                                 <span class="formato-importe">
                                     {{ anual.licitado|floatformat:2 }}
                                 </span>
                             </td>
-                            <td class="numero" data-indice="{{ forloop.counter0 }}">
+
+                            <td
+                                class="numero fin-anio"
+                                data-indice="{{ forloop.counter0 }}"
+                            >
                                 <span class="formato-importe">
                                     {{ anual.oc|floatformat:2 }}
                                 </span>
                             </td>
+
                         {% endfor %}
 
                     </tr>
 
                 {% empty %}
+
                     <tr>
-                        <td colspan="4">
+                        <td colspan="100">
                             <div class="sin-resultados">
                                 No hay datos para calcular los totales
                                 con los filtros seleccionados.
                             </div>
                         </td>
                     </tr>
+
                 {% endfor %}
-
-                {% if totales_empresas %}
-                    <tr class="total-final">
-
-                        <td>TOTAL</td>
-                        <td></td>
-
-                        <td class="numero">
-                            {{ total_procesos_distintos }}
-                        </td>
-
-                        <td class="numero">
-                            {{ total_procesos_renglones }}
-                        </td>
-
-                        {% for anual in totales_generales_anuales %}
-                            <td class="numero">
-                                <span class="formato-importe">
-                                    {{ anual.licitado|floatformat:2 }}
-                                </span>
-                            </td>
-
-                            <td class="numero">
-                                <span class="formato-importe">
-                                    {{ anual.oc|floatformat:2 }}
-                                </span>
-                            </td>
-                        {% endfor %}
-
-                    </tr>
-                {% endif %}
 
             </tbody>
 
         </table>
 
     </div>
+
 </div>

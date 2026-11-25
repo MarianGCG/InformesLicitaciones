@@ -1,0 +1,171 @@
+
+{% for registro in registros %}
+
+    <tr class="fila-resultado">
+
+        <!-- EMPRESA -->
+        <td
+            class="empresa"
+            title="{% if registro.empresa_oferente %}{{ registro.empresa_oferente.nombre }}{% elif registro.empresa_proveedor %}{{ registro.empresa_proveedor.nombre }}{% else %}-{% endif %}"
+        >
+            {% if registro.empresa_oferente %}
+                {{ registro.empresa_oferente.nombre }}
+            {% elif registro.empresa_proveedor %}
+                {{ registro.empresa_proveedor.nombre }}
+            {% else %}
+                -
+            {% endif %}
+
+            {% if empresa_seleccionada %}
+                <button
+                    type="button"
+                    class="boton-quitar-fila"
+                    title="Quitar esta fila de la vista"
+                    aria-label="Quitar esta fila"
+                ></button>
+            {% endif %}
+        </td>
+
+        <!-- TELÉFONO -->
+        <td class="columna-telefono" style="display:none;">
+            {% if registro.empresa_oferente %}
+                {{ registro.empresa_oferente.telefono|default:"-" }}
+            {% elif registro.empresa_proveedor %}
+                {{ registro.empresa_proveedor.telefono|default:"-" }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <!-- EMAIL -->
+        <td class="columna-email" style="display:none;">
+            {% if registro.empresa_oferente %}
+                {{ registro.empresa_oferente.email|default:"-" }}
+            {% elif registro.empresa_proveedor %}
+                {{ registro.empresa_proveedor.email|default:"-" }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <!-- ORDEN DE COMPRA -->
+        <td class="orden-compra">
+            {% if registro.id in ids_adjudicados_otra_empresa %}
+                Ya asignado
+            {% elif registro.numero_oc %}
+                {{ registro.numero_oc }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <!-- COMPRADOR -->
+        <td
+            class="comprador"
+            title="{{ registro.comprador|default:'-' }}"
+        >
+            {{ registro.comprador|default:"-" }}
+        </td>
+
+        <!-- PROCESO -->
+        <td
+            class="proceso"
+            title="Doble clic para buscar este proceso"
+        >
+            {{ registro.numero_proceso|default:"-" }}
+        </td>
+
+        <!-- RENGLÓN -->
+        <td>
+            {{ registro.numero_renglon|default:"-" }}
+        </td>
+
+        <!-- COMPETIDORES -->
+        <td
+            class="columna-competidores"
+            style="display:none;"
+            title="{{ registro.competidores|default:'-' }}"
+        >
+            {{ registro.competidores|default:"-" }}
+        </td>
+
+        <!-- FECHA APERTURA -->
+        <td>
+            {% if registro.fecha_apertura %}
+                {{ registro.fecha_apertura|date:"d/m/Y" }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <!-- INICIO CONTRATO -->
+        <td>
+            {% if registro.fecha_inicio_contrato %}
+                {{ registro.fecha_inicio_contrato|date:"d/m/Y" }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <!-- FIN CONTRATO -->
+        <td
+            class="fecha-fin-contrato"
+            data-numero-oc="{{ registro.numero_oc|default:''|escape }}"
+            data-fecha-inicio="{{ registro.fecha_inicio_contrato|date:'Y-m-d' }}"
+            data-fecha-fin="{{ registro.fecha_fin_contrato|date:'Y-m-d' }}"
+            title="Doble clic para modificar las fechas del contrato de esta OC"
+        >
+            {% if registro.fecha_fin_contrato %}
+                {{ registro.fecha_fin_contrato|date:"d/m/Y" }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <!-- ESTADO -->
+        <td
+            class="estado"
+            title="{{ registro.estado|default:'-' }}"
+        >
+            {{ registro.estado|default:"-" }}
+        </td>
+
+        <!-- OFERTA -->
+        <td
+            class="importe"
+            data-importe="{{ registro.precio_total_oferta|default:'' }}"
+        >
+            {% if registro.precio_total_oferta is not None %}
+                {{ registro.precio_total_oferta|floatformat:"2g" }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <!-- COMPRA -->
+        <td class="importe">
+            {% if registro.numero_oc and registro.precio_total_compra is not None %}
+                {{ registro.precio_total_compra|floatformat:"2g" }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <!-- MONEDA -->
+        <td>
+            {{ registro.moneda_oferta|default:"-" }}
+        </td>
+
+        <!-- DESCRIPCIÓN -->
+        <td
+            class="descripcion"
+            data-url="{{ registro.url|default:''|escape }}"
+            title="Doble clic para abrir la fuente de datos"
+        >
+            {{ registro.descripcion_renglon|default:"-" }}
+        </td>
+
+    </tr>
+
+{% endfor %}
+
